@@ -26,7 +26,7 @@ export const useTenantStore = defineStore('tenant', () => {
   const fetchProfile = async () => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/tentant/tenant/profile', {
+      const res = await fetch('/api/v1/tenants/me', {
         headers: { Authorization: `Bearer ${authStore.token}` },
       });
       if (res.ok) {
@@ -46,7 +46,7 @@ export const useTenantStore = defineStore('tenant', () => {
   const updateProfile = async () => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/tentant/tenant/profile/update', {
+      const res = await fetch('/api/v1/tenants/me', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -71,7 +71,7 @@ export const useTenantStore = defineStore('tenant', () => {
   const fetchRevenueAnalytics = async () => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/tentant/tenant/analytics/revenue', {
+      const res = await fetch('/api/v1/analytics/tenant', {
         headers: { Authorization: `Bearer ${authStore.token}` },
       });
       if (res.ok) {
@@ -91,7 +91,7 @@ export const useTenantStore = defineStore('tenant', () => {
   const fetchTicketHistory = async () => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/tentant/tenant/tickets/history?limit=20', {
+      const res = await fetch('/api/v1/parking/tickets?limit=20', {
         headers: { Authorization: `Bearer ${authStore.token}` },
       });
       if (res.ok) {
@@ -111,7 +111,7 @@ export const useTenantStore = defineStore('tenant', () => {
   const fetchStaff = async () => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/tentant/tenant/staff', {
+      const res = await fetch('/api/v1/tenants/staff', {
         headers: { Authorization: `Bearer ${authStore.token}` },
       });
       if (res.ok) {
@@ -131,7 +131,7 @@ export const useTenantStore = defineStore('tenant', () => {
   const createStaff = async (staffData: any) => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/tentant/tenant/staff', {
+      const res = await fetch('/api/v1/tenants/staff', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
