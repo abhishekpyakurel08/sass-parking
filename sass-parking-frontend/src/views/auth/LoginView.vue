@@ -1,14 +1,23 @@
 <script setup lang="ts">
-import { ref, reactive } from "vue"
+import { ref, reactive, computed } from "vue"
 import {
   Loader2, Car, Building2, Mail, Lock, ArrowRight, Eye, EyeOff
 } from "lucide-vue-next"
-import { useRouter } from "vue-router"
+import { useRoute, useRouter } from "vue-router"
 import { useAuthStore } from "../../stores/auth"
 import { toast } from "vue3-toastify"
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
+
+const selectedRole = computed(() => {
+  const role = String(route.query.role ?? "").trim()
+  if (role === "SUPER_ADMIN") return "Super Admin"
+  if (role === "TENANT_OWNER") return "Tenant Owner"
+  if (role === "GATE_STAFF") return "Gate Staff"
+  return ""
+})
 
 const view = ref<"login" | "register" | "pos">("login")
 const isLoading = ref(false)
@@ -147,6 +156,9 @@ const onSubmit = async () => {
               <div class="space-y-2">
                 <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight">Welcome back.</h2>
                 <p class="text-slate-500">Authenticate to access the control center.</p>
+                <div v-if="selectedRole" class="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                  {{ selectedRole }} portal selected
+                </div>
               </div>
 
               <div class="space-y-5 pt-4">
