@@ -65,9 +65,9 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
 
 // ─── Security Middleware ──────────────────────────────────────────────────────
-app.use(mongoSanitize);     // MongoDB injection protection
-app.use(hpp());               // HTTP parameter pollution protection
-app.use(compression());       // Response compression
+app.use(mongoSanitize);     
+app.use(hpp());               
+app.use(compression());       
 
 // ─── Request Logging ─────────────────────────────────────────────────────────
 app.use(morgan('combined', {
@@ -112,7 +112,7 @@ const startServer = async (): Promise<void> => {
 
   const server = app.listen(env.PORT, () => {
     logger.info(` Server running on port ${env.PORT} [${env.NODE_ENV}]`);
-    logger.info(`📖  Swagger docs: http://localhost:${env.PORT}/api-docs`);
+    logger.info(`  Swagger docs: http://localhost:${env.PORT}/api-docs`);
   });
 
   const shutdown = (signal: string) => {
