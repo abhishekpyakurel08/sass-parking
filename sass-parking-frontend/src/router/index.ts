@@ -8,6 +8,11 @@ import SuperadminDashboardView from "../views/SuperAdminDashboard/SuperadminDash
 const routes = [
   {
     path: "/",
+    name: "landing",
+    component: LandingView,
+  },
+  {
+    path: "/login",
     name: "login",
     component: LoginView,
   },
