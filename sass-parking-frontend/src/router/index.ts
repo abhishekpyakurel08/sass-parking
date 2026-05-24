@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from "vue-router"
 
 import LoginView from "../views/auth/LoginView.vue"
+import OperatorDashboardView from "../views/operator/DashboardView.vue"
+import TenantDashboardView from "../views/tenant/TenantDashboardView.vue"
 
 const routes = [
   {
@@ -8,6 +10,16 @@ const routes = [
     name: "login",
     component: LoginView,
   },
+  {
+    path: "/operator",
+    name: "operator-dashboard",
+    component: OperatorDashboardView,
+  },
+  {
+    path: "/tenant",
+    name: "tenant-dashboard",
+    component: TenantDashboardView,
+  }
 ]
 
 const router = createRouter({
