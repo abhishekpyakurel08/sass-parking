@@ -20,6 +20,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { startCronJobs } from './utils/cron.js';
 
 import authRoutes     from './routes/auth.route.js';
+import userRoutes     from './routes/user.route.js';
 import tenantRoutes   from './routes/tenant.route.js';
 import parkingRoutes  from './routes/parking.route.js';
 import ratesRoutes    from './routes/rates.route.js';
@@ -96,6 +97,7 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use('/api/v1/auth',      authLimiter, authRoutes);
+app.use('/api/v1/user',      authLimiter, userRoutes);
 app.use('/api/v1/tenants',   tenantRoutes);
 app.use('/api/v1/parking',   parkingRoutes);
 app.use('/api/v1/rates',     ratesRoutes);
