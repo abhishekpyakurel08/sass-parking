@@ -1,0 +1,21 @@
+# Ignore log files but keep the folder
+logs/*.log
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prisma (no longer used)
+prisma/
+prisma.config.ts

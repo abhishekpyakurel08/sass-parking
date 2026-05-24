@@ -1,0 +1,471 @@
+openapi: 3.0.3
+info:
+  title: SaaS Parking API
+  description: |
+    Multi-tenant parking management SaaS backend.
+    Supports SUPER_ADMIN, TENANT_OWNER, and GATE_STAFF roles.
+    All tenant-scoped endpoints require `X-Tenant-ID` header.
+  version: 1.0.0
+  contact:
+    name: ParkSaaS Pro
+
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Development Server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        message: { type: string }
+        data:    { type: object }
+
+    ErrorResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        message: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:   { type: string }
+              message: { type: string }
+
+    Tenant:
+      type: object
+      properties:
+        _id:              { type: string }
+        name:             { type: string }
+        corporate_email:  { type: string }
+        total_capacity:   { type: integer }
+        status:           { type: string, enum: [ACTIVE, SUSPENDED] }
+        createdAt:        { type: string, format: date-time }
+
+    User:
+      type: object
+      properties:
+        _id:       { type: string }
+        name:      { type: string }
+        email:     { type: string }
+        role:      { type: string, enum: [SUPER_ADMIN, TENANT_OWNER, GATE_STAFF] }
+        tenant_id: { type: string, nullable: true }
+
+    ParkingSpace:
+      type: object
+      properties:
+        _id:          { type: string }
+        tenant_id:    { type: string }
+        floor_level:  { type: string }
+        space_number: { type: string }
+        vehicle_type: { type: string, enum: [CAR, BIKE, TRUCK] }
+        status:       { type: string, enum: [FREE, OCCUPIED, RESERVED] }
+
+    Ticket:
+      type: object
+      properties:
+        _id:            { type: string }
+        tenant_id:      { type: string }
+        space_id:       { type: string }
+        ticket_number:  { type: string, format: uuid }
+        license_plate:  { type: string }
+        vehicle_type:   { type: string, enum: [CAR, BIKE, TRUCK] }
+        check_in_time:  { type: string, format: date-time }
+        check_out_time: { type: string, format: date-time, nullable: true }
+        fare_amount:    { type: number }
+        status:         { type: string, enum: [ACTIVE, PENDING_PAYMENT, PAID] }
+
+    HourlyRate:
+      type: object
+      properties:
+        _id:          { type: string }
+        tenant_id:    { type: string }
+        vehicle_type: { type: string, enum: [CAR, BIKE, TRUCK] }
+        rate_per_hour: { type: number }
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Register new Tenant + Owner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, corporate_email, owner_name, owner_email, password]
+              properties:
+                name:            { type: string, example: "Nepal Parking Ltd" }
+                corporate_email: { type: string, example: "info@nepalparking.com" }
+                total_capacity:  { type: integer, example: 100 }
+                owner_name:      { type: string, example: "Ram Bahadur" }
+                owner_email:     { type: string, example: "ram@nepalparking.com" }
+                password:        { type: string, example: "SecurePass123!" }
+      responses:
+        '201': { description: Registered, content: { application/json: { schema: { $ref: '#/components/schemas/SuccessResponse' } } } }
+        '409': { description: Conflict, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Login — returns access token + refresh token cookie
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:    { type: string }
+                password: { type: string }
+      responses:
+        '200': { description: Login success }
+        '401': { description: Invalid credentials }
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Rotate refresh token — get new access token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token: { type: string }
+      responses:
+        '200': { description: New access token issued }
+        '401': { description: Invalid refresh token }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout — clears refresh token
+      responses:
+        '200': { description: Logged out }
+
+  /tenants:
+    get:
+      tags: [Tenants]
+      summary: List all tenants (SUPER_ADMIN)
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+      responses:
+        '200': { description: Tenant list }
+    post:
+      tags: [Tenants]
+      summary: Create tenant (SUPER_ADMIN)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, corporate_email]
+              properties:
+                name:            { type: string }
+                corporate_email: { type: string }
+                total_capacity:  { type: integer }
+      responses:
+        '201': { description: Created }
+
+  /tenants/{id}:
+    patch:
+      tags: [Tenants]
+      summary: Update tenant (SUPER_ADMIN)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:           { type: string }
+                total_capacity: { type: integer }
+                status:         { type: string, enum: [ACTIVE, SUSPENDED] }
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Tenants]
+      summary: Delete tenant (SUPER_ADMIN)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Deleted }
+
+  /tenants/me:
+    get:
+      tags: [Tenants]
+      summary: Get own tenant profile (TENANT_OWNER)
+      parameters:
+        - in: header
+          name: X-Tenant-ID
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Tenant profile }
+
+  /tenants/staff:
+    get:
+      tags: [Tenants]
+      summary: List staff (TENANT_OWNER)
+      parameters:
+        - in: header
+          name: X-Tenant-ID
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Staff list }
+    post:
+      tags: [Tenants]
+      summary: Create gate staff (TENANT_OWNER)
+      parameters:
+        - in: header
+          name: X-Tenant-ID
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:     { type: string }
+                email:    { type: string }
+                password: { type: string }
+      responses:
+        '201': { description: Staff created }
+
+  /parking/spaces:
+    get:
+      tags: [Parking]
+      summary: List parking spaces
+      parameters:
+        - in: header
+          name: X-Tenant-ID
+          required: true
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string, enum: [FREE, OCCUPIED, RESERVED] }
+        - in: query
+          name: vehicle_type
+          schema: { type: string, enum: [CAR, BIKE, TRUCK] }
+      responses:
+        '200': { description: Space list }
+    post:
+      tags: [Parking]
+      summary: Create parking space (TENANT_OWNER)
+      parameters:
+        - in: header
+          name: X-Tenant-ID
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [floor_level, space_number, vehicle_type]
+              properties:
+                floor_level:  { type: string, example: "G" }
+                space_number: { type: string, example: "A-101" }
+                vehicle_type: { type: string, enum: [CAR, BIKE, TRUCK] }
+      responses:
+        '201': { description: Created }
+
+  /parking/check-in:
+    post:
+      tags: [Parking]
+      summary: Vehicle check-in (GATE_STAFF / TENANT_OWNER)
+      parameters:
+        - in: header
+          name: X-Tenant-ID
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [space_id, license_plate, vehicle_type]
+              properties:
+                space_id:      { type: string }
+                license_plate: { type: string, example: "BA-2-CHA-1234" }
+                vehicle_type:  { type: string, enum: [CAR, BIKE, TRUCK] }
+      responses:
+        '201': { description: Checked in }
+
+  /parking/check-out:
+    post:
+      tags: [Parking]
+      summary: Vehicle check-out with fare calculation
+      parameters:
+        - in: header
+          name: X-Tenant-ID
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ticket_id]
+              properties:
+                ticket_id: { type: string }
+      responses:
+        '200': { description: Checked out with fare }
+
+  /parking/scan:
+    post:
+      tags: [Parking]
+      summary: Scan/validate a ticket QR code or license plate
+      parameters:
+        - in: header
+          name: X-Tenant-ID
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, example: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d" }
+      responses:
+        '200':
+          description: Ticket scan success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  ticket: { type: object }
+
+  /parking/tickets:
+    get:
+      tags: [Parking]
+      summary: Get ticket list (paginated)
+      parameters:
+        - in: header
+          name: X-Tenant-ID
+          required: true
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string, enum: [ACTIVE, PENDING_PAYMENT, PAID] }
+      responses:
+        '200': { description: Ticket list }
+
+  /rates:
+    post:
+      tags: [Rates]
+      summary: Create hourly rate (TENANT_OWNER)
+      parameters:
+        - in: header
+          name: X-Tenant-ID
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vehicle_type, rate_per_hour]
+              properties:
+                vehicle_type:  { type: string, enum: [CAR, BIKE, TRUCK] }
+                rate_per_hour: { type: number, example: 50 }
+      responses:
+        '201': { description: Rate created }
+    get:
+      tags: [Rates]
+      summary: Get all rates for tenant
+      parameters:
+        - in: header
+          name: X-Tenant-ID
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Rate list }
+
+  /rates/{id}:
+    patch:
+      tags: [Rates]
+      summary: Update hourly rate
+      parameters:
+        - in: header
+          name: X-Tenant-ID
+          required: true
+          schema: { type: string }
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rate_per_hour]
+              properties:
+                rate_per_hour: { type: number }
+      responses:
+        '200': { description: Rate updated }
+
+  /analytics/global:
+    get:
+      tags: [Analytics]
+      summary: System-wide analytics (SUPER_ADMIN)
+      responses:
+        '200': { description: Global stats }
+
+  /analytics/tenant:
+    get:
+      tags: [Analytics]
+      summary: Tenant analytics (TENANT_OWNER)
+      parameters:
+        - in: header
+          name: X-Tenant-ID
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Tenant stats }
