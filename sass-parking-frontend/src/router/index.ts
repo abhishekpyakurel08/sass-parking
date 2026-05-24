@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router"
 
+import LandingView from "../views/landing/LandingView.vue"
 import LoginView from "../views/auth/LoginView.vue"
 import OperatorDashboardView from "../views/operator/DashboardView.vue"
 import TenantDashboardView from "../views/tenant/TenantDashboardView.vue"
@@ -7,6 +8,11 @@ import TenantDashboardView from "../views/tenant/TenantDashboardView.vue"
 const routes = [
   {
     path: "/",
+    name: "landing",
+    component: LandingView,
+  },
+  {
+    path: "/login",
     name: "login",
     component: LoginView,
   },
