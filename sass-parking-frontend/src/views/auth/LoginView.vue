@@ -65,7 +65,13 @@ const onSubmit = async () => {
       const res = await fetch("/api/v1/user/auth/onboard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(registerData)
+        body: JSON.stringify({
+          name: registerData.businessName,
+          corporate_email: registerData.ownerEmail,
+          owner_name: registerData.ownerName,
+          owner_email: registerData.ownerEmail,
+          password: registerData.password,
+        })
       })
       const data = await res.json()
       if (!res.ok) {
@@ -238,7 +244,7 @@ const onSubmit = async () => {
                   <label class="text-sm font-semibold text-slate-700">Master Password</label>
                   <div class="relative group">
                     <Lock class="absolute left-3.5 top-3 h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
-                    <input v-model="registerData.password" :type="showRegisterPassword ? 'text' : 'password'" placeholder="••••••••" required
+                    <input v-model="registerData.password" :type="showRegisterPassword ? 'text' : 'password'" placeholder="••••••••" required minlength="8"
                            class="w-full pl-11 pr-11 py-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none text-slate-900 font-medium tracking-widest" />
                     <button type="button" @click="showRegisterPassword = !showRegisterPassword" class="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors">
                       <EyeOff v-if="showRegisterPassword" class="h-5 w-5" />

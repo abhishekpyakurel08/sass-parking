@@ -11,8 +11,9 @@ const COOKIE_NAME = 'park_session';
 // 1. TENANT + OWNER INITIAL ONBOARDING (legacy endpoint)
 export const registerTenantOwner = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { businessName, ownerName, ownerEmail, password, corporate_email, total_capacity } = req.body;
-    const tenantEmail = corporate_email || ownerEmail;
+    const { name, owner_name, owner_email, password, corporate_email, total_capacity } = req.body;
+    const ownerEmail = owner_email;
+    const tenantEmail = corporate_email || owner_email;
 
     const existingTenant = await Tenant.findOne({ corporate_email: tenantEmail });
     if (existingTenant) {
@@ -27,7 +28,7 @@ export const registerTenantOwner = async (req: Request, res: Response): Promise<
     }
 
     const tenant = await Tenant.create({
-      name: businessName || ownerName,
+      name: name || owner_name,
       corporate_email: tenantEmail,
       total_capacity: total_capacity || 100,
       status: TenantStatus.ACTIVE,
@@ -36,7 +37,7 @@ export const registerTenantOwner = async (req: Request, res: Response): Promise<
     const password_hash = await bcrypt.hash(password, env.BCRYPT_ROUNDS);
     const owner = await User.create({
       tenant_id: tenant._id,
-      name: ownerName,
+      name: owner_name,
       email: ownerEmail,
       password_hash,
       role: UserRole.TENANT_OWNER,

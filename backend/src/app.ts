@@ -33,6 +33,7 @@ const __dirname  = path.dirname(__filename);
 const app: Application = express();
 
 // ─── Security Headers ────────────────────────────────────────────────────────
+// Apply strict CSP globally. /api-docs overrides this below with a relaxed CSP.
 app.use(helmet());
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
@@ -76,12 +77,30 @@ app.use(morgan('combined', {
   skip: (_req, res) => res.statusCode < 400 && env.isProd,
 }));
 
-// ─── Swagger UI ───────────────────────────────────────────────────────────────
+// ─── Swagger UI (public — relaxed CSP so inline scripts/styles render) ────────
 const swaggerDocument = YAML.load(path.join(__dirname, 'config/swagger.yaml'));
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
-  customSiteTitle: 'ParkSaaS Pro API',
-  customCss: '.swagger-ui .topbar { background-color: #1a1a2e; }',
-}));
+app.use(
+  '/api-docs',
+  // Helmet's default CSP blocks Swagger UI's inline scripts/styles → 403.
+  // We override CSP only for this route to allow them.
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc:  ["'self'"],
+        scriptSrc:   ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc:    ["'self'", "'unsafe-inline'"],
+        fontSrc:     ["'self'", 'data:'],
+        imgSrc:      ["'self'", 'data:', 'https:'],
+        connectSrc:  ["'self'"],
+      },
+    },
+  }),
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerDocument, {
+    customSiteTitle: 'ParkSaaS Pro API',
+    customCss: '.swagger-ui .topbar { background-color: #1a1a2e; }',
+  })
+);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (_req: Request, res: Response) => {

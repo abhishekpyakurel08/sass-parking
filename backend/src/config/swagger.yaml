@@ -4,7 +4,25 @@ info:
   description: |
     Multi-tenant parking management SaaS backend.
     Supports SUPER_ADMIN, TENANT_OWNER, and GATE_STAFF roles.
-    All tenant-scoped endpoints require `X-Tenant-ID` header.
+
+    ## Authentication
+    All protected endpoints require a `Bearer <JWT>` token in the `Authorization` header.
+
+    ## Authorization
+    - **SUPER_ADMIN**: Full system access, no tenant restriction.
+    - **TENANT_OWNER**: Scoped to their tenant; must pass `X-Tenant-ID` header.
+    - **GATE_STAFF**: Scoped to their tenant; must pass `X-Tenant-ID` header.
+
+    ## Common Error Codes
+    | Code | Meaning |
+    |------|---------|
+    | 400  | Validation error — bad request body or params |
+    | 401  | Missing or invalid Bearer token |
+    | 403  | Insufficient role / cross-tenant access / suspended tenant |
+    | 404  | Resource not found |
+    | 409  | Conflict — duplicate resource |
+    | 429  | Rate limit exceeded |
+    | 500  | Internal server error |
   version: 1.0.0
   contact:
     name: ParkSaaS Pro
@@ -20,13 +38,21 @@ components:
       scheme: bearer
       bearerFormat: JWT
 
+  parameters:
+    TenantIdHeader:
+      in: header
+      name: X-Tenant-ID
+      required: true
+      schema: { type: string }
+      description: MongoDB ObjectId of the tenant. Required for all tenant-scoped endpoints.
+
   schemas:
     SuccessResponse:
       type: object
       properties:
         success: { type: boolean, example: true }
         message: { type: string }
-        data:    { type: object }
+        data: { type: object }
 
     ErrorResponse:
       type: object
@@ -38,92 +64,180 @@ components:
           items:
             type: object
             properties:
-              field:   { type: string }
+              field: { type: string }
               message: { type: string }
 
     Tenant:
       type: object
       properties:
-        _id:              { type: string }
-        name:             { type: string }
-        corporate_email:  { type: string }
-        total_capacity:   { type: integer }
-        status:           { type: string, enum: [ACTIVE, SUSPENDED] }
-        createdAt:        { type: string, format: date-time }
+        _id: { type: string }
+        name: { type: string }
+        corporate_email: { type: string }
+        total_capacity: { type: integer }
+        status: { type: string, enum: [ACTIVE, SUSPENDED] }
+        createdAt: { type: string, format: date-time }
 
     User:
       type: object
       properties:
-        _id:       { type: string }
-        name:      { type: string }
-        email:     { type: string }
-        role:      { type: string, enum: [SUPER_ADMIN, TENANT_OWNER, GATE_STAFF] }
+        _id: { type: string }
+        name: { type: string }
+        email: { type: string }
+        role: { type: string, enum: [SUPER_ADMIN, TENANT_OWNER, GATE_STAFF] }
         tenant_id: { type: string, nullable: true }
 
     ParkingSpace:
       type: object
       properties:
-        _id:          { type: string }
-        tenant_id:    { type: string }
-        floor_level:  { type: string }
+        _id: { type: string }
+        tenant_id: { type: string }
+        floor_level: { type: string }
         space_number: { type: string }
         vehicle_type: { type: string, enum: [CAR, BIKE, TRUCK] }
-        status:       { type: string, enum: [FREE, OCCUPIED, RESERVED] }
+        status: { type: string, enum: [FREE, OCCUPIED, RESERVED] }
 
     Ticket:
       type: object
       properties:
-        _id:            { type: string }
-        tenant_id:      { type: string }
-        space_id:       { type: string }
-        ticket_number:  { type: string, format: uuid }
-        license_plate:  { type: string }
-        vehicle_type:   { type: string, enum: [CAR, BIKE, TRUCK] }
-        check_in_time:  { type: string, format: date-time }
+        _id: { type: string }
+        tenant_id: { type: string }
+        space_id: { type: string }
+        ticket_number: { type: string, format: uuid }
+        license_plate: { type: string }
+        vehicle_type: { type: string, enum: [CAR, BIKE, TRUCK] }
+        check_in_time: { type: string, format: date-time }
         check_out_time: { type: string, format: date-time, nullable: true }
-        fare_amount:    { type: number }
-        status:         { type: string, enum: [ACTIVE, PENDING_PAYMENT, PAID] }
+        fare_amount: { type: number }
+        status: { type: string, enum: [ACTIVE, PENDING_PAYMENT, PAID] }
 
     HourlyRate:
       type: object
       properties:
-        _id:          { type: string }
-        tenant_id:    { type: string }
+        _id: { type: string }
+        tenant_id: { type: string }
         vehicle_type: { type: string, enum: [CAR, BIKE, TRUCK] }
         rate_per_hour: { type: number }
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid Bearer token
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+          example:
+            success: false
+            message: "Bearer token is missing or malformed"
+
+    Forbidden:
+      description: "Insufficient role, cross-tenant access attempt, or tenant is suspended"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+          examples:
+            insufficient_role:
+              value:
+                success: false
+                message: "Access denied. Required: [SUPER_ADMIN]. Your role: GATE_STAFF"
+            cross_tenant:
+              value:
+                success: false
+                message: "Cross-tenant access is not permitted"
+            suspended:
+              value:
+                success: false
+                message: "Tenant account is suspended. Contact support."
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+          example:
+            success: false
+            message: "Resource not found"
+
+    ValidationError:
+      description: Request body or parameter validation failed
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+          example:
+            success: false
+            message: "Validation failed"
+            errors:
+              - field: "email"
+                message: "Invalid email address"
+
+    RateLimited:
+      description: Too many requests — rate limit exceeded
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+          example:
+            success: false
+            message: "Too many auth attempts — please try again later"
 
 security:
   - bearerAuth: []
 
+tags:
+  - name: Auth
+    description: Authentication and token management
+  - name: User
+    description: Legacy user auth endpoints (onboard / login / logout)
+  - name: Tenants
+    description: Tenant CRUD and staff management
+  - name: Parking
+    description: Parking spaces, check-in/check-out, ticket history
+  - name: Operator
+    description: Gate staff operations (check-in / check-out / stats)
+  - name: Rates
+    description: Hourly rate configuration per vehicle type
+  - name: Analytics
+    description: Revenue and occupancy analytics
+
 paths:
+  # ─── AUTH ──────────────────────────────────────────────────────────────────
+
   /auth/register:
     post:
       tags: [Auth]
       security: []
-      summary: Register new Tenant + Owner
+      summary: Register new Tenant + Owner account
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [name, corporate_email, owner_name, owner_email, password]
+              required:
+                [name, corporate_email, owner_name, owner_email, password]
               properties:
-                name:            { type: string, example: "Nepal Parking Ltd" }
-                corporate_email: { type: string, example: "info@nepalparking.com" }
-                total_capacity:  { type: integer, example: 100 }
-                owner_name:      { type: string, example: "Ram Bahadur" }
-                owner_email:     { type: string, example: "ram@nepalparking.com" }
-                password:        { type: string, example: "SecurePass123!" }
+                name: { type: string, example: "Nepal Parking Ltd" }
+                corporate_email:
+                  { type: string, example: "info@nepalparking.com" }
+                total_capacity: { type: integer, example: 100 }
+                owner_name: { type: string, example: "Ram Bahadur" }
+                owner_email: { type: string, example: "ram@nepalparking.com" }
+                password: { type: string, example: "SecurePass123!" }
       responses:
-        '201': { description: Registered, content: { application/json: { schema: { $ref: '#/components/schemas/SuccessResponse' } } } }
-        '409': { description: Conflict, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+        "201":
+          description: Tenant and owner registered successfully
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SuccessResponse" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
 
   /auth/login:
     post:
       tags: [Auth]
       security: []
-      summary: Login — returns access token + refresh token cookie
+      summary: Login — returns JWT access token
       requestBody:
         required: true
         content:
@@ -132,17 +246,29 @@ paths:
               type: object
               required: [email, password]
               properties:
-                email:    { type: string }
-                password: { type: string }
+                email: { type: string, example: "ram@nepalparking.com" }
+                password: { type: string, example: "SecurePass123!" }
+                rememberMe: { type: boolean, default: false }
       responses:
-        '200': { description: Login success }
-        '401': { description: Invalid credentials }
+        "200":
+          description: Login successful — returns token and user info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  token: { type: string }
+                  user: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/RateLimited" }
 
   /auth/refresh:
     post:
       tags: [Auth]
       security: []
-      summary: Rotate refresh token — get new access token
+      summary: Rotate refresh token — obtain new access token
       requestBody:
         content:
           application/json:
@@ -151,20 +277,95 @@ paths:
               properties:
                 refresh_token: { type: string }
       responses:
-        '200': { description: New access token issued }
-        '401': { description: Invalid refresh token }
+        "200": { description: New access token issued }
+        "401": { $ref: "#/components/responses/Unauthorized" }
 
   /auth/logout:
     post:
       tags: [Auth]
-      summary: Logout — clears refresh token
+      summary: Logout — clears refresh token cookie
       responses:
-        '200': { description: Logged out }
+        "200": { description: Logged out }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ─── USER (LEGACY) ─────────────────────────────────────────────────────────
+
+  /user/auth/onboard:
+    post:
+      tags: [User]
+      security: []
+      summary: Onboard new business + master account (legacy)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [businessName, ownerName, ownerEmail, password]
+              properties:
+                businessName: { type: string, example: "Alaric Parking" }
+                ownerName: { type: string, example: "Abhishek" }
+                ownerEmail: { type: string, example: "admin@alaric.com" }
+                password: { type: string, example: "SecurePass123!" }
+                corporate_email: { type: string }
+                total_capacity: { type: integer, example: 100 }
+      responses:
+        "201": { description: Tenant onboarded }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "409": { description: Email already exists }
+
+  /user/auth/login:
+    post:
+      tags: [User]
+      security: []
+      summary: Login — returns JWT token (legacy)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+                rememberMe: { type: boolean }
+      responses:
+        "200": { description: Login successful }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /user/auth/logout:
+    post:
+      tags: [User]
+      security: []
+      summary: Logout — clears session cookie
+      responses:
+        "200": { description: Logged out }
+
+  /user/auth/pos-login:
+    post:
+      tags: [User]
+      security: []
+      summary: POS terminal login (deprecated — use /user/auth/login)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                apiKey: { type: string }
+      responses:
+        "401": { description: POS API Key login is deprecated }
+
+  # ─── TENANTS ───────────────────────────────────────────────────────────────
 
   /tenants:
     get:
       tags: [Tenants]
-      summary: List all tenants (SUPER_ADMIN)
+      summary: List all tenants (SUPER_ADMIN only)
       parameters:
         - in: query
           name: page
@@ -173,10 +374,12 @@ paths:
           name: limit
           schema: { type: integer, default: 20 }
       responses:
-        '200': { description: Tenant list }
+        "200": { description: Tenant list }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Tenants]
-      summary: Create tenant (SUPER_ADMIN)
+      summary: Create tenant (SUPER_ADMIN only)
       requestBody:
         required: true
         content:
@@ -185,16 +388,20 @@ paths:
               type: object
               required: [name, corporate_email]
               properties:
-                name:            { type: string }
+                name: { type: string }
                 corporate_email: { type: string }
-                total_capacity:  { type: integer }
+                total_capacity: { type: integer }
       responses:
-        '201': { description: Created }
+        "201": { description: Tenant created }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: Tenant email conflict }
 
   /tenants/{id}:
     patch:
       tags: [Tenants]
-      summary: Update tenant (SUPER_ADMIN)
+      summary: Update tenant (SUPER_ADMIN only)
       parameters:
         - in: path
           name: id
@@ -206,53 +413,56 @@ paths:
             schema:
               type: object
               properties:
-                name:           { type: string }
+                name: { type: string }
                 total_capacity: { type: integer }
-                status:         { type: string, enum: [ACTIVE, SUSPENDED] }
+                status: { type: string, enum: [ACTIVE, SUSPENDED] }
       responses:
-        '200': { description: Updated }
+        "200": { description: Tenant updated }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     delete:
       tags: [Tenants]
-      summary: Delete tenant (SUPER_ADMIN)
+      summary: Delete tenant (SUPER_ADMIN only)
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string }
       responses:
-        '200': { description: Deleted }
+        "200": { description: Tenant deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /tenants/me:
     get:
       tags: [Tenants]
       summary: Get own tenant profile (TENANT_OWNER)
       parameters:
-        - in: header
-          name: X-Tenant-ID
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/TenantIdHeader"
       responses:
-        '200': { description: Tenant profile }
+        "200": { description: Tenant profile }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /tenants/staff:
     get:
       tags: [Tenants]
-      summary: List staff (TENANT_OWNER)
+      summary: List gate staff (TENANT_OWNER)
       parameters:
-        - in: header
-          name: X-Tenant-ID
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/TenantIdHeader"
       responses:
-        '200': { description: Staff list }
+        "200": { description: Staff list }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Tenants]
-      summary: Create gate staff (TENANT_OWNER)
+      summary: Create gate staff member (TENANT_OWNER)
       parameters:
-        - in: header
-          name: X-Tenant-ID
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/TenantIdHeader"
       requestBody:
         required: true
         content:
@@ -261,21 +471,24 @@ paths:
               type: object
               required: [name, email, password]
               properties:
-                name:     { type: string }
-                email:    { type: string }
+                name: { type: string }
+                email: { type: string }
                 password: { type: string }
       responses:
-        '201': { description: Staff created }
+        "201": { description: Staff created }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: Email already in use }
+
+  # ─── PARKING ───────────────────────────────────────────────────────────────
 
   /parking/spaces:
     get:
       tags: [Parking]
-      summary: List parking spaces
+      summary: List parking spaces (GATE_STAFF / TENANT_OWNER)
       parameters:
-        - in: header
-          name: X-Tenant-ID
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/TenantIdHeader"
         - in: query
           name: status
           schema: { type: string, enum: [FREE, OCCUPIED, RESERVED] }
@@ -283,15 +496,14 @@ paths:
           name: vehicle_type
           schema: { type: string, enum: [CAR, BIKE, TRUCK] }
       responses:
-        '200': { description: Space list }
+        "200": { description: Space list }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Parking]
-      summary: Create parking space (TENANT_OWNER)
+      summary: Create parking space (TENANT_OWNER only)
       parameters:
-        - in: header
-          name: X-Tenant-ID
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/TenantIdHeader"
       requestBody:
         required: true
         content:
@@ -300,21 +512,21 @@ paths:
               type: object
               required: [floor_level, space_number, vehicle_type]
               properties:
-                floor_level:  { type: string, example: "G" }
+                floor_level: { type: string, example: "G" }
                 space_number: { type: string, example: "A-101" }
                 vehicle_type: { type: string, enum: [CAR, BIKE, TRUCK] }
       responses:
-        '201': { description: Created }
+        "201": { description: Space created }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /parking/check-in:
     post:
       tags: [Parking]
       summary: Vehicle check-in (GATE_STAFF / TENANT_OWNER)
       parameters:
-        - in: header
-          name: X-Tenant-ID
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/TenantIdHeader"
       requestBody:
         required: true
         content:
@@ -323,21 +535,22 @@ paths:
               type: object
               required: [space_id, license_plate, vehicle_type]
               properties:
-                space_id:      { type: string }
+                space_id: { type: string }
                 license_plate: { type: string, example: "BA-2-CHA-1234" }
-                vehicle_type:  { type: string, enum: [CAR, BIKE, TRUCK] }
+                vehicle_type: { type: string, enum: [CAR, BIKE, TRUCK] }
       responses:
-        '201': { description: Checked in }
+        "201": { description: Vehicle checked in — returns QR ticket }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /parking/check-out:
     post:
       tags: [Parking]
-      summary: Vehicle check-out with fare calculation
+      summary: Vehicle check-out with fare calculation (GATE_STAFF / TENANT_OWNER)
       parameters:
-        - in: header
-          name: X-Tenant-ID
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/TenantIdHeader"
       requestBody:
         required: true
         content:
@@ -348,17 +561,18 @@ paths:
               properties:
                 ticket_id: { type: string }
       responses:
-        '200': { description: Checked out with fare }
+        "200": { description: Checked out — fare calculated and returned }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /parking/scan:
     post:
       tags: [Parking]
-      summary: Scan/validate a ticket QR code or license plate
+      summary: Scan / validate a QR code or license plate
       parameters:
-        - in: header
-          name: X-Tenant-ID
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/TenantIdHeader"
       requestBody:
         required: true
         content:
@@ -367,9 +581,13 @@ paths:
               type: object
               required: [code]
               properties:
-                code: { type: string, example: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d" }
+                code:
+                  {
+                    type: string,
+                    example: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+                  }
       responses:
-        '200':
+        "200":
           description: Ticket scan success
           content:
             application/json:
@@ -377,32 +595,99 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  ticket: { type: object }
+                  ticket: { $ref: "#/components/schemas/Ticket" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /parking/tickets:
     get:
       tags: [Parking]
-      summary: Get ticket list (paginated)
+      summary: Get paginated ticket history (GATE_STAFF / TENANT_OWNER)
       parameters:
-        - in: header
-          name: X-Tenant-ID
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/TenantIdHeader"
         - in: query
           name: status
           schema: { type: string, enum: [ACTIVE, PENDING_PAYMENT, PAID] }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
       responses:
-        '200': { description: Ticket list }
+        "200": { description: Ticket list }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  # ─── OPERATOR ──────────────────────────────────────────────────────────────
+
+  /operator/check-in:
+    post:
+      tags: [Operator]
+      summary: Gate operator — vehicle check-in (GATE_STAFF / TENANT_OWNER)
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vehiclePlateNumber, vehicleType]
+              properties:
+                vehiclePlateNumber: { type: string, example: "BA-2-CHA-1234" }
+                vehicleType: { type: string, enum: [CAR, BIKE, TRUCK] }
+                floor: { type: string, example: "G" }
+      responses:
+        "201":
+          {
+            description: Vehicle checked in — returns print-ready receipt with QR,
+          }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /operator/check-out:
+    post:
+      tags: [Operator]
+      summary: Gate operator — vehicle check-out and fare settlement (GATE_STAFF / TENANT_OWNER)
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vehiclePlateNumber]
+              properties:
+                vehiclePlateNumber: { type: string, example: "BA-2-CHA-1234" }
+      responses:
+        "200": { description: Vehicle checked out — fare calculated }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /operator/stats:
+    get:
+      tags: [Operator]
+      summary: Daily gate statistics (GATE_STAFF / TENANT_OWNER)
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      responses:
+        "200": { description: Daily stats — vehicle count, revenue, sessions }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  # ─── RATES ─────────────────────────────────────────────────────────────────
 
   /rates:
     post:
       tags: [Rates]
       summary: Create hourly rate (TENANT_OWNER)
       parameters:
-        - in: header
-          name: X-Tenant-ID
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/TenantIdHeader"
       requestBody:
         required: true
         content:
@@ -411,30 +696,29 @@ paths:
               type: object
               required: [vehicle_type, rate_per_hour]
               properties:
-                vehicle_type:  { type: string, enum: [CAR, BIKE, TRUCK] }
+                vehicle_type: { type: string, enum: [CAR, BIKE, TRUCK] }
                 rate_per_hour: { type: number, example: 50 }
       responses:
-        '201': { description: Rate created }
+        "201": { description: Rate created }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     get:
       tags: [Rates]
-      summary: Get all rates for tenant
+      summary: Get all rates for tenant (TENANT_OWNER / GATE_STAFF)
       parameters:
-        - in: header
-          name: X-Tenant-ID
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/TenantIdHeader"
       responses:
-        '200': { description: Rate list }
+        "200": { description: Rate list }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /rates/{id}:
     patch:
       tags: [Rates]
-      summary: Update hourly rate
+      summary: Update hourly rate (TENANT_OWNER)
       parameters:
-        - in: header
-          name: X-Tenant-ID
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/TenantIdHeader"
         - in: path
           name: id
           required: true
@@ -449,23 +733,30 @@ paths:
               properties:
                 rate_per_hour: { type: number }
       responses:
-        '200': { description: Rate updated }
+        "200": { description: Rate updated }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ─── ANALYTICS ─────────────────────────────────────────────────────────────
 
   /analytics/global:
     get:
       tags: [Analytics]
-      summary: System-wide analytics (SUPER_ADMIN)
+      summary: System-wide analytics (SUPER_ADMIN only)
       responses:
-        '200': { description: Global stats }
+        "200": { description: Global stats }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /analytics/tenant:
     get:
       tags: [Analytics]
-      summary: Tenant analytics (TENANT_OWNER)
+      summary: Tenant-scoped revenue and occupancy analytics (TENANT_OWNER)
       parameters:
-        - in: header
-          name: X-Tenant-ID
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/TenantIdHeader"
       responses:
-        '200': { description: Tenant stats }
+        "200": { description: Tenant stats }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
