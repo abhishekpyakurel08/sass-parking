@@ -12,9 +12,9 @@ const operatorStore = useOperatorStore()
 const activeTab = ref<"check-in" | "check-out" | "stats">("check-in")
 
 // Check-in form
-const checkInForm = reactive({ vehiclePlateNumber: "", vehicleType: "CAR", floor: "" })
+const checkInForm = reactive({ vehiclePlateNumber: "", vehicleType: "CAR" }) // Removed 'floor_level'
 const checkInSuccess = ref(false)
-const assignedSlot = ref("")
+const assignedSlot = ref("") // This can also be removed if not needed elsewhere for display
 const checkInQrCode = ref("")
 
 // Check-out form
@@ -31,9 +31,10 @@ const submitCheckIn = async () => {
   try {
     const data = await operatorStore.checkIn(checkInForm)
     checkInSuccess.value = true
-    assignedSlot.value = data.assignedSlot
+    // assignedSlot.value = data.assignedSlot // Removed as slot assignment is no longer tracked
     checkInQrCode.value = data.qrCode
     checkInForm.vehiclePlateNumber = ""
+    // checkInForm.floor_level = "" // Removed as floor_level is no longer tracked
   } catch {
     // Toast already shown by store
   }
@@ -118,14 +119,19 @@ const switchTab = (tab: "check-in" | "check-out" | "stats") => {
                       <option value="BIKE">Motorcycle</option>
                       <option value="CAR">Standard Car</option>
                       <option value="TRUCK">Truck / Heavy</option>
+                      <option value="SUV">SUV</option>
+                      <option value="BUS">Bus</option>
                     </select>
                   </div>
 
+                  <!-- Removed Floor Preference as it's no longer tracked -->
+                  <!--
                   <div class="space-y-1.5">
                     <label class="text-sm font-semibold text-slate-700">Floor Preference (Optional)</label>
-                    <input v-model="checkInForm.floor" type="text" placeholder="e.g. Ground"
+                    <input v-model="checkInForm.floor_level" type="text" placeholder="e.g. Ground"
                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none text-slate-900 font-medium" />
                   </div>
+                  -->
 
                   <button type="submit" :disabled="operatorStore.isLoading" 
                           class="w-full bg-[#10b981] hover:bg-[#059669] disabled:bg-[#10b981]/50 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20 mt-4">
@@ -144,10 +150,13 @@ const switchTab = (tab: "check-in" | "check-out" | "stats") => {
                 </div>
                 
                 <div class="space-y-4 relative z-10">
+                  <!-- Removed Assigned Bay display -->
+                  <!--
                   <div class="bg-white/10 rounded-xl p-4 flex justify-between items-center backdrop-blur-sm border border-white/5">
                     <span class="text-slate-400 font-medium">Assigned Bay</span>
-                    <span class="text-2xl font-black text-emerald-400">{{ assignedSlot }}</span>
+                    <span class="text-2xl font-black text-emerald-400">{{ assignedSlot || 'N/A' }}</span>
                   </div>
+                  -->
                   
                   <div v-if="checkInQrCode" class="mt-6 flex flex-col items-center bg-white p-4 rounded-xl">
                     <img :src="checkInQrCode" alt="Parking QR" class="w-48 h-48 rounded-lg shadow-sm" />

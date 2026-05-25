@@ -100,7 +100,7 @@
             <p class="mt-4 text-slate-600 leading-7">Created with direct operator feedback to keep check-in, check-out, and shift handover simple.</p>
           </div>
           <div class="about-card reveal-on-scroll rounded-3xl bg-white border border-slate-200 p-6 shadow-sm">
-            <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center"><ShieldCheck class="w-6 h-6" /></div>
+            <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center"></div> <!-- Removed ShieldCheck -->
             <h3 class="mt-6 text-3xl font-extrabold text-slate-900">Revenue Integrity</h3>
             <p class="mt-4 text-slate-600 leading-7">Reduce manual errors through automatic fare calculation, clear ticket trails, and auditable records.</p>
           </div>
@@ -264,7 +264,7 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from "vue"
-import { Car, MapPin, Users, ShieldCheck, Star, Ticket, Printer, Cog, BarChart3, Check } from "lucide-vue-next"
+import { Car, Users, Star, Ticket, Printer, Cog, BarChart3, Check } from "lucide-vue-next" // Removed MapPin, ShieldCheck
 import NavBar from '../../components/NavBar.vue'
 import AppFooter from '../../components/AppFooter.vue'
 

@@ -1,5 +1,3 @@
-
-
 export enum UserRole {
   SUPER_ADMIN = 'SUPER_ADMIN',
   TENANT_OWNER = 'TENANT_OWNER',
@@ -15,16 +13,28 @@ export enum VehicleType {
   CAR = 'CAR',
   BIKE = 'BIKE',
   TRUCK = 'TRUCK',
-}
-
-export enum SpaceStatus {
-  FREE = 'FREE',
-  OCCUPIED = 'OCCUPIED',
-  RESERVED = 'RESERVED',
+  SUV = 'SUV',
+  BUS = 'BUS',
 }
 
 export enum TicketStatus {
   ACTIVE = 'ACTIVE',
   PENDING_PAYMENT = 'PENDING_PAYMENT',
   PAID = 'PAID',
+}
+
+export enum CustomerStatus {
+  ACTIVE = 'ACTIVE',
+  SUSPENDED = 'SUSPENDED',
+  EXPIRED = 'EXPIRED',
+}
+
+export enum PaymentMethod {
+  CASH = 'CASH',
+  CARD = 'CARD',
+  ESEWA = 'ESEWA',
+  KHALTI = 'KHALTI',
+  IMEPAY = 'IMEPAY',
+  CONNECTIPS = 'CONNECTIPS',
+  WALLET = 'WALLET',
 }

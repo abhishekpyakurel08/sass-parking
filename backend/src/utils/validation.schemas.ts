@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PaymentMethod } from '../types/enums.js';
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export const registerSchema = z.object({
@@ -32,37 +33,60 @@ export const updateTenantSchema = z.object({
   status: z.enum(['ACTIVE', 'SUSPENDED']).optional(),
 });
 
-// ── Parking Spaces ────────────────────────────────────────────────────────────
-export const createSpaceSchema = z.object({
-  floor_level: z.string().min(1, 'Floor level is required'),
-  space_number: z.string().min(1, 'Space number is required'),
-  vehicle_type: z.enum(['CAR', 'BIKE', 'TRUCK']),
-});
-
-export const updateSpaceSchema = z.object({
-  status: z.enum(['FREE', 'OCCUPIED', 'RESERVED']).optional(),
-  vehicle_type: z.enum(['CAR', 'BIKE', 'TRUCK']).optional(),
-});
-
 // ── Check-in / Check-out ──────────────────────────────────────────────────────
 export const checkInSchema = z.object({
-  space_id: z.string().min(1, 'space_id is required'),
-  license_plate: z.string().min(2).max(20, 'License plate too long'),
-  vehicle_type: z.enum(['CAR', 'BIKE', 'TRUCK']),
+  license_plate: z.string().min(2).max(20, 'License plate too long').optional(),
+  vehicle_type: z.enum(['CAR', 'BIKE', 'TRUCK', 'SUV', 'BUS']),
+  customer_code: z.string().min(1, 'Customer code is required').max(50, 'Customer code too long').optional(),
+  notes: z.string().max(255).optional(),
+})
+.refine(data => data.license_plate || data.customer_code, {
+  message: 'Either license plate or customer code must be provided for check-in',
+  path: ['license_plate', 'customer_code'],
 });
 
 export const checkOutSchema = z.object({
   ticket_id: z.string().min(1, 'ticket_id is required'),
 });
 
+export const lostTicketSchema = z.object({
+  vehicle_type: z.enum(['CAR', 'BIKE', 'TRUCK', 'SUV', 'BUS']),
+  license_plate: z.string().min(2).max(20, 'License plate too long'),
+  assumed_duration_hours: z.number().int().positive('Assumed duration must be a positive integer'),
+});
+
+export const processPaymentSchema = z.object({
+  ticket_id: z.string().min(1, 'Ticket ID is required'),
+  payment_method: z.nativeEnum(PaymentMethod),
+  amount_received: z.number().positive('Amount received must be positive').optional(),
+  transaction_reference: z.string().min(1, 'Transaction reference is required').optional(),
+}).superRefine((data, ctx) => {
+  if (data.payment_method === PaymentMethod.CASH && data.amount_received === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Amount received is required for cash payments',
+      path: ['amount_received'],
+    });
+  }
+  if (data.payment_method !== PaymentMethod.CASH && data.transaction_reference === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Transaction reference is required for digital payments',
+      path: ['transaction_reference'],
+    });
+  }
+});
+
 // ── Rates ─────────────────────────────────────────────────────────────────────
 export const createRateSchema = z.object({
-  vehicle_type: z.enum(['CAR', 'BIKE', 'TRUCK']),
+  vehicle_type: z.enum(['CAR', 'BIKE', 'TRUCK', 'SUV', 'BUS']),
   rate_per_hour: z.number().positive('Rate must be a positive number'),
+  lost_ticket_penalty: z.number().min(0).default(0).optional(),
 });
 
 export const updateRateSchema = z.object({
-  rate_per_hour: z.number().positive('Rate must be a positive number'),
+  rate_per_hour: z.number().positive('Rate must be a positive number').optional(),
+  lost_ticket_penalty: z.number().min(0).optional(),
 });
 
 // ── Staff creation ────────────────────────────────────────────────────────────
@@ -75,5 +99,26 @@ export const createStaffSchema = z.object({
 // ── Scan ──────────────────────────────────────────────────────────────────────
 export const scanSchema = z.object({
   code: z.string().min(1, 'Scan code (barcode UUID or license plate) is required'),
+});
+
+// ── Customer Management ───────────────────────────────────────────────────────
+export const createCustomerSchema = z.object({
+  name: z.string().min(2, 'Customer name is required'),
+  customer_code: z.string().min(1, 'Customer code is required').max(50, 'Customer code too long'),
+  email: z.string().email('Invalid email address').optional(),
+  phone_number: z.string().min(7).max(20).optional(),
+  discount_percentage: z.number().min(0).max(100).default(0).optional(),
+});
+
+export const updateCustomerSchema = z.object({
+  name: z.string().min(2, 'Customer name is required').optional(),
+  email: z.string().email('Invalid email address').optional(),
+  phone_number: z.string().min(7).max(20).optional(),
+  status: z.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED']).optional(),
+  discount_percentage: z.number().min(0).max(100).optional(),
+});
+
+export const regenerateCustomerQrSchema = z.object({
+  customer_id: z.string().min(1, 'Customer ID is required'),
 });
 

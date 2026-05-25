@@ -1,9 +1,8 @@
 export interface IParkingTicket {
   tenantId: any;
-  slotId: any;
   ticketNumber?: string;
   vehiclePlateNumber: string;
-  vehicleType: 'BIKE' | 'CAR' | 'TRUCK';
+  vehicleType: 'BIKE' | 'CAR' | 'TRUCK' | 'SUV' | 'BUS';
   checkInTime: Date;
   checkOutTime?: Date;
   totalCost?: number;
@@ -12,4 +11,6 @@ export interface IParkingTicket {
   gateStaffOut?: any;
   createdAt: Date;
   updatedAt: Date;
+  slot_number?: string; // Added as it's now embedded in the ticket
+  floor_level?: string; // Added as it's now embedded in the ticket
 }

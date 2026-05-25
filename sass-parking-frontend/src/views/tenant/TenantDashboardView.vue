@@ -20,7 +20,7 @@ const activeTab = ref<Tab>(authStore.user?.role === "GATE_STAFF" ? "check-in" : 
 const isTenantAdmin = authStore.user?.role === "TENANT_OWNER"
 
 // Gate operator state
-const checkInForm = reactive({ vehiclePlateNumber: "", vehicleType: "CAR", floor: "" })
+const checkInForm = reactive({ vehiclePlateNumber: "", vehicleType: "CAR", floor_level: "" }) // Changed 'floor' to 'floor_level'
 const checkInSuccess = ref(false)
 const assignedSlot = ref("")
 const checkInQrCode = ref("")
@@ -59,6 +59,7 @@ const submitCheckIn = async () => {
     checkInQrCode.value = data.qrCode
     lastTicketNumber.value = data.ticketNumber
     checkInForm.vehiclePlateNumber = ""
+    checkInForm.floor_level = "" // Clear floor after submission
   } catch { /* toast shown in store */ }
 }
 
@@ -222,11 +223,13 @@ onMounted(() => {
                       <option value="BIKE">Motorcycle</option>
                       <option value="CAR">Standard Car</option>
                       <option value="TRUCK">Truck / Heavy</option>
+                      <option value="SUV">SUV</option>
+                      <option value="BUS">Bus</option>
                     </select>
                   </div>
                   <div>
                     <label class="text-sm font-semibold text-slate-700">Floor (Optional)</label>
-                    <input v-model="checkInForm.floor" type="text" placeholder="e.g. Ground" class="mt-1.5 w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none text-slate-900 font-medium" />
+                    <input v-model="checkInForm.floor_level" type="text" placeholder="e.g. Ground" class="mt-1.5 w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none text-slate-900 font-medium" />
                   </div>
                   <button type="submit" :disabled="operatorStore.isLoading" class="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-500/50 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20 mt-2">
                     <Loader2 v-if="operatorStore.isLoading" class="w-5 h-5 animate-spin" />
@@ -246,7 +249,7 @@ onMounted(() => {
 
                 <div class="bg-white/10 rounded-xl p-4 flex justify-between items-center mb-4">
                   <span class="text-slate-400">Assigned Bay</span>
-                  <span class="text-2xl font-black text-emerald-400">{{ assignedSlot }}</span>
+                  <span class="text-2xl font-black text-emerald-400">{{ assignedSlot || 'N/A' }}</span>
                 </div>
                 <div v-if="checkInQrCode" class="flex flex-col items-center bg-white p-4 rounded-xl">
                   <img :src="checkInQrCode" alt="QR" class="w-40 h-40 rounded-lg" />

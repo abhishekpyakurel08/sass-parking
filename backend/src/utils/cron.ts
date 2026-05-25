@@ -1,8 +1,7 @@
 import cron from 'node-cron';
 import { Ticket } from '../models/ticket.model.js';
-import { ParkingSpace } from '../models/parkingSpace.model.js';
 import { logger } from '../utils/logger.js';
-import { TicketStatus, SpaceStatus } from '../types/enums.js';
+import { TicketStatus } from '../types/enums.js';
 
 /**
  * Cron job: runs every day at midnight
@@ -24,10 +23,6 @@ export const startCronJobs = (): void => {
         ticket.status = TicketStatus.PENDING_PAYMENT;
         ticket.check_out_time = new Date();
         await ticket.save();
-
-        await ParkingSpace.findByIdAndUpdate(ticket.space_id, {
-          $set: { status: SpaceStatus.FREE },
-        });
       }
 
       logger.info(`[CRON] Cleaned up ${staleTickets.length} stale tickets`);

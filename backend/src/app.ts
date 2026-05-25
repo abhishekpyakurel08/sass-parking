@@ -26,6 +26,7 @@ import parkingRoutes  from './routes/parking.route.js';
 import ratesRoutes    from './routes/rates.route.js';
 import analyticsRoutes from './routes/analytics.route.js';
 import operatorRoutes  from './routes/operator.routes.js';
+import customerRoutes  from './routes/customer.route.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -120,6 +121,7 @@ app.use('/api/v1/user',      authLimiter, userRoutes);
 app.use('/api/v1/tenants',   tenantRoutes);
 app.use('/api/v1/parking',   parkingRoutes);
 app.use('/api/v1/rates',     ratesRoutes);
+app.use('/api/v1/customers', customerRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1',           operatorRoutes);
 
