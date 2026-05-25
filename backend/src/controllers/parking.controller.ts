@@ -161,7 +161,7 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
       ? { _id: ticket_id, tenant_id: tenantId, status: TicketStatus.ACTIVE }
       : { ticket_number: ticket_id, tenant_id: tenantId, status: TicketStatus.ACTIVE };
 
-    const ticket = await Ticket.findOne(query).session(session).populate('customer_id'); // Populate customer_id
+    const ticket = await Ticket.findOne(query).session(session).populate('customer_id');
 
     if (!ticket) {
       await session.abortTransaction();
@@ -170,9 +170,7 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
 
     const checkOutTime = new Date();
     const durationMs = checkOutTime.getTime() - ticket.check_in_time.getTime();
-    const durationMins = durationMs / (1000 * 60);
-
-    const hours = Math.ceil(durationMins / 60) || 1;
+    let durationMins = durationMs / (1000 * 60);
 
     const rateDoc = await HourlyRate.findOne({
       tenant_id: tenantId,
@@ -180,11 +178,26 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
     }).session(session);
 
     const rate_per_hour = rateDoc?.rate_per_hour ?? 50; // Fallback default
-    let base_fare = hours * rate_per_hour;
+    const grace_period_minutes = rateDoc?.grace_period_minutes ?? 0; // Get grace period
+
+    let base_fare = 0;
     let discount_amount = 0;
+    let total_charge_before_discount_or_grace = 0; // To calculate the 'Subtotal' in the receipt
+
+    // Apply grace period first
+    if (durationMins > grace_period_minutes) {
+      durationMins -= grace_period_minutes; // Deduct grace period from chargeable time
+      const hours = Math.ceil(durationMins / 60) || 1;
+      base_fare = hours * rate_per_hour;
+      total_charge_before_discount_or_grace = (hours * rate_per_hour) + (rate_per_hour * (grace_period_minutes / 60)); // Original calculation including grace period minutes if it was charged
+    } else {
+      // If duration is within grace period, fare is 0
+      base_fare = 0;
+      total_charge_before_discount_or_grace = 0; // No charge means no subtotal from rate
+    }
 
     // Apply customer discount if available
-    if (ticket.customer_id && typeof (ticket.customer_id as any).discount_percentage === 'number') {
+    if (ticket.customer_id && typeof (ticket.customer_id as any).discount_percentage === 'number' && base_fare > 0) {
       const customerDiscountPct = (ticket.customer_id as any).discount_percentage;
       discount_amount = base_fare * (customerDiscountPct / 100);
       base_fare -= discount_amount;
@@ -203,9 +216,11 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
       ticketId: ticket._id,
       ticket_number: ticket.ticket_number,
       license_plate: ticket.license_plate,
-      durationHours: hours,
+      durationMinutes: durationMs / (1000 * 60), // Log actual duration
+      chargeableDurationMinutes: durationMins, // Log duration after grace period
       fare_amount: base_fare,
       discount_amount,
+      grace_period_minutes,
     });
 
     res.status(200).json({
@@ -217,9 +232,10 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
         vehicle_type: ticket.vehicle_type,
         check_in_time: ticket.check_in_time,
         check_out_time: checkOutTime,
-        duration_hours: hours,
+        duration_minutes: durationMs / (1000 * 60), // Total duration
+        chargeable_duration_minutes: durationMins, // Duration after grace period
         rate_per_hour,
-        subtotal: hours * rate_per_hour, // Include subtotal before discount for clarity
+        subtotal: total_charge_before_discount_or_grace, // This is the base amount before any discounts or grace period deductions were visually applied.
         discount: discount_amount,
         total_amount: base_fare,
         status: ticket.status,

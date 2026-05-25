@@ -82,11 +82,13 @@ export const createRateSchema = z.object({
   vehicle_type: z.enum(['CAR', 'BIKE', 'TRUCK', 'SUV', 'BUS']),
   rate_per_hour: z.number().positive('Rate must be a positive number'),
   lost_ticket_penalty: z.number().min(0).default(0).optional(),
+  grace_period_minutes: z.number().int().min(0).default(0).optional(), // Added grace_period_minutes
 });
 
 export const updateRateSchema = z.object({
   rate_per_hour: z.number().positive('Rate must be a positive number').optional(),
   lost_ticket_penalty: z.number().min(0).optional(),
+  grace_period_minutes: z.number().int().min(0).optional(), // Added grace_period_minutes
 });
 
 // ── Staff creation ────────────────────────────────────────────────────────────

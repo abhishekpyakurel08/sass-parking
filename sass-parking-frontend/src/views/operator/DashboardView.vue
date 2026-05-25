@@ -19,7 +19,8 @@ const checkInQrCode = ref("")
 
 // Check-out form
 const checkOutForm = reactive({ vehiclePlateNumber: "" })
-const checkOutSummary = ref<{ durationHours: number; ratePerHour: number; totalCharge: number } | null>(null)
+// Updated type to match backend response (duration_hours, total_amount, subtotal, discount)
+const checkOutSummary = ref<{ duration_hours: number; rate_per_hour: number; total_amount: number; subtotal: number; discount: number } | null>(null) 
 
 const handleLogout = async () => {
   await authStore.logout()
@@ -204,15 +205,23 @@ const switchTab = (tab: "check-in" | "check-out" | "stats") => {
                 <div class="space-y-3">
                   <div class="flex justify-between items-center py-2 border-b border-slate-100">
                     <span class="text-slate-500 font-medium">Duration</span>
-                    <span class="font-bold text-slate-900">{{ checkOutSummary.durationHours }} hour(s)</span>
+                    <span class="font-bold text-slate-900">{{ Math.floor(checkOutSummary.duration_hours) }} hr(s) {{ Math.round((checkOutSummary.duration_hours % 1) * 60) }} min</span>
                   </div>
                   <div class="flex justify-between items-center py-2 border-b border-slate-100">
                     <span class="text-slate-500 font-medium">Rate Base</span>
-                    <span class="font-bold text-slate-900">Rs. {{ checkOutSummary.ratePerHour }}/hr</span>
+                    <span class="font-bold text-slate-900">Rs. {{ checkOutSummary.rate_per_hour }}/hr</span>
+                  </div>
+                  <div class="flex justify-between items-center py-2 border-b border-slate-100">
+                    <span class="text-slate-500 font-medium">Subtotal</span>
+                    <span class="font-bold text-slate-900">Rs. {{ checkOutSummary.subtotal.toFixed(2) }}</span>
+                  </div>
+                  <div v-if="checkOutSummary.discount > 0" class="flex justify-between items-center py-2 border-b border-slate-100">
+                    <span class="text-slate-500 font-medium">Discount</span>
+                    <span class="font-bold text-red-500">- Rs. {{ checkOutSummary.discount.toFixed(2) }}</span>
                   </div>
                   <div class="flex justify-between items-center pt-4 mt-2">
                     <span class="text-lg text-slate-900 font-black">Total Due</span>
-                    <span class="text-3xl font-black text-emerald-600">Rs. {{ checkOutSummary.totalCharge.toFixed(2) }}</span>
+                    <span class="text-3xl font-black text-emerald-600">Rs. {{ checkOutSummary.total_amount.toFixed(2) }}</span>
                   </div>
                 </div>
                 

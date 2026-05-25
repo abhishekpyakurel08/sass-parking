@@ -20,13 +20,14 @@ const activeTab = ref<Tab>(authStore.user?.role === "GATE_STAFF" ? "check-in" : 
 const isTenantAdmin = authStore.user?.role === "TENANT_OWNER"
 
 // Gate operator state
-const checkInForm = reactive({ vehiclePlateNumber: "", vehicleType: "CAR", floor_level: "" }) // Changed 'floor' to 'floor_level'
+const checkInForm = reactive({ vehiclePlateNumber: "", vehicleType: "CAR", floor: "" })
 const checkInSuccess = ref(false)
 const assignedSlot = ref("")
 const checkInQrCode = ref("")
 const lastTicketNumber = ref("")
 const checkOutForm = reactive({ vehiclePlateNumber: "" })
-const checkOutSummary = ref<{ durationHours: number; ratePerHour: number; totalCharge: number } | null>(null)
+// Updated type to match backend response (duration_hours, total_amount, subtotal, discount)
+const checkOutSummary = ref<{ duration_hours: number; rate_per_hour: number; total_amount: number; subtotal: number; discount: number } | null>(null) 
 
 // Staff Management
 const newStaffForm = reactive({ name: "", email: "", password: "", apiKey: "" })
@@ -59,7 +60,7 @@ const submitCheckIn = async () => {
     checkInQrCode.value = data.qrCode
     lastTicketNumber.value = data.ticketNumber
     checkInForm.vehiclePlateNumber = ""
-    checkInForm.floor_level = "" // Clear floor after submission
+    checkInForm.floor = "" // Clear floor after submission
   } catch { /* toast shown in store */ }
 }
 
@@ -229,7 +230,7 @@ onMounted(() => {
                   </div>
                   <div>
                     <label class="text-sm font-semibold text-slate-700">Floor (Optional)</label>
-                    <input v-model="checkInForm.floor_level" type="text" placeholder="e.g. Ground" class="mt-1.5 w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none text-slate-900 font-medium" />
+                    <input v-model="checkInForm.floor" type="text" placeholder="e.g. Ground" class="mt-1.5 w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none text-slate-900 font-medium" />
                   </div>
                   <button type="submit" :disabled="operatorStore.isLoading" class="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-500/50 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20 mt-2">
                     <Loader2 v-if="operatorStore.isLoading" class="w-5 h-5 animate-spin" />
@@ -282,9 +283,11 @@ onMounted(() => {
               <div v-if="checkOutSummary" class="bg-white border-2 border-emerald-500 p-8 rounded-2xl shadow-xl">
                 <div class="flex items-center gap-3 mb-6 text-emerald-600"><CheckCircle class="w-8 h-8" /><h3 class="text-2xl font-bold">Payment Settled</h3></div>
                 <div class="space-y-3">
-                  <div class="flex justify-between py-2 border-b border-slate-100"><span class="text-slate-500">Duration</span><span class="font-bold text-slate-900">{{ checkOutSummary.durationHours }} hr(s)</span></div>
-                  <div class="flex justify-between py-2 border-b border-slate-100"><span class="text-slate-500">Rate</span><span class="font-bold text-slate-900">Rs. {{ checkOutSummary.ratePerHour }}/hr</span></div>
-                  <div class="flex justify-between pt-4"><span class="text-lg font-black text-slate-900">Total</span><span class="text-3xl font-black text-emerald-600">Rs. {{ checkOutSummary.totalCharge.toFixed(2) }}</span></div>
+                  <div class="flex justify-between py-2 border-b border-slate-100"><span class="text-slate-500">Duration</span><span class="font-bold text-slate-900">{{ Math.floor(checkOutSummary.duration_hours) }} hr(s) {{ Math.round((checkOutSummary.duration_hours % 1) * 60) }} min</span></div>
+                  <div class="flex justify-between py-2 border-b border-slate-100"><span class="text-slate-500">Rate</span><span class="font-bold text-slate-900">Rs. {{ checkOutSummary.rate_per_hour }}/hr</span></div>
+                  <div class="flex justify-between py-2 border-b border-slate-100"><span class="text-slate-500">Subtotal</span><span class="font-bold text-slate-900">Rs. {{ checkOutSummary.subtotal.toFixed(2) }}</span></div>
+                  <div v-if="checkOutSummary.discount > 0" class="flex justify-between py-2 border-b border-slate-100"><span class="text-slate-500">Discount</span><span class="font-bold text-red-500">- Rs. {{ checkOutSummary.discount.toFixed(2) }}</span></div>
+                  <div class="flex justify-between pt-4"><span class="text-lg font-black text-slate-900">Total</span><span class="text-3xl font-black text-emerald-600">Rs. {{ checkOutSummary.total_amount.toFixed(2) }}</span></div>
                 </div>
                 <button @click="checkOutSummary = null" class="mt-6 w-full px-6 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-semibold hover:bg-slate-200 transition-colors">Next Vehicle</button>
               </div>
@@ -295,15 +298,15 @@ onMounted(() => {
           <div v-if="activeTab === 'stats'">
             <div v-if="operatorStore.stats" class="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <div class="flex items-center gap-3 text-slate-500 mb-4"><Car class="w-5 h-5 text-blue-500" /><h3 class="font-bold">Vehicles Today</h3></div>
+                <div class="flex items-center gap-3 text-slate-500 mb-4"><Car class="w-5 h-5 text-blue-500" /></div>
                 <p class="text-4xl font-black text-slate-900">{{ operatorStore.stats.totalVehicles }}</p>
               </div>
               <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <div class="flex items-center gap-3 text-slate-500 mb-4"><CheckCircle class="w-5 h-5 text-emerald-500" /><h3 class="font-bold">Completed Sessions</h3></div>
+                <div class="flex items-center gap-3 text-slate-500 mb-4"><CheckCircle class="w-5 h-5 text-emerald-500" /></div>
                 <p class="text-4xl font-black text-slate-900">{{ operatorStore.stats.completedSessions }}</p>
               </div>
               <div class="bg-gradient-to-br from-emerald-500 to-emerald-700 p-6 rounded-2xl shadow-lg shadow-emerald-500/30 text-white">
-                <div class="flex items-center gap-3 text-emerald-100 mb-4"><BarChart3 class="w-5 h-5" /><h3 class="font-bold">Daily Revenue</h3></div>
+                <div class="flex items-center gap-3 text-emerald-100 mb-4"><BarChart3 class="w-5 h-5" /></div>
                 <p class="text-4xl font-black">Rs. {{ operatorStore.stats.totalRevenue.toFixed(2) }}</p>
               </div>
             </div>
@@ -315,19 +318,19 @@ onMounted(() => {
             <div v-if="tenantStore.isLoading" class="flex justify-center p-16"><Loader2 class="w-8 h-8 text-indigo-500 animate-spin" /></div>
             <div v-else-if="tenantStore.revenueAnalytics" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <div class="flex items-center gap-3 text-slate-500 mb-4"><BarChart3 class="w-5 h-5 text-indigo-500" /><h3 class="font-bold">Today</h3></div>
+                <div class="flex items-center gap-3 text-slate-500 mb-4"><BarChart3 class="w-5 h-5 text-indigo-500" /></div>
                 <p class="text-4xl font-black text-slate-900">Rs. {{ tenantStore.revenueAnalytics.today.toFixed(2) }}</p>
               </div>
               <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <div class="flex items-center gap-3 text-slate-500 mb-4"><BarChart3 class="w-5 h-5 text-indigo-500" /><h3 class="font-bold">1 Month</h3></div>
+                <div class="flex items-center gap-3 text-slate-500 mb-4"><BarChart3 class="w-5 h-5 text-indigo-500" /></div>
                 <p class="text-4xl font-black text-slate-900">Rs. {{ tenantStore.revenueAnalytics.oneMonth.toFixed(2) }}</p>
               </div>
               <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <div class="flex items-center gap-3 text-slate-500 mb-4"><BarChart3 class="w-5 h-5 text-indigo-500" /><h3 class="font-bold">3 Months</h3></div>
+                <div class="flex items-center gap-3 text-slate-500 mb-4"><BarChart3 class="w-5 h-5 text-indigo-500" /></div>
                 <p class="text-4xl font-black text-slate-900">Rs. {{ tenantStore.revenueAnalytics.threeMonths.toFixed(2) }}</p>
               </div>
               <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <div class="flex items-center gap-3 text-slate-500 mb-4"><BarChart3 class="w-5 h-5 text-indigo-500" /><h3 class="font-bold">6 Months</h3></div>
+                <div class="flex items-center gap-3 text-slate-500 mb-4"><BarChart3 class="w-5 h-5 text-indigo-500" /></div>
                 <p class="text-4xl font-black text-slate-900">Rs. {{ tenantStore.revenueAnalytics.sixMonths.toFixed(2) }}</p>
               </div>
             </div>
@@ -355,15 +358,15 @@ onMounted(() => {
                   <tbody>
                     <tr v-for="ticket in tenantStore.ticketHistory" :key="ticket._id" class="border-b border-slate-100 hover:bg-slate-50">
                       <td class="px-6 py-4 font-mono font-bold text-indigo-600">{{ ticket.ticketNumber || 'N/A' }}</td>
-                      <td class="px-6 py-4 font-bold text-slate-900 uppercase">{{ ticket.vehiclePlateNumber }}</td>
-                      <td class="px-6 py-4 font-medium text-slate-600">{{ ticket.vehicleType }}</td>
+                      <td class="px-6 py-4 font-bold text-slate-900 uppercase">{{ ticket.license_plate }}</td>
+                      <td class="px-6 py-4 font-medium text-slate-600">{{ ticket.vehicle_type }}</td>
                       <td class="px-6 py-4">
-                        <span :class="ticket.paymentStatus === 'PAID' ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50'" class="px-3 py-1 rounded-full text-xs font-bold">
-                          {{ ticket.paymentStatus }}
+                        <span :class="ticket.status === 'PAID' ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50'" class="px-3 py-1 rounded-full text-xs font-bold">
+                          {{ ticket.status }}
                         </span>
                       </td>
-                      <td class="px-6 py-4 font-bold text-slate-900">Rs. {{ ticket.totalCost.toFixed(2) }}</td>
-                      <td class="px-6 py-4 font-medium text-slate-600">{{ new Date(ticket.checkInTime).toLocaleString() }}</td>
+                      <td class="px-6 py-4 font-bold text-slate-900">Rs. {{ (ticket.fare_amount + ticket.penalty_amount - ticket.discount_amount).toFixed(2) }}</td>
+                      <td class="px-6 py-4 font-medium text-slate-600">{{ new Date(ticket.check_in_time).toLocaleString() }}</td>
                     </tr>
                     <tr v-if="tenantStore.ticketHistory.length === 0">
                       <td colspan="6" class="px-6 py-8 text-center text-slate-500 font-medium">No tickets found.</td>

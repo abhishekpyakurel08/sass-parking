@@ -7,7 +7,7 @@ import { VehicleType } from '../types/enums.js';
 export const createRate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const tenantId = req.tenant!.tenantId;
-    const { vehicle_type, rate_per_hour, lost_ticket_penalty } = req.body;
+    const { vehicle_type, rate_per_hour, lost_ticket_penalty, grace_period_minutes } = req.body; // Include grace_period_minutes
 
     const existingRate = await HourlyRate.findOne({ tenant_id: tenantId, vehicle_type });
     if (existingRate) {
@@ -19,6 +19,7 @@ export const createRate = async (req: Request, res: Response, next: NextFunction
       vehicle_type,
       rate_per_hour,
       lost_ticket_penalty: lost_ticket_penalty ?? 0,
+      grace_period_minutes: grace_period_minutes ?? 0, // Save grace_period_minutes
     });
 
     res.status(201).json({ success: true, data: newRate });
@@ -58,7 +59,7 @@ export const updateRate = async (req: Request, res: Response, next: NextFunction
   try {
     const tenantId = req.tenant!.tenantId;
     const { vehicle_type } = req.params;
-    const { rate_per_hour, lost_ticket_penalty } = req.body;
+    const { rate_per_hour, lost_ticket_penalty, grace_period_minutes } = req.body; // Include grace_period_minutes
 
     if (!Object.values(VehicleType).includes(vehicle_type as VehicleType)) {
       return next(new NotFoundError('Invalid vehicle type specified.'));
@@ -66,7 +67,7 @@ export const updateRate = async (req: Request, res: Response, next: NextFunction
 
     const updatedRate = await HourlyRate.findOneAndUpdate(
       { tenant_id: tenantId, vehicle_type: vehicle_type as VehicleType },
-      { $set: { rate_per_hour, lost_ticket_penalty } },
+      { $set: { rate_per_hour, lost_ticket_penalty, grace_period_minutes } }, // Update grace_period_minutes
       { new: true, runValidators: true }
     ).lean();
 
