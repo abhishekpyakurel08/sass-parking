@@ -1,11 +1,10 @@
 // tailwind.config.js
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{vue,js,ts,jsx,tsx}",
-  ],
+  darkMode: "class", // <-- Make sure this line is present
+
+  content: ["./index.html", "./src/**/*.{vue,js,ts,jsx,tsx}"],
   theme: {
     extend: {},
   },
   plugins: [],
-}
+};
