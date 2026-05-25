@@ -2,14 +2,14 @@ import type { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import { Ticket } from '../models/ticket.model.js';
 import { HourlyRate } from '../models/hourlyRate.model.js';
-import { Customer } from '../models/customer.model.js'; // Import Customer model
+import { Customer } from '../models/customer.model.js';
 import mongoose from 'mongoose';
 import {
   NotFoundError,
   ConflictError,
   ValidationError,
 } from '../errors/ApiError.js';
-import { TicketStatus, PaymentMethod } from '../types/enums.js'; // Import PaymentMethod
+import { TicketStatus, PaymentMethod } from '../types/enums.js';
 import { logTransaction } from '../utils/logger.js';
 import { generateQrCodeDataUri } from '../utils/qr.js';
 
@@ -46,6 +46,10 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction): 
       if (!resolvedLicensePlate) {
         resolvedLicensePlate = `CUSTOMER-${customer_code}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
       }
+    } else if (!license_plate) {
+      // If neither license_plate nor customer_code is provided
+      await session.abortTransaction();
+      return next(new ValidationError('Either license plate or customer code must be provided for check-in'));
     }
 
     // Check no active ticket exists for this plate
@@ -253,6 +257,18 @@ export const handleLostTicket = async (req: Request, res: Response, next: NextFu
     const base_fare = assumed_duration_hours * rate_per_hour;
     const total_charge = base_fare + lost_ticket_penalty;
 
+    // Check if an active ticket already exists for this license plate to prevent duplicates
+    const existingActiveTicket = await Ticket.findOne({
+      tenant_id: tenantId,
+      license_plate: license_plate.toUpperCase(),
+      status: TicketStatus.ACTIVE,
+    }).session(session);
+
+    if (existingActiveTicket) {
+      await session.abortTransaction();
+      return next(new ConflictError('An active ticket already exists for this vehicle. Cannot process as lost.'));
+    }
+
     // Create a new ticket with PENDING_PAYMENT status
     const ticketUUID = crypto.randomUUID();
     const entryTime = new Date(); // Approximate entry time for lost ticket
@@ -349,6 +365,15 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
     ticket.change_given = change_given;
     ticket.transaction_reference = transaction_reference;
     await ticket.save({ session });
+
+    // Update customer total savings if applicable
+    if (ticket.customer_id && ticket.discount_amount > 0) {
+      await Customer.findByIdAndUpdate(
+        ticket.customer_id,
+        { $inc: { total_savings: ticket.discount_amount } },
+        { session }
+      );
+    }
 
     await session.commitTransaction();
 
