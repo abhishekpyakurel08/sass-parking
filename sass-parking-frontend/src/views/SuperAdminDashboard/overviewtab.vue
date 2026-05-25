@@ -40,11 +40,14 @@ const revenueTrend = computed(() => {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
   const growthFactor = [0.65, 0.72, 0.78, 0.85, 0.92, 1.0];
 
-  return months.map((month, i) => ({
-    month,
-    value: baseMRR * growthFactor[i],
-    projected: baseMRR * (growthFactor[i] * 1.08), // 8% projected growth
-  }));
+  return months.map((month, i) => {
+    const factor = growthFactor[i] ?? 1.0;
+    return {
+      month,
+      value: baseMRR * factor,
+      projected: baseMRR * (factor * 1.08), // 8% projected growth
+    };
+  });
 });
 
 // Chart dimensions and scaling
@@ -76,15 +79,17 @@ const chartPoints = computed(() => {
 // Smooth monotone-like bezier curve path
 const smoothPath = (points: { x: number; y: number }[], isArea = false) => {
   if (points.length === 0) return "";
-  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+  const first = points[0];
+  if (!first) return "";
+  if (points.length === 1) return `M ${first.x} ${first.y}`;
 
-  let d = `M ${points[0].x} ${points[0].y}`;
+  let d = `M ${first.x} ${first.y}`;
 
   for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[i === 0 ? 0 : i - 1];
-    const p1 = points[i];
-    const p2 = points[i + 1];
-    const p3 = points[i + 2] || p2;
+    const p0 = points[i === 0 ? 0 : i - 1] || first;
+    const p1 = points[i] || first;
+    const p2 = points[i + 1] || first;
+    const p3 = points[i + 2] || p2 || first;
 
     const cp1x = p1.x + (p2.x - p0.x) / 6;
     const cp1y = p1.y + (p2.y - p0.y) / 6;
@@ -95,8 +100,9 @@ const smoothPath = (points: { x: number; y: number }[], isArea = false) => {
   }
 
   if (isArea) {
-    d += ` L ${points[points.length - 1].x} ${CHART_HEIGHT - PADDING.bottom}`;
-    d += ` L ${points[0].x} ${CHART_HEIGHT - PADDING.bottom} Z`;
+    const last = points[points.length - 1] || first;
+    d += ` L ${last.x} ${CHART_HEIGHT - PADDING.bottom}`;
+    d += ` L ${first.x} ${CHART_HEIGHT - PADDING.bottom} Z`;
   }
 
   return d;
@@ -139,28 +145,33 @@ const yAxisLabels = computed(() => {
 const growthRate = computed(() => {
   const data = revenueTrend.value;
   if (data.length < 2) return "0.0";
-  const first = data[0].value;
-  const last = data[data.length - 1].value;
+  const first = data[0]?.value ?? 120000;
+  const last = data[data.length - 1]?.value ?? 120000;
   return (((last - first) / first) * 100).toFixed(1);
 });
 
 // Premium colors synced with theme config and your brand blueprint
 const chartColors = computed(() => ({
-  line: "#0369a1", // brand-700
-  lineProjected: isDarkMode.value ? "#38bdf8" : "#0284c7", // light sky vs deep sky
+  line: "#B2BEB5", // Ash Gray (Main Accent)
+  lineProjected: isDarkMode.value ? "#d3dad5" : "#8d9e92", // Projected Ash Gray variants
   areaStart: isDarkMode.value
-    ? "rgba(3, 105, 161, 0.2)"
-    : "rgba(3, 105, 161, 0.12)",
-  areaEnd: "rgba(3, 105, 161, 0)",
-  grid: isDarkMode.value ? "#27272a" : "#f1f5f9",
-  text: isDarkMode.value ? "#71717a" : "#94a3b8",
-  dot: "#0369a1",
-  tooltipBg: isDarkMode.value ? "#09090b" : "#ffffff",
-  tooltipText: isDarkMode.value ? "#f4f4f5" : "#0f172a",
+    ? "rgba(178, 190, 181, 0.15)"
+    : "rgba(178, 190, 181, 0.25)",
+  areaEnd: "rgba(178, 190, 181, 0)",
+  grid: isDarkMode.value ? "#2B2B2B" : "#DADADA", // Charcoal vs Light Gray
+  text: isDarkMode.value ? "#B2BEB5" : "#6B7280", // Ash Gray vs Gray
+  dot: "#B2BEB5",
+  tooltipBg: isDarkMode.value ? "#111111" : "#ffffff", // Matte Black vs White
+  tooltipText: isDarkMode.value ? "#F8F9FA" : "#1A1A1A", // Soft White vs Rich Black
 }));
 
 // Floating HTML tooltip coordinates and reference data
 const activePointIdx = ref<number | null>(null);
+
+const activePoint = computed(() => {
+  if (activePointIdx.value === null) return null;
+  return chartPoints.value[activePointIdx.value] || null;
+});
 
 const handleChartHover = (index: number) => {
   activePointIdx.value = index;
@@ -313,18 +324,18 @@ const handleChartLeave = () => {
         <div class="my-4 relative">
           <!-- Dynamic Floating HTML Tooltip matching original Recharts design structure -->
           <div
-            v-if="activePointIdx !== null"
+            v-if="activePoint"
             class="absolute pointer-events-none bg-white dark:bg-zinc-950 p-3.5 border border-slate-150 dark:border-zinc-800 shadow-xl rounded-2xl transition-all duration-100 ease-out z-10"
             :style="{
-              left: `${(chartPoints[activePointIdx].x / CHART_WIDTH) * 100}%`,
-              top: `${(chartPoints[activePointIdx].y / CHART_HEIGHT) * 100 - 15}%`,
+              left: `${(activePoint.x / CHART_WIDTH) * 100}%`,
+              top: `${(activePoint.y / CHART_HEIGHT) * 100 - 15}%`,
               transform: 'translate(-50%, -100%)',
             }"
           >
             <p
               class="text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest leading-none"
             >
-              {{ chartPoints[activePointIdx].label }}
+              {{ activePoint.label }}
             </p>
             <div class="mt-2 space-y-1 text-xs">
               <p
@@ -337,7 +348,7 @@ const handleChartLeave = () => {
                 <span class="font-mono"
                   >Rs.
                   {{
-                    Math.round(chartPoints[activePointIdx].val).toLocaleString()
+                    Math.round(activePoint.val).toLocaleString()
                   }}</span
                 >
               </p>
@@ -352,7 +363,7 @@ const handleChartLeave = () => {
                   >Rs.
                   {{
                     Math.round(
-                      chartPoints[activePointIdx].proj,
+                      activePoint.proj,
                     ).toLocaleString()
                   }}</span
                 >
@@ -396,10 +407,10 @@ const handleChartLeave = () => {
 
             <!-- Active Vertical Hover Line (Cursor) -->
             <line
-              v-if="activePointIdx !== null"
-              :x1="chartPoints[activePointIdx].x"
+              v-if="activePoint"
+              :x1="activePoint.x"
               :y1="PADDING.top"
-              :x2="chartPoints[activePointIdx].x"
+              :x2="activePoint.x"
               :y2="CHART_HEIGHT - PADDING.bottom"
               stroke="#94a3b8"
               class="dark:stroke-zinc-700 opacity-60"

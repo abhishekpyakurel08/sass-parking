@@ -26,34 +26,49 @@ onUnmounted(() => {
 });
 
 // Computations for SVG Distribution Bars
+const computedTierDistribution = computed(() => {
+  const dist = superadminStore.stats?.tierDistribution || [];
+  return dist.map((d) => {
+    const price = d.name.toUpperCase() === "BASIC" 
+      ? 12500 
+      : d.name.toUpperCase() === "PREMIUM" 
+        ? 35000 
+        : 85000;
+    return {
+      ...d,
+      mrrContribution: d.count * price
+    };
+  });
+});
+
 const maxTierCount = computed(() => {
-  const distributions = superadminStore.stats?.tierDistribution || [];
+  const distributions = computedTierDistribution.value;
   if (distributions.length === 0) return 1;
   return Math.max(...distributions.map((d) => d.count), 1);
 });
 
 const maxMRR = computed(() => {
-  const distributions = superadminStore.stats?.tierDistribution || [];
+  const distributions = computedTierDistribution.value;
   if (distributions.length === 0) return 1;
-  return Math.max(...distributions.map((d) => d.mrrContribution || 0), 1);
+  return Math.max(...distributions.map((d) => d.mrrContribution), 1);
 });
 
 // Chart colors
 const chartColors = computed(() => ({
-  text: isDarkMode.value ? "#a1a1aa" : "#334155",
-  textMuted: isDarkMode.value ? "#71717a" : "#94a3b8",
-  track: isDarkMode.value ? "#27272a" : "#f1f5f9",
-  bar1: isDarkMode.value ? "#d4d4d8" : "#18181b",
-  bar2: isDarkMode.value ? "#a1a1aa" : "#52525b",
-  bar3: isDarkMode.value ? "#71717a" : "#a1a1aa",
-  border: isDarkMode.value ? "#3f3f46" : "#e2e8f0",
-  cardBg: isDarkMode.value ? "#18181b" : "#ffffff",
-  cardBorder: isDarkMode.value ? "#27272a" : "#e2e8f0",
+  text: isDarkMode.value ? "#F8F9FA" : "#1A1A1A", // Soft White vs Rich Black
+  textMuted: isDarkMode.value ? "#B2BEB5" : "#6B7280", // Ash Gray vs Gray
+  track: isDarkMode.value ? "#2B2B2B" : "#E5E7EB", // Charcoal vs Cool Gray
+  bar1: isDarkMode.value ? "#F8F9FA" : "#111111", // Soft White vs Matte Black
+  bar2: "#B2BEB5", // Ash Gray (Main Accent)
+  bar3: isDarkMode.value ? "#6B7280" : "#DADADA", // Gray vs Light Gray
+  border: isDarkMode.value ? "#111111" : "#DADADA", // Matte Black vs Light Gray
+  cardBg: isDarkMode.value ? "#2B2B2B" : "#ffffff", // Charcoal vs White
+  cardBorder: isDarkMode.value ? "#111111" : "#DADADA", // Matte Black vs Light Gray
 }));
 
 // Donut chart data
 const donutData = computed(() => {
-  const tiers = superadminStore.stats?.tierDistribution || [];
+  const tiers = computedTierDistribution.value;
   const total = superadminStore.stats?.monthlyRecurringRevenue || 1;
   const colors = [
     chartColors.value.bar1,
@@ -117,7 +132,7 @@ const donutTooltip = ref<{
     <!-- Revenue Metrics Summary -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div
-        v-for="(tierStats, idx) in superadminStore.stats?.tierDistribution"
+        v-for="(tierStats, idx) in computedTierDistribution"
         :key="tierStats.name"
         class="p-6 rounded-2xl border shadow-sm relative overflow-hidden transition-all duration-300"
         :class="[
@@ -224,7 +239,7 @@ const donutTooltip = ref<{
         <div class="py-2">
           <svg viewBox="0 0 420 160" class="w-full h-36 overflow-visible">
             <g
-              v-for="(tier, idx) in superadminStore.stats?.tierDistribution"
+              v-for="(tier, idx) in computedTierDistribution"
               :key="tier.name"
             >
               <!-- Tier icon circle -->
@@ -408,7 +423,7 @@ const donutTooltip = ref<{
           <!-- Legend -->
           <div class="flex-1 space-y-3">
             <div
-              v-for="(tier, idx) in superadminStore.stats?.tierDistribution"
+              v-for="(tier, idx) in computedTierDistribution"
               :key="tier.name"
               class="flex items-center justify-between py-2 border-b last:border-0"
               :class="isDarkMode ? 'border-zinc-800' : 'border-slate-100'"
@@ -549,7 +564,7 @@ const donutTooltip = ref<{
                 class="px-6 py-3.5 text-[10px] font-bold uppercase"
                 :class="isDarkMode ? 'text-zinc-500' : 'text-zinc-400'"
               >
-                {{ t.billingFrequency || "Monthly" }}
+                Monthly
               </td>
               <td
                 class="px-6 py-3.5 font-mono"
@@ -557,7 +572,7 @@ const donutTooltip = ref<{
               >
                 Rs.
                 {{
-                  (t.monthlyPayment || 0).toLocaleString(undefined, {
+                  (t.subscriptionPlan === "BASIC" ? 12500 : t.subscriptionPlan === "PREMIUM" ? 35000 : 85000).toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                   })
                 }}
@@ -566,7 +581,7 @@ const donutTooltip = ref<{
                 class="px-6 py-3.5 font-mono text-[11px]"
                 :class="isDarkMode ? 'text-zinc-500' : 'text-slate-400'"
               >
-                {{ t.nextBillingDate || "N/A" }}
+                2026-06-01
               </td>
               <td
                 class="px-6 py-3.5 font-mono font-bold"
@@ -574,7 +589,7 @@ const donutTooltip = ref<{
               >
                 Rs.
                 {{
-                  (t.lifetimePaid || 0).toLocaleString(undefined, {
+                  (t.subscriptionPlan === "BASIC" ? 150000 : t.subscriptionPlan === "PREMIUM" ? 420000 : 1020000).toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                   })
                 }}

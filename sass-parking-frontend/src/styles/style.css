@@ -2,6 +2,133 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --background: #F8F9FA;
+  --surface: #FFFFFF;
+  --primary-dark: #111111;
+  --secondary-dark: #2B2B2B;
+  --main-accent: #B2BEB5;
+  --border-light: #DADADA;
+  --hover-gray: #E5E7EB;
+  --text-primary: #1A1A1A;
+  --text-secondary: #6B7280;
+}
+
+/* Global resets using custom palette */
+body {
+  background-color: var(--background) !important;
+  color: var(--text-primary) !important;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Background Overrides */
+.bg-slate-50, 
+.bg-slate-100, 
+.bg-slate-200, 
+.bg-\[\#f4f7f9\] {
+  background-color: var(--background) !important;
+}
+
+.bg-white, 
+.bg-slate-50\/50, 
+.bg-slate-100\/50 {
+  background-color: var(--surface) !important;
+}
+
+.bg-slate-900, 
+.bg-zinc-900 {
+  background-color: var(--primary-dark) !important;
+}
+
+.hover\:bg-slate-800:hover, 
+.hover\:bg-zinc-800:hover {
+  background-color: var(--secondary-dark) !important;
+}
+
+/* Hover Overrides */
+.hover\:bg-slate-100:hover, 
+.hover\:bg-slate-50:hover, 
+.hover\:bg-gray-100:hover {
+  background-color: var(--hover-gray) !important;
+}
+
+/* Border Overrides */
+.border-slate-200, 
+.border-slate-300, 
+.border-slate-100, 
+.border-gray-200, 
+.border-zinc-200 {
+  border-color: var(--border-light) !important;
+}
+
+/* Text Overrides */
+.text-slate-900, 
+.text-gray-900, 
+.text-zinc-950, 
+.text-black {
+  color: var(--text-primary) !important;
+}
+
+.text-slate-600, 
+.text-slate-500, 
+.text-slate-400, 
+.text-gray-600, 
+.text-gray-500, 
+.text-zinc-500 {
+  color: var(--text-secondary) !important;
+}
+
+/* Main Accent Override (Ash Gray #B2BEB5 replaces Emerald green accents) */
+.text-emerald-600, 
+.text-emerald-700, 
+.text-teal-600, 
+.text-emerald-500, 
+.text-brand-600 {
+  color: var(--main-accent) !important;
+}
+
+.bg-emerald-50, 
+.bg-emerald-100\/50, 
+.bg-emerald-50\/50, 
+.bg-teal-50 {
+  background-color: rgba(178, 190, 181, 0.12) !important;
+}
+
+.bg-emerald-500, 
+.bg-emerald-600, 
+.bg-teal-600, 
+.bg-\[\#10b981\], 
+.bg-brand-600 {
+  background: var(--main-accent) !important;
+  background-color: var(--main-accent) !important;
+}
+
+.hover\:bg-emerald-600:hover, 
+.hover\:bg-emerald-700:hover, 
+.hover\:bg-\[\#059669\]:hover, 
+.hover\:bg-teal-700:hover {
+  background: #9faaa2 !important; /* Slightly darker shade of Ash Gray for hover */
+  background-color: #9faaa2 !important;
+}
+
+.from-emerald-400, 
+.from-emerald-500 {
+  --tw-gradient-from: var(--main-accent) !important;
+  --tw-gradient-stops: var(--main-accent), var(--main-accent) !important;
+}
+
+.to-emerald-600, 
+.to-emerald-700 {
+  --tw-gradient-to: #9faaa2 !important;
+}
+
+/* Shadow modifications */
+.shadow-emerald-500\/30, 
+.shadow-emerald-600\/20, 
+.shadow-\[\#10b981\]\/20 {
+  box-shadow: 0 10px 15px -3px rgba(178, 190, 181, 0.25) !important;
+}
+
 html {
 	scroll-behavior: smooth;
 	scroll-padding-top: 5rem;
