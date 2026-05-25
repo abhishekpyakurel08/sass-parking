@@ -16,8 +16,12 @@ export const useOperatorStore = defineStore('operator', () => {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${authStore.token}`,
+          ...(authStore.user?.tenantId ? { 'X-Tenant-ID': authStore.user.tenantId } : {}),
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          license_plate: data.vehiclePlateNumber,
+          vehicle_type: data.vehicleType,
+        }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -40,8 +44,11 @@ export const useOperatorStore = defineStore('operator', () => {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${authStore.token}`,
+          ...(authStore.user?.tenantId ? { 'X-Tenant-ID': authStore.user.tenantId } : {}),
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ticket_id: data.vehiclePlateNumber,
+        }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -60,7 +67,10 @@ export const useOperatorStore = defineStore('operator', () => {
     isLoading.value = true;
     try {
       const res = await fetch('/api/v1/operator/stats', {
-        headers: { Authorization: `Bearer ${authStore.token}` },
+        headers: { 
+          Authorization: `Bearer ${authStore.token}`,
+          ...(authStore.user?.tenantId ? { 'X-Tenant-ID': authStore.user.tenantId } : {}),
+        },
       });
       const json = await res.json();
       if (res.ok) {

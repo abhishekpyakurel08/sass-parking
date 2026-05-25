@@ -4,12 +4,13 @@ import { toast } from 'vue3-toastify';
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || '');
-  const user = ref<{ id: string; name: string; role: string; tenantId?: string } | null>(
+  const user = ref<{ id: string; name: string; role: string; tenantId?: string; tenant_id?: string } | null>(
     JSON.parse(localStorage.getItem('user') || 'null')
   );
 
-  const setAuth = (newToken: string, newUser: { id: string; name: string; role: string; tenantId?: string }) => {
+  const setAuth = (newToken: string, newUser: { id: string; name: string; role: string; tenantId?: string; tenant_id?: string }) => {
     token.value = newToken;
+    newUser.tenantId = newUser.tenantId || newUser.tenant_id;
     user.value = newUser;
     localStorage.setItem('token', newToken);
     localStorage.setItem('user', JSON.stringify(newUser));

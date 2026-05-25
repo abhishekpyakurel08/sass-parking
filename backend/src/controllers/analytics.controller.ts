@@ -45,7 +45,9 @@ export const getTenantAnalytics = async (req: Request, res: Response, next: Next
     const tenantOid  = new mongoose.Types.ObjectId(tenantId);
     const now        = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const oneMonthStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const threeMonthsStart = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    const sixMonthsStart = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
 
     const [revenueStats, activeTickets, vehicleTrends] = await Promise.all([
       Ticket.aggregate([
@@ -57,26 +59,37 @@ export const getTenantAnalytics = async (req: Request, res: Response, next: Next
         },
         {
           $facet: {
-            today:   [{ $match: { check_out_time: { $gte: todayStart } } }, { $group: { _id: null, revenue: { $sum: { $add: ['$fare_amount', '$penalty_amount'] } } } }],
-            monthly: [{ $match: { check_out_time: { $gte: monthStart } } }, { $group: { _id: null, revenue: { $sum: { $add: ['$fare_amount', '$penalty_amount'] } } } }],
+            today:       [{ $match: { check_out_time: { $gte: todayStart } } }, { $group: { _id: null, revenue: { $sum: { $add: ['$fare_amount', '$penalty_amount'] } } } }],
+            oneMonth:    [{ $match: { check_out_time: { $gte: oneMonthStart } } }, { $group: { _id: null, revenue: { $sum: { $add: ['$fare_amount', '$penalty_amount'] } } } }],
+            threeMonths: [{ $match: { check_out_time: { $gte: threeMonthsStart } } }, { $group: { _id: null, revenue: { $sum: { $add: ['$fare_amount', '$penalty_amount'] } } } }],
+            sixMonths:   [{ $match: { check_out_time: { $gte: sixMonthsStart } } }, { $group: { _id: null, revenue: { $sum: { $add: ['$fare_amount', '$penalty_amount'] } } } }],
           },
         },
       ]),
       Ticket.countDocuments({ tenant_id: tenantOid, status: TicketStatus.ACTIVE }),
       Ticket.aggregate([
-        { $match: { tenant_id: tenantOid, check_in_time: { $gte: monthStart } } },
+        { $match: { tenant_id: tenantOid, check_in_time: { $gte: oneMonthStart } } },
         { $group: { _id: '$vehicle_type', count: { $sum: 1 } } },
       ]),
     ]);
 
+    const today = revenueStats[0]?.today?.[0]?.revenue ?? 0;
+    const oneMonth = revenueStats[0]?.oneMonth?.[0]?.revenue ?? 0;
+    const threeMonths = revenueStats[0]?.threeMonths?.[0]?.revenue ?? 0;
+    const sixMonths = revenueStats[0]?.sixMonths?.[0]?.revenue ?? 0;
+
     res.status(200).json({
       success: true,
       data: {
-        today_revenue:   revenueStats[0]?.today?.[0]?.revenue   ?? 0,
-        monthly_revenue: revenueStats[0]?.monthly?.[0]?.revenue ?? 0,
-        active_tickets:  activeTickets,
-        vehicle_trends:  vehicleTrends,
-        generated_at:    new Date().toISOString(),
+        today,
+        oneMonth,
+        threeMonths,
+        sixMonths,
+        today_revenue: today,
+        monthly_revenue: oneMonth,
+        active_tickets: activeTickets,
+        vehicle_trends: vehicleTrends,
+        generated_at: new Date().toISOString(),
       },
     });
   } catch (err) { next(err); }
