@@ -2,7 +2,7 @@
   <div>
     <NavBar />
     <main class="min-h-screen bg-slate-50 font-sans">
-      <section class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-12 lg:py-16">
+      <section id="home" class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-12 lg:py-16">
         <div class="landing-panel reveal-on-scroll max-w-6xl">
           <div class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-1 text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">
             Smart parking platform
@@ -18,7 +18,6 @@
           <div class="mt-8 flex flex-col sm:flex-row sm:flex-wrap gap-3">
             <RouterLink to="/login" class="inline-flex w-full sm:w-auto items-center justify-center rounded-xl bg-slate-900 px-8 py-4 text-base font-bold text-white border border-slate-900 hover:bg-slate-800 transition-colors">Open Go TO Dashboard</RouterLink>
             <a href="#about" class="inline-flex w-full sm:w-auto items-center justify-center rounded-xl bg-white px-8 py-4 text-base font-bold text-slate-900 border border-slate-300 hover:bg-slate-100 transition-colors">View Features</a>
-            <a href="#pricing" class="inline-flex w-full sm:w-auto items-center justify-center rounded-xl bg-slate-200 px-8 py-4 text-base font-bold text-slate-900 border border-slate-300 hover:bg-slate-300 transition-colors">Take a Tour</a>
           </div>
 
           <div class="mt-10 border-t border-slate-200 pt-8">
