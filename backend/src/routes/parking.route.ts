@@ -4,8 +4,8 @@ import {
   checkOut,
   getTickets,
   scanTicket,
-  handleLostTicket, // New
-  processPayment,   // New
+  handleLostTicket, 
+  processPayment,   
 } from '../controllers/parking.controller.js';
 import { authenticate, requireRole } from '../middleware/auth.middleware.js';
 import { tenantMiddleware } from '../middleware/tenant.middleware.js';
@@ -19,23 +19,20 @@ import {
 } from '../utils/validation.schemas.js';
 import { UserRole } from '../types/enums.js';
 
+import { auditAction } from '../middleware/auditLogger.js';
+
 const router = Router();
 router.use(authenticate, tenantMiddleware);
 
-// Operations — all gate-capable roles
-router.post('/check-in',  requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER), validate(checkInSchema), checkIn);
-router.post('/check-out', requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER), validate(checkOutSchema), checkOut);
+router.post('/check-in',  requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER), validate(checkInSchema), auditAction('Parking:CheckIn'), checkIn);
+router.post('/check-out', requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER), validate(checkOutSchema), auditAction('Parking:CheckOut'), checkOut);
 
-// New: Lost Ticket Handling
-router.post('/lost-ticket', requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER), validate(lostTicketSchema), handleLostTicket);
+router.post('/lost-ticket', requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER), validate(lostTicketSchema), auditAction('Parking:LostTicket'), handleLostTicket);
 
-// New: Payment Processing
-router.post('/process-payment', requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER), validate(processPaymentSchema), processPayment);
+router.post('/process-payment', requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER), validate(processPaymentSchema), auditAction('Parking:ProcessPayment'), processPayment);
 
-// Scan / Verify barcode or license plate
-router.post('/scan', requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER), validate(scanSchema), scanTicket);
+router.post('/scan', requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER), validate(scanSchema), auditAction('Parking:Scan'), scanTicket);
 
-// Ticket history
 router.get('/tickets', requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER), getTickets);
 
 export default router;

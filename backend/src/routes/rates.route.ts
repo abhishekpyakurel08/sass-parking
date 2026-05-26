@@ -15,10 +15,9 @@ import { UserRole } from '../types/enums.js';
 const router = Router();
 router.use(authenticate, tenantMiddleware);
 
-// Only Tenant Owners can manage rates
 router.route('/')
   .post(requireRole(UserRole.TENANT_OWNER), validate(createRateSchema), createRate)
-  .get(requireRole(UserRole.TENANT_OWNER, UserRole.GATE_STAFF), getRates); // Staff can view rates
+  .get(requireRole(UserRole.TENANT_OWNER, UserRole.GATE_STAFF), getRates); 
 
 router.route('/:vehicle_type')
   .get(requireRole(UserRole.TENANT_OWNER, UserRole.GATE_STAFF), getRateByVehicleType)

@@ -12,11 +12,14 @@ const TenantSchema = new Schema<ITenant>(
       enum: Object.values(TenantStatus),
       default: TenantStatus.ACTIVE,
     },
+    contactNumber: { type: String, trim: true },
+    address: { type: String, trim: true },
+    ownerName: { type: String, trim: true },
+    subscriptionPlan: { type: String, default: 'FREE' },
   },
   { timestamps: true }
 );
 
-TenantSchema.index({ corporate_email: 1 });
 TenantSchema.index({ status: 1 });
 
 export const Tenant = model<ITenant>('Tenant', TenantSchema);

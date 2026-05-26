@@ -14,7 +14,6 @@ const UserSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
-UserSchema.index({ email: 1 });
 UserSchema.index({ tenant_id: 1, role: 1 });
 
 export const User = model<IUser>('User', UserSchema);

@@ -27,17 +27,20 @@ import ratesRoutes    from './routes/rates.route.js';
 import analyticsRoutes from './routes/analytics.route.js';
 import operatorRoutes  from './routes/operator.routes.js';
 import customerRoutes  from './routes/customer.route.js';
+import auditLogRoutes  from './routes/auditLog.route.js';
+import syncRoutes      from './routes/sync.route.js';
+import apiKeyRoutes    from './routes/apiKey.route.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
 const app: Application = express();
 
-// ─── Security Headers ────────────────────────────────────────────────────────
-// Apply strict CSP globally. /api-docs overrides this below with a relaxed CSP.
+// ─── Security Headers ─
+
 app.use(helmet());
 
-// ─── CORS ─────────────────────────────────────────────────────────────────────
+// ─── CORS ────
 app.use(cors({
   origin: env.CORS_ORIGIN.split(',').map(o => o.trim()),
   credentials: true,
@@ -103,7 +106,7 @@ app.use(
   })
 );
 
-// ─── Health Check ─────────────────────────────────────────────────────────────
+// ─── Health Check ──────
 app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({
     success: true,
@@ -123,6 +126,9 @@ app.use('/api/v1/parking',   parkingRoutes);
 app.use('/api/v1/rates',     ratesRoutes);
 app.use('/api/v1/customers', customerRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
+app.use('/api/v1/audit-logs', auditLogRoutes);
+app.use('/api/v1/sync',      syncRoutes);
+app.use('/api/v1/api-keys',  apiKeyRoutes);
 app.use('/api/v1',           operatorRoutes);
 
 // ─── Error Handling ───────────────────────────────────────────────────────────

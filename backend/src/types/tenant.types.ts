@@ -6,6 +6,10 @@ export interface ITenant {
   corporate_email: string;
   total_capacity: number;
   status: TenantStatus;
+  contactNumber?: string;
+  address?: string;
+  ownerName?: string;
+  subscriptionPlan?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }

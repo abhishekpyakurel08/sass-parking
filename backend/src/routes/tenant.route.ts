@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import {
   getAllTenants, createTenant, updateTenant, deleteTenant,
-  getMyTenant, createStaff, getStaff,
+  getMyTenant, updateMyTenant, createStaff, getStaff,
 } from '../controllers/tenant.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/auth.middleware.js';
@@ -21,6 +21,7 @@ router.delete('/:id', requireRole(UserRole.SUPER_ADMIN), deleteTenant);
 
 // TENANT_OWNER routes — require tenant context
 router.get('/me', requireRole(UserRole.TENANT_OWNER), tenantMiddleware, getMyTenant);
+router.put('/me', requireRole(UserRole.TENANT_OWNER), tenantMiddleware, updateMyTenant);
 router.get('/staff', requireRole(UserRole.TENANT_OWNER), tenantMiddleware, getStaff);
 router.post('/staff', requireRole(UserRole.TENANT_OWNER), tenantMiddleware, validate(createStaffSchema), createStaff);
 

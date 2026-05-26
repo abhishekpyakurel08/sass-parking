@@ -73,6 +73,24 @@ export const getMyTenant = async (req: Request, res: Response, next: NextFunctio
   } catch (err) { next(err); }
 };
 
+export const updateMyTenant = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const updates = req.body;
+    // Prevent updating sensitive fields
+    delete updates.status;
+    delete updates.corporate_email;
+    delete updates.total_capacity;
+
+    const tenant = await Tenant.findByIdAndUpdate(
+      req.tenant!.tenantId,
+      { $set: updates },
+      { new: true, runValidators: true }
+    );
+    if (!tenant) return next(new NotFoundError('Tenant not found'));
+    res.status(200).json({ success: true, data: tenant });
+  } catch (err) { next(err); }
+};
+
 
 
 export const createStaff = async (req: Request, res: Response, next: NextFunction): Promise<void> => {

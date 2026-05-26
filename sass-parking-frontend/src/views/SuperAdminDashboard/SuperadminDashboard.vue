@@ -1,20 +1,21 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
+import { onMounted } from "vue";
 import { useSuperadminStore } from "../../stores/superadmin";
+import { useAuthStore } from "../../stores/auth";
 import { useRouter } from "vue-router";
 import {
-  Building2,
-  Users,
-  LogOut,
+  Search,
+  Bell,
+  HelpCircle,
   LayoutDashboard,
-  ChevronRight,
-  ShieldAlert,
+  Building2,
+  ParkingSquare,
+  Banknote,
+  Users,
+  BarChart2,
+  ScanLine,
   Settings,
-  SquareActivity,
-  Server,
-  CreditCard,
-  Sun,
-  Moon,
+  LogOut,
 } from "lucide-vue-next";
 
 // Import Modular Components
@@ -27,256 +28,172 @@ import SettingsTab from "./settingstab.vue";
 
 const router = useRouter();
 const superadminStore = useSuperadminStore();
-
-// --- Improved Theme System ---
-// Uses a reactive ref that watches the DOM directly via MutationObserver
-// This ensures sync across all components without prop drilling
-const isDark = ref(false);
-
-const updateThemeState = () => {
-  const root = document.documentElement;
-  const hasDark = root.classList.contains("dark");
-  isDark.value = hasDark;
-  // Also update meta theme-color for mobile browsers
-  const metaTheme = document.querySelector('meta[name="theme-color"]');
-  if (metaTheme) {
-    metaTheme.setAttribute("content", hasDark ? "#09090b" : "#ffffff");
-  }
-};
-
-const toggleTheme = () => {
-  const root = document.documentElement;
-  const goingDark = !root.classList.contains("dark");
-
-  if (goingDark) {
-    root.classList.add("dark");
-    localStorage.setItem("theme", "dark");
-  } else {
-    root.classList.remove("dark");
-    localStorage.setItem("theme", "light");
-  }
-
-  // Dispatch custom event so other components can react
-  window.dispatchEvent(
-    new CustomEvent("themechange", {
-      detail: { isDark: goingDark },
-    }),
-  );
-
-  updateThemeState();
-};
-
-// Watch for system preference changes
-let mediaQuery: MediaQueryList | null = null;
-
-const handleSystemThemeChange = (e: MediaQueryListEvent) => {
-  const savedTheme = localStorage.getItem("theme");
-  // Only auto-switch if user hasn't manually set a preference
-  if (!savedTheme) {
-    const root = document.documentElement;
-    if (e.matches) {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-    updateThemeState();
-  }
-};
-
-// Observe DOM changes to keep reactive state in sync (e.g. if another tab changes it)
-let observer: MutationObserver | null = null;
+const authStore = useAuthStore();
 
 onMounted(() => {
   superadminStore.fetchPlatformStats();
   superadminStore.fetchTenants();
-
-  // Initialize theme
-  const savedTheme = localStorage.getItem("theme");
-  const systemPrefersDark = window.matchMedia(
-    "(prefers-color-scheme: dark)",
-  ).matches;
-  const root = document.documentElement;
-
-  if (savedTheme === "dark" || (!savedTheme && systemPrefersDark)) {
-    root.classList.add("dark");
-  } else {
-    root.classList.remove("dark");
-  }
-
-  updateThemeState();
-
-  // Listen for system preference changes
-  mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-  mediaQuery.addEventListener("change", handleSystemThemeChange);
-
-  // Observe class changes on html element
-  observer = new MutationObserver(() => updateThemeState());
-  observer.observe(root, { attributes: true, attributeFilter: ["class"] });
 });
 
-const handleLogout = () => {
+const handleLogout = async () => {
+  await authStore.logout();
   router.push("/");
 };
 
 const switchTab = (
-  tab: "overview" | "tenants" | "users" | "plans" | "logs" | "settings",
+  tab: "overview" | "tenants" | "lots" | "revenue" | "users" | "reports" | "settings",
 ) => {
-  superadminStore.activeTab = tab;
-  if (tab === "overview") superadminStore.fetchPlatformStats();
+  superadminStore.activeTab = tab as any;
+  if (tab === "overview") {
+    superadminStore.fetchPlatformStats();
+    superadminStore.fetchTenants();
+  }
   if (tab === "tenants") superadminStore.fetchTenants();
   if (tab === "users") {
     superadminStore.fetchTenants();
     superadminStore.fetchGlobalUsers();
   }
-  if (tab === "plans") {
-    superadminStore.fetchTenants();
-    superadminStore.fetchPlatformStats();
-    if (typeof superadminStore.fetchPricingPlans === "function") {
-      superadminStore.fetchPricingPlans();
-    }
+  if (tab === "plans" as any) {
+    superadminStore.fetchPricingPlans();
   }
-  if (tab === "logs") superadminStore.fetchAuditLogs();
-  if (tab === "settings") superadminStore.fetchGlobalSettings();
+  if (tab === "logs" as any) superadminStore.fetchAuditLogs();
+  if (tab === "settings" as any) superadminStore.fetchGlobalSettings();
 };
 </script>
 
 <template>
-  <div
-    class="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-50 flex font-sans transition-colors duration-300"
-  >
+  <div class="min-h-screen bg-slate-50 text-slate-900 flex font-sans">
     <!-- Sidebar -->
-    <aside
-      class="w-72 dark:bg-zinc-950 text-zinc-300 flex flex-col flex-shrink-0 z-20 shadow-2xl relative border-r border-white/5 transition-colors duration-300"
-    >
-      <div
-        class="absolute inset-0 dark:bg-gradient-to-b from-zinc-900/50 to-transparent pointer-events-none transition-opacity duration-300"
-      ></div>
-
-      <div class="p-6 pb-6 border-b border-white/5 relative z-10">
-        <div class="flex items-center gap-3">
-          <div
-            class="w-10 h-10 bg-gradient-to-br from-zinc-700 to-zinc-900 rounded-xl flex items-center justify-center shadow-lg shadow-black/40"
-          >
-            <ShieldAlert class="text-white w-6 h-6" />
-          </div>
-          <span
-            class="font-bold text-xl tracking-tight text-slate-900 dark:text-white"
-          >
-            Platform<span class="text-slate-700 dark:text-zinc-400">Hub</span>
-          </span>
-        </div>
-        <p
-          class="text-xs text-zinc-500 mt-1 font-medium uppercase tracking-wide"
-        >
-          Admin Panel
-        </p>
+    <aside class="w-64 bg-[#dbeafe] flex flex-col flex-shrink-0 z-20 border-r border-blue-200">
+      <div class="p-6">
+        <h1 class="font-black text-2xl text-slate-900 tracking-tight">ParkSaaS</h1>
+        <p class="text-xs font-bold text-slate-600 mt-0.5">Enterprise Console</p>
       </div>
 
-      <nav class="flex-1 p-4 space-y-1 relative z-10 overflow-y-auto">
-        <p
-          class="text-xs font-bold text-zinc-600 uppercase tracking-widest px-4 pt-2 pb-1"
-        >
-          Management Menu
-        </p>
+      <nav class="flex-1 px-4 space-y-1.5 overflow-y-auto mt-4">
         <button
-          v-for="item in [
-            {
-              id: 'overview',
-              icon: LayoutDashboard,
-              label: 'Overview Dashboard',
-            },
-            { id: 'tenants', icon: Building2, label: 'Partner Accounts' },
-            { id: 'users', icon: Users, label: 'System Users' },
-            { id: 'plans', icon: CreditCard, label: 'Billing & Subscriptions' },
-            { id: 'logs', icon: Activity, label: 'Activity Logs' },
-            { id: 'settings', icon: Settings, label: 'Global Settings' },
-          ]"
-          :key="item.id"
-          @click="switchTab(item.id as any)"
+          @click="switchTab('overview')"
           :class="[
-            'w-full flex items-center justify-between px-4 py-3 rounded-xl font-semibold transition-all outline-none',
-            superadminStore.activeTab === item.id
-              ? 'bg-zinc-800 text-white shadow-lg shadow-zinc-950/40'
-              : 'text-zinc-500 hover:bg-white/5 hover:text-white',
+            'w-full flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all outline-none',
+            superadminStore.activeTab === 'overview'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-slate-700 hover:bg-blue-200/50',
           ]"
         >
-          <div class="flex items-center gap-3">
-            <component :is="item.icon" class="w-5 h-5" />
-            {{ item.label }}
-          </div>
-          <ChevronRight
-            v-if="superadminStore.activeTab === item.id"
-            class="w-4 h-4 opacity-70"
-          />
+          <LayoutDashboard class="w-5 h-5" />
+          Dashboard
+        </button>
+        <button
+          @click="switchTab('tenants')"
+          :class="[
+            'w-full flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all outline-none',
+            superadminStore.activeTab === 'tenants'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-slate-700 hover:bg-blue-200/50',
+          ]"
+        >
+          <Building2 class="w-5 h-5" />
+          Tenants
+        </button>
+        <button
+          @click="switchTab('lots')"
+          :class="[
+            'w-full flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all outline-none',
+            superadminStore.activeTab === 'lots'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-slate-700 hover:bg-blue-200/50',
+          ]"
+        >
+          <ParkingSquare class="w-5 h-5" />
+          Parking Lots
+        </button>
+        <button
+          @click="switchTab('revenue')"
+          :class="[
+            'w-full flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all outline-none',
+            superadminStore.activeTab === 'revenue'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-slate-700 hover:bg-blue-200/50',
+          ]"
+        >
+          <Banknote class="w-5 h-5" />
+          Revenue
+        </button>
+        <button
+          @click="switchTab('users')"
+          :class="[
+            'w-full flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all outline-none',
+            superadminStore.activeTab === 'users'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-slate-700 hover:bg-blue-200/50',
+          ]"
+        >
+          <Users class="w-5 h-5" />
+          Users
+        </button>
+        <button
+          @click="switchTab('reports')"
+          :class="[
+            'w-full flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all outline-none',
+            superadminStore.activeTab === 'reports'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-slate-700 hover:bg-blue-200/50',
+          ]"
+        >
+          <BarChart2 class="w-5 h-5" />
+          Reports
         </button>
       </nav>
 
       <!-- Bottom controls -->
-      <div class="p-4 border-t border-white/5 relative z-10">
-        <!-- <div
-          class="flex items-center gap-2 px-4 py-3 bg-zinc-900/40 rounded-xl border border-white/5 mb-2"
+      <div class="p-4 space-y-2 mb-4">
+        <button
+          @click="switchTab('settings')"
+          class="w-full flex items-center gap-3 px-4 py-3 rounded-lg font-semibold text-slate-700 hover:bg-blue-200/50 transition-colors"
         >
-          <span
-            class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"
-          ></span>
-          <p class="text-xs font-bold text-zinc-400">All Systems Online</p>
-        </div> -->
+          <Settings class="w-5 h-5" /> Settings
+        </button>
         <button
           @click="handleLogout"
-          class="w-full bg-red-500 rounded-2xl flex items-center gap-3 px-4 py-3 text-zinc-100 hover:text-white hover:bg-white/5 rounded-xl font-semibold transition-colors outline-none"
+          class="w-full flex items-center gap-3 px-4 py-3 rounded-lg font-semibold text-slate-700 hover:bg-blue-200/50 transition-colors"
         >
-          <LogOut class="w-5 h-5" /> Sign Out
+          <LogOut class="w-5 h-5" /> Log Out
         </button>
       </div>
     </aside>
 
     <!-- Main Content Frame -->
-    <main
-      class="flex-1 flex flex-col h-screen overflow-hidden bg-[#f4f7f9] dark:bg-zinc-950 transition-colors duration-300"
-    >
-      <header
-        class="bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 px-8 py-5 flex justify-between items-center shrink-0 shadow-sm relative z-10 transition-colors duration-300"
-      >
-        <div>
-          <h1
-            class="text-2xl font-black text-slate-900 dark:text-white capitalize tracking-tight"
-          >
-            {{ superadminStore.activeTab.replace("-", " ") }}
-          </h1>
-          <p class="text-sm text-slate-500 dark:text-zinc-400 mt-0.5">
-            Manage registered companies, system users, and global configuration
-            values.
-          </p>
+    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50">
+      <header class="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center shrink-0">
+        <div class="flex-1 max-w-md relative">
+          <Search class="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input 
+            type="text" 
+            placeholder="Search Metropolis Parking..." 
+            class="w-full bg-slate-100 rounded-full pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
         </div>
-        <div class="flex items-center gap-4">
-          <!-- Improved Dark/Light Theme Toggle with animation -->
-          <button
-            @click="toggleTheme"
-            aria-label="Toggle theme"
-            class="relative p-2.5 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-xl border border-slate-200 dark:border-zinc-700 transition-all duration-300 overflow-hidden group"
-            :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
-          >
-            <div class="relative w-5 h-5">
-              <Sun
-                class="w-5 h-5 text-amber-500 absolute inset-0 transition-all duration-500 rotate-0 opacity-100 dark:rotate-90 dark:opacity-0 dark:scale-50"
-              />
-              <Moon
-                class="w-5 h-5 text-indigo-400 absolute inset-0 transition-all duration-500 -rotate-90 opacity-0 scale-50 dark:rotate-0 dark:opacity-100 dark:scale-100"
-              />
-            </div>
+        <div class="flex items-center gap-5">
+          <button class="text-slate-600 hover:text-slate-900">
+            <Bell class="w-5 h-5" />
           </button>
-
-          <div
-            class="px-4 py-1.5 bg-zinc-900 dark:bg-zinc-800 text-white font-bold text-sm rounded-full border border-zinc-800 flex items-center gap-2 transition-colors duration-300"
-          >
-            <Server class="w-4 h-4" />
-            System Administrator
+          <button class="text-slate-600 hover:text-slate-900">
+            <HelpCircle class="w-5 h-5" />
+          </button>
+          <div class="flex items-center gap-3 border-l pl-5">
+            <div class="text-right">
+              <p class="text-sm font-bold text-slate-900 leading-none">Alex Mercer</p>
+              <p class="text-[10px] font-medium text-slate-500 mt-1">Tenant Owner</p>
+            </div>
+            <div class="w-10 h-10 rounded-full overflow-hidden border border-slate-200">
+              <img src="https://i.pravatar.cc/150?img=11" alt="Admin" class="w-full h-full object-cover" />
+            </div>
           </div>
         </div>
       </header>
 
       <div class="flex-1 overflow-y-auto p-8">
-        <div class="max-w-full mx-auto space-y-6">
+        <div class="max-w-7xl mx-auto space-y-6">
           <OverviewTab v-if="superadminStore.activeTab === 'overview'" />
           <TenantsTab v-if="superadminStore.activeTab === 'tenants'" />
           <UsersTab v-if="superadminStore.activeTab === 'users'" />

@@ -9,9 +9,10 @@ export const useTenantStore = defineStore('tenant', () => {
   const activeTab = ref<'overview' | 'profile' | 'staff' | 'revenue' | 'tickets'>('overview');
   const isLoading = ref(false);
 
-  const revenueAnalytics = ref<{ today: number; oneMonth: number; threeMonths: number; sixMonths: number } | null>(null);
+  const revenueAnalytics = ref<{ today: number; oneMonth: number; threeMonths: number; sixMonths: number; active_tickets: number } | null>(null);
   const ticketHistory = ref<any[]>([]);
   const staffList = ref<any[]>([]);
+  const rates = ref<any[]>([]);
 
   const profile = reactive({
     companyName: '',
@@ -31,7 +32,15 @@ export const useTenantStore = defineStore('tenant', () => {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.data) Object.assign(profile, data.data);
+        if (data.data) {
+          profile.companyName = data.data.name || '';
+          profile.email = data.data.corporate_email || '';
+          profile.ownerName = data.data.ownerName || '';
+          profile.contactNumber = data.data.contactNumber || '';
+          profile.address = data.data.address || '';
+          profile.subscriptionStatus = data.data.status || 'ACTIVE';
+          profile.subscriptionPlan = data.data.subscriptionPlan || 'BASIC';
+        }
       } else {
         const err = await res.json();
         toast.error(err.message || 'Failed to load profile');
@@ -53,7 +62,7 @@ export const useTenantStore = defineStore('tenant', () => {
           Authorization: `Bearer ${authStore.token}`,
         },
         body: JSON.stringify({
-          companyName: profile.companyName,
+          name: profile.companyName,
           contactNumber: profile.contactNumber,
           address: profile.address,
         }),
@@ -154,8 +163,28 @@ export const useTenantStore = defineStore('tenant', () => {
     }
   };
 
+  const fetchRates = async () => {
+    isLoading.value = true;
+    try {
+      const res = await fetch('/api/v1/rates', {
+        headers: { Authorization: `Bearer ${authStore.token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        rates.value = data.data;
+      } else {
+        const err = await res.json();
+        toast.error(err.message || 'Failed to load rates');
+      }
+    } catch {
+      toast.error('Network error loading rates');
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
   return { 
-    activeTab, isLoading, profile, revenueAnalytics, ticketHistory, staffList,
-    fetchProfile, updateProfile, fetchRevenueAnalytics, fetchTicketHistory, fetchStaff, createStaff
+    activeTab, isLoading, profile, revenueAnalytics, ticketHistory, staffList, rates,
+    fetchProfile, updateProfile, fetchRevenueAnalytics, fetchTicketHistory, fetchStaff, createStaff, fetchRates
   };
 });
