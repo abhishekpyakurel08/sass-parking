@@ -159,7 +159,14 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
 
     const query = mongoose.isValidObjectId(ticket_id)
       ? { _id: ticket_id, tenant_id: tenantId, status: TicketStatus.ACTIVE }
-      : { ticket_number: ticket_id, tenant_id: tenantId, status: TicketStatus.ACTIVE };
+      : {
+          tenant_id: tenantId,
+          status: TicketStatus.ACTIVE,
+          $or: [
+            { ticket_number: ticket_id },
+            { license_plate: ticket_id.toUpperCase() }
+          ]
+        };
 
     const ticket = await Ticket.findOne(query).session(session).populate('customer_id');
 

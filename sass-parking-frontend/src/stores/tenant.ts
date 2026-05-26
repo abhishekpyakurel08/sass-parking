@@ -6,11 +6,18 @@ import { toast } from 'vue3-toastify';
 export const useTenantStore = defineStore('tenant', () => {
   const authStore = useAuthStore();
 
-  const activeTab = ref<'overview' | 'profile' | 'staff' | 'revenue' | 'tickets'>('overview');
+  const activeTab = ref<'overview' | 'tickets' | 'staff' | 'rates' | 'profile'>('overview');
   const isLoading = ref(false);
 
-  const revenueAnalytics = ref<{ today: number; oneMonth: number; threeMonths: number; sixMonths: number; active_tickets: number } | null>(null);
+  const revenueAnalytics = ref<{
+    today: number; oneMonth: number; threeMonths: number;
+    sixMonths: number; active_tickets: number;
+  } | null>(null);
+
   const ticketHistory = ref<any[]>([]);
+  const ticketPagination = ref({ page: 1, totalPages: 1, total: 0 });
+  const ticketFilter = ref<'ALL' | 'ACTIVE' | 'PENDING_PAYMENT' | 'PAID' | 'EXPIRED'>('ALL');
+
   const staffList = ref<any[]>([]);
   const rates = ref<any[]>([]);
 
@@ -24,12 +31,17 @@ export const useTenantStore = defineStore('tenant', () => {
     subscriptionPlan: '',
   });
 
+  const authHeaders = () => ({
+    Authorization: `Bearer ${authStore.token}`,
+    'Content-Type': 'application/json',
+    ...(authStore.user?.tenantId ? { 'X-Tenant-ID': authStore.user.tenantId } : {}),
+  });
+
+  // ── Profile ──────────────────────────────────────────────────────────────────
   const fetchProfile = async () => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/tenants/me', {
-        headers: { Authorization: `Bearer ${authStore.token}` },
-      });
+      const res = await fetch('/api/v1/tenants/me', { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
         if (data.data) {
@@ -45,11 +57,8 @@ export const useTenantStore = defineStore('tenant', () => {
         const err = await res.json();
         toast.error(err.message || 'Failed to load profile');
       }
-    } catch {
-      toast.error('Network error loading profile');
-    } finally {
-      isLoading.value = false;
-    }
+    } catch { toast.error('Network error loading profile'); }
+    finally { isLoading.value = false; }
   };
 
   const updateProfile = async () => {
@@ -57,134 +66,120 @@ export const useTenantStore = defineStore('tenant', () => {
     try {
       const res = await fetch('/api/v1/tenants/me', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authStore.token}`,
-        },
-        body: JSON.stringify({
-          name: profile.companyName,
-          contactNumber: profile.contactNumber,
-          address: profile.address,
-        }),
+        headers: authHeaders(),
+        body: JSON.stringify({ name: profile.companyName, contactNumber: profile.contactNumber, address: profile.address }),
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Update failed');
-      }
+      if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Update failed'); }
       toast.success('✅ Company profile updated!');
-    } finally {
-      isLoading.value = false;
-    }
+    } finally { isLoading.value = false; }
   };
 
+  // ── Analytics ─────────────────────────────────────────────────────────────────
   const fetchRevenueAnalytics = async () => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/analytics/tenant', {
-        headers: { Authorization: `Bearer ${authStore.token}` },
-      });
+      const res = await fetch('/api/v1/analytics/tenant', { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
         revenueAnalytics.value = data.data;
       } else {
         const err = await res.json();
-        toast.error(err.message || 'Failed to load revenue analytics');
+        toast.error(err.message || 'Failed to load analytics');
       }
-    } catch {
-      toast.error('Network error loading analytics');
-    } finally {
-      isLoading.value = false;
-    }
+    } catch { toast.error('Network error loading analytics'); }
+    finally { isLoading.value = false; }
   };
 
-  const fetchTicketHistory = async () => {
+  // ── Tickets ───────────────────────────────────────────────────────────────────
+  const fetchTicketHistory = async (page = 1, status?: string) => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/parking/tickets?limit=20', {
-        headers: { Authorization: `Bearer ${authStore.token}` },
-      });
+      const params = new URLSearchParams({ page: String(page), limit: '15' });
+      const s = status ?? ticketFilter.value;
+      if (s && s !== 'ALL') params.set('status', s);
+      const res = await fetch(`/api/v1/parking/tickets?${params.toString()}`, { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
         ticketHistory.value = data.data;
+        ticketPagination.value = data.pagination || { page: 1, totalPages: 1, total: data.data.length };
       } else {
         const err = await res.json();
-        toast.error(err.message || 'Failed to load ticket history');
+        toast.error(err.message || 'Failed to load tickets');
       }
-    } catch {
-      toast.error('Network error loading history');
-    } finally {
-      isLoading.value = false;
-    }
+    } catch { toast.error('Network error loading tickets'); }
+    finally { isLoading.value = false; }
   };
 
+  // ── Staff ─────────────────────────────────────────────────────────────────────
   const fetchStaff = async () => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/tenants/staff', {
-        headers: { Authorization: `Bearer ${authStore.token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        staffList.value = data.data;
-      } else {
-        const err = await res.json();
-        toast.error(err.message || 'Failed to load staff');
-      }
-    } catch {
-      toast.error('Network error loading staff');
-    } finally {
-      isLoading.value = false;
-    }
+      const res = await fetch('/api/v1/tenants/staff', { headers: authHeaders() });
+      if (res.ok) { const data = await res.json(); staffList.value = data.data; }
+      else { const err = await res.json(); toast.error(err.message || 'Failed to load staff'); }
+    } catch { toast.error('Network error loading staff'); }
+    finally { isLoading.value = false; }
   };
 
-  const createStaff = async (staffData: any) => {
+  const createStaff = async (staffData: { name: string; email: string; password: string }) => {
     isLoading.value = true;
     try {
       const res = await fetch('/api/v1/tenants/staff', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authStore.token}`,
-        },
+        headers: authHeaders(),
         body: JSON.stringify(staffData),
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Failed to create operator');
-      }
-      toast.success('✅ Operator created successfully!');
-      await fetchStaff(); // Refresh list
+      if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Failed to create operator'); }
+      toast.success('✅ Operator account created!');
+      await fetchStaff();
       return true;
-    } catch (err: any) {
-      toast.error(err.message);
-      return false;
-    } finally {
-      isLoading.value = false;
-    }
+    } catch (err: any) { toast.error(err.message); return false; }
+    finally { isLoading.value = false; }
   };
 
+  // ── Rates ─────────────────────────────────────────────────────────────────────
   const fetchRates = async () => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/rates', {
-        headers: { Authorization: `Bearer ${authStore.token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        rates.value = data.data;
-      } else {
-        const err = await res.json();
-        toast.error(err.message || 'Failed to load rates');
-      }
-    } catch {
-      toast.error('Network error loading rates');
-    } finally {
-      isLoading.value = false;
-    }
+      const res = await fetch('/api/v1/rates', { headers: authHeaders() });
+      if (res.ok) { const data = await res.json(); rates.value = data.data; }
+      else { const err = await res.json(); toast.error(err.message || 'Failed to load rates'); }
+    } catch { toast.error('Network error loading rates'); }
+    finally { isLoading.value = false; }
   };
 
-  return { 
-    activeTab, isLoading, profile, revenueAnalytics, ticketHistory, staffList, rates,
-    fetchProfile, updateProfile, fetchRevenueAnalytics, fetchTicketHistory, fetchStaff, createStaff, fetchRates
+  const upsertRate = async (vehicleType: string, payload: {
+    rate_per_hour: number; grace_period_minutes?: number; lost_ticket_penalty?: number;
+  }) => {
+    isLoading.value = true;
+    try {
+      // Try PUT first (update), then POST (create)
+      let res = await fetch(`/api/v1/rates/${vehicleType}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify(payload),
+      });
+      if (res.status === 404) {
+        res = await fetch('/api/v1/rates', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ vehicle_type: vehicleType, ...payload }),
+        });
+      }
+      if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Failed to save rate'); }
+      toast.success(`✅ ${vehicleType} rate saved!`);
+      await fetchRates();
+      return true;
+    } catch (err: any) { toast.error(err.message); return false; }
+    finally { isLoading.value = false; }
+  };
+
+  return {
+    activeTab, isLoading,
+    profile, fetchProfile, updateProfile,
+    revenueAnalytics, fetchRevenueAnalytics,
+    ticketHistory, ticketPagination, ticketFilter, fetchTicketHistory,
+    staffList, fetchStaff, createStaff,
+    rates, fetchRates, upsertRate,
   };
 });

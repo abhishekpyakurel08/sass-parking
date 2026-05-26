@@ -163,13 +163,13 @@ const chartBars = [
                 <div class="bg-slate-50 border border-slate-100 rounded-lg p-4">
                   <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">TODAY'S REVENUE</p>
                   <p class="text-lg font-bold text-slate-900">
-                    ${{ store.revenueAnalytics?.today?.toFixed(2) ?? '0.00' }}
+                    Rs. {{ store.revenueAnalytics?.today?.toFixed(2) ?? '0.00' }}
                   </p>
                 </div>
                 <div class="bg-slate-50 border border-slate-100 rounded-lg p-4">
                   <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">MONTHLY REVENUE</p>
                   <p class="text-lg font-bold text-slate-900">
-                    ${{ store.revenueAnalytics?.oneMonth?.toFixed(2) ?? '0.00' }}
+                    Rs. {{ store.revenueAnalytics?.oneMonth?.toFixed(2) ?? '0.00' }}
                   </p>
                 </div>
               </div>
@@ -187,7 +187,6 @@ const chartBars = [
                 <h3 class="font-bold text-lg text-slate-900">Daily Revenue Flow</h3>
                 <div class="flex bg-slate-50 p-1 rounded-lg border border-slate-100">
                   <button class="px-3 py-1 bg-white shadow-sm rounded-md text-xs font-bold text-slate-900">Hourly</button>
-                  <button class="px-3 py-1 text-xs font-bold text-slate-500">Heatmap</button>
                 </div>
               </div>
               <div class="h-52 flex items-end justify-between gap-1.5 mt-4 px-1">
@@ -208,14 +207,14 @@ const chartBars = [
             <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200 border-l-4 border-l-blue-600">
               <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">TODAY'S REVENUE</p>
               <div class="flex items-baseline gap-3">
-                <h3 class="text-2xl font-black text-slate-900">${{ store.revenueAnalytics?.today?.toFixed(2) ?? '0.00' }}</h3>
+                <h3 class="text-2xl font-black text-slate-900">Rs. {{ store.revenueAnalytics?.today?.toFixed(2) ?? '0.00' }}</h3>
                 <span class="text-xs font-bold text-green-600 flex items-center gap-0.5"><TrendingUp class="w-3 h-3" /> Live</span>
               </div>
             </div>
             <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200 border-l-4 border-l-blue-600">
               <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">3-MONTH REVENUE</p>
               <div class="flex items-baseline gap-3">
-                <h3 class="text-2xl font-black text-slate-900">${{ store.revenueAnalytics?.threeMonths?.toFixed(0) ?? '0' }}</h3>
+                <h3 class="text-2xl font-black text-slate-900">Rs. {{ store.revenueAnalytics?.threeMonths?.toFixed(0) ?? '0' }}</h3>
                 <span class="text-xs font-medium text-slate-500">last 90 days</span>
               </div>
             </div>
@@ -310,7 +309,7 @@ const chartBars = [
                       PER {{ rate.billing_unit || 'HOUR' }}
                     </p>
                   </div>
-                  <span class="text-lg font-black text-slate-900">${{ rate.rate_per_hour ?? rate.amount ?? '—' }}</span>
+                  <span class="text-lg font-black text-slate-900">Rs. {{ rate.rate_per_hour ?? rate.amount ?? '—' }}</span>
                 </div>
               </div>
 
