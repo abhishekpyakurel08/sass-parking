@@ -3,12 +3,13 @@ import {
   View, Text, StyleSheet, SafeAreaView, ScrollView,
   TouchableOpacity, ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
-import { RefreshCcw, CircleUser, CarFront, CheckCircle2, Banknote, Scan, ArrowRight, ParkingCircle, LogOut } from 'lucide-react-native';
+import { RefreshCcw, CarFront, CheckCircle2, Banknote, Scan, ArrowRight, ParkingCircle, LogOut, CloudUpload } from 'lucide-react-native';
 import { colors } from '../theme/colors';
 import { useNavigation } from '@react-navigation/native';
 import { useParkingStore } from '../store/parkingStore';
 import { useAuthStore } from '../store/authStore';
 import type { Ticket } from '../types/api.types';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const statusColor: Record<string, string> = {
   ACTIVE: colors.success,
@@ -18,8 +19,8 @@ const statusColor: Record<string, string> = {
   LOST: colors.danger,
 };
 
-const TicketRow = ({ ticket }: { ticket: Ticket }) => (
-  <View style={styles.activityItem}>
+const TicketRow = ({ ticket, index }: { ticket: Ticket, index: number }) => (
+  <Animated.View entering={FadeInDown.delay(100 * index).springify()} style={styles.activityItem}>
     <View style={styles.plateBadge}>
       <Text style={styles.plateText} numberOfLines={1}>{ticket.license_plate}</Text>
     </View>
@@ -30,27 +31,33 @@ const TicketRow = ({ ticket }: { ticket: Ticket }) => (
     <View style={[styles.statusBadge, { backgroundColor: statusColor[ticket.status] + '30' }]}>
       <Text style={[styles.statusBadgeText, { color: statusColor[ticket.status] }]}>{ticket.status}</Text>
     </View>
-  </View>
+  </Animated.View>
 );
 
 const DashboardScreen = () => {
   const navigation = useNavigation();
-  const { stats, recentTickets, isLoadingStats, fetchDashboard } = useParkingStore();
+  const { stats, recentTickets, isLoadingStats, fetchDashboard, offlineQueueCount, isSyncing, syncOfflineQueue } = useParkingStore();
   const { user, logout } = useAuthStore();
 
-  useEffect(() => { fetchDashboard(); }, []);
+  useEffect(() => { 
+    fetchDashboard(); 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Logout', style: 'destructive', onPress: async () => {
           await logout();
-          navigation.navigate('Login' as never);
+          // Navigation to Login is handled automatically by AppNavigator
         }},
     ]);
   };
 
-  const onRefresh = useCallback(() => { fetchDashboard(); }, []);
+  const onRefresh = useCallback(() => { 
+    fetchDashboard(); 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fmtRevenue = (n: number) => {
     if (n >= 1000) return `Rs. ${(n / 1000).toFixed(1)}k`;
@@ -74,29 +81,46 @@ const DashboardScreen = () => {
         refreshControl={<RefreshControl refreshing={isLoadingStats} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
         {/* Operator Status */}
-        <View style={styles.operatorCard}>
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.operatorCard}>
           <View>
             <Text style={styles.label}>OPERATOR STATUS</Text>
             <Text style={styles.operatorName}>{user?.name ?? 'Operator'}</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            <View style={styles.onlineBadge}>
-              <Text style={styles.onlineText}>ONLINE</Text>
-            </View>
+            {offlineQueueCount > 0 ? (
+              <TouchableOpacity style={styles.offlineBadge} onPress={syncOfflineQueue} disabled={isSyncing}>
+                {isSyncing ? (
+                  <ActivityIndicator color="#FFF" size="small" />
+                ) : (
+                  <>
+                    <CloudUpload color="#FFF" size={12} style={{ marginRight: 4 }} />
+                    <Text style={styles.offlineText}>{offlineQueueCount} PENDING</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.onlineBadge}>
+                <Text style={styles.onlineText}>ONLINE</Text>
+              </View>
+            )}
             <Text style={styles.roleText}>{user?.role?.replace('_', ' ')}</Text>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Action Buttons */}
-        <TouchableOpacity style={styles.checkInButton} onPress={() => navigation.navigate('CheckIn' as never)}>
-          <ParkingCircle color="#FFF" size={32} style={{ marginBottom: 8 }} />
-          <Text style={styles.actionButtonText}>CHECK IN VEHICLE</Text>
-        </TouchableOpacity>
+        <Animated.View entering={FadeInDown.delay(100).duration(400)}>
+          <TouchableOpacity style={styles.checkInButton} onPress={() => navigation.navigate('CheckIn' as never)}>
+            <ParkingCircle color="#FFF" size={32} style={{ marginBottom: 8 }} />
+            <Text style={styles.actionButtonText}>CHECK IN VEHICLE</Text>
+          </TouchableOpacity>
+        </Animated.View>
 
-        <TouchableOpacity style={styles.scanButton} onPress={() => navigation.navigate('Scanner' as never)}>
-          <Scan color="#000" size={32} style={{ marginBottom: 8 }} />
-          <Text style={[styles.actionButtonText, { color: '#000' }]}>SCAN TO CHECK OUT</Text>
-        </TouchableOpacity>
+        <Animated.View entering={FadeInDown.delay(200).duration(400)}>
+          <TouchableOpacity style={styles.scanButton} onPress={() => navigation.navigate('Scanner' as never)}>
+            <Scan color="#FFF" size={32} style={{ marginBottom: 8 }} />
+            <Text style={[styles.actionButtonText, { color: '#FFF' }]}>SCAN TO CHECK OUT</Text>
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* Shift Overview */}
         <Text style={styles.sectionTitle}>SHIFT OVERVIEW</Text>
@@ -104,7 +128,7 @@ const DashboardScreen = () => {
         {isLoadingStats && !stats ? (
           <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
         ) : (
-          <>
+          <Animated.View entering={FadeInDown.delay(300).duration(400)}>
             <View style={styles.overviewCard}>
               <View style={styles.overviewHeader}>
                 <Text style={styles.label}>VEHICLES TODAY</Text>
@@ -134,31 +158,33 @@ const DashboardScreen = () => {
                 {fmtRevenue(stats?.totalRevenue ?? 0)}
               </Text>
             </View>
-          </>
+          </Animated.View>
         )}
 
         {/* Recent Activity */}
-        <View style={styles.activityHeader}>
-          <Text style={styles.sectionTitle}>RECENT ACTIVITY</Text>
-          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={styles.viewAllText}>VIEW ALL</Text>
-            <ArrowRight color={colors.primary} size={14} style={{ marginLeft: 4 }} />
-          </TouchableOpacity>
-        </View>
+        <Animated.View entering={FadeInDown.delay(400).duration(400)}>
+          <View style={styles.activityHeader}>
+            <Text style={styles.sectionTitle}>RECENT ACTIVITY</Text>
+            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }} onPress={() => navigation.navigate('History' as never)}>
+              <Text style={styles.viewAllText}>VIEW ALL</Text>
+              <ArrowRight color={colors.primary} size={14} style={{ marginLeft: 4 }} />
+            </TouchableOpacity>
+          </View>
 
-        <View style={styles.activityCard}>
-          {recentTickets.length === 0 ? (
-            <View style={{ padding: 20, alignItems: 'center' }}>
-              <Text style={{ color: colors.textSecondary }}>No activity yet today</Text>
-            </View>
-          ) : (
-            recentTickets.slice(0, 5).map((ticket, i) => (
-              <View key={ticket._id} style={i === Math.min(recentTickets.length, 5) - 1 ? { borderBottomWidth: 0 } : {}}>
-                <TicketRow ticket={ticket} />
+          <View style={styles.activityCard}>
+            {recentTickets.length === 0 ? (
+              <View style={{ padding: 20, alignItems: 'center' }}>
+                <Text style={{ color: colors.textSecondary }}>No activity yet today</Text>
               </View>
-            ))
-          )}
-        </View>
+            ) : (
+              recentTickets.slice(0, 5).map((ticket, i) => (
+                <View key={ticket._id} style={i === Math.min(recentTickets.length, 5) - 1 ? { borderBottomWidth: 0 } : {}}>
+                  <TicketRow ticket={ticket} index={i} />
+                </View>
+              ))
+            )}
+          </View>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -175,6 +201,8 @@ const styles = StyleSheet.create({
   operatorName:    { color: colors.text, fontSize: 18 },
   onlineBadge:     { backgroundColor: colors.success, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 2, marginBottom: 4 },
   onlineText:      { color: '#FFF', fontSize: 10, fontWeight: 'bold' },
+  offlineBadge:    { backgroundColor: '#F59E0B', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, marginBottom: 4, flexDirection: 'row', alignItems: 'center' },
+  offlineText:     { color: '#FFF', fontSize: 10, fontWeight: 'bold' },
   roleText:        { color: colors.textSecondary, fontSize: 10 },
   checkInButton:   { backgroundColor: colors.primary, borderRadius: 4, padding: 24, alignItems: 'center', marginBottom: 12 },
   scanButton:      { backgroundColor: colors.secondary, borderRadius: 4, padding: 24, alignItems: 'center', marginBottom: 32 },
@@ -187,8 +215,8 @@ const styles = StyleSheet.create({
   viewAllText:     { color: colors.primary, fontSize: 12, fontWeight: 'bold' },
   activityCard:    { backgroundColor: colors.card, borderRadius: 4, borderWidth: 1, borderColor: colors.border },
   activityItem:    { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
-  plateBadge:      { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderRadius: 4, paddingHorizontal: 8, paddingVertical: 6, width: 80, alignItems: 'center' },
-  plateText:       { color: colors.text, fontSize: 11, fontFamily: 'monospace' },
+  plateBadge:      { backgroundColor: colors.accent + '30', borderWidth: 1, borderColor: colors.accent, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 6, width: 80, alignItems: 'center' },
+  plateText:       { color: colors.text, fontSize: 11, fontFamily: 'monospace', fontWeight: 'bold' },
   activityDetails: { flex: 1, marginLeft: 16 },
   activityTitle:   { color: colors.text, fontSize: 14, fontWeight: 'bold' },
   activityTime:    { color: colors.textSecondary, fontSize: 12, marginTop: 2 },

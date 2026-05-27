@@ -5,11 +5,9 @@ import {
 } from 'react-native';
 import { RefreshCcw, Mail, Eye, EyeOff, LogIn, Shield, ShieldCheck, ShieldAlert } from 'lucide-react-native';
 import { colors } from '../theme/colors';
-import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../store/authStore';
 
 const LoginScreen = () => {
-  const navigation = useNavigation();
   const { login, isLoading, error, clearError } = useAuthStore();
   const [email, setEmail]       = useState('');
   const [pin, setPin]           = useState('');
@@ -23,7 +21,7 @@ const LoginScreen = () => {
     try {
       clearError();
       await login(email.trim(), pin);
-      navigation.navigate('MainTabs' as never);
+      // Navigation is now handled conditionally in AppNavigator based on isAuthenticated state
     } catch (err: any) {
       Alert.alert('Login Failed', err.message);
     }

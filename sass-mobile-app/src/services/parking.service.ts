@@ -48,4 +48,16 @@ export const parkingService = {
     const { data } = await api.get<DailyStats>('/operator/stats');
     return data;
   },
+
+  // POST /api/v1/sync/batch — upload offline operations
+  async syncBatch(payload: { operations: any[] }): Promise<any> {
+    const { data } = await api.post<any>('/sync/batch', payload);
+    return data;
+  },
+
+  // GET /api/v1/parking/:ticket_id/receipt
+  async getReceipt(ticket_id: string): Promise<{ success: boolean; printable_text: string }> {
+    const { data } = await api.get<{ success: boolean; printable_text: string }>(`/parking/${ticket_id}/receipt`);
+    return data;
+  }
 };

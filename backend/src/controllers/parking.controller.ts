@@ -598,28 +598,114 @@ export const exportReport = async (req: Request, res: Response, next: NextFuncti
       const customerName = t.customer_id ? (t.customer_id as any).name : 'Standard';
 
       const row = [
-        `"${t.ticket_number || ''}"`,
-        `"${t.license_plate || '—'}"`,
-        `"${t.vehicle_type || 'CAR'}"`,
-        `"${t.status || 'ACTIVE'}"`,
-        `"${checkIn}"`,
-        `"${checkOut}"`,
-        t.fare_amount || 0,
-        t.penalty_amount || 0,
-        t.discount_amount || 0,
+        t.ticket_number,
+        t.license_plate,
+        t.vehicle_type,
+        t.status,
+        checkIn,
+        checkOut,
+        t.fare_amount,
+        t.penalty_amount,
+        t.discount_amount,
         payable,
-        `"${t.payment_method || '—'}"`,
-        `"${customerName}"`
-      ];
-
-      csvRows.push(row.join(','));
+        t.payment_method || 'N/A',
+        customerName
+      ].join(',');
+      csvRows.push(row);
     }
 
-    const csvContent = csvRows.join('\n');
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename=parking_report_${Date.now()}.csv`);
-    res.status(200).send(csvContent);
-  } catch (err) {
-    next(err);
-  }
+    res.header('Content-Type', 'text/csv');
+    res.attachment(`parking_export_${new Date().getTime()}.csv`);
+    res.send(csvRows.join('\n'));
+  } catch (err) { next(err); }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/v1/parking/ticket/:id/receipt  — Generate printable receipt text for past ticket
+// ─────────────────────────────────────────────────────────────────────────────
+export const getReceipt = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const tenantId = req.tenant!.tenantId;
+    const ticketId = req.params.id;
+
+    const ticket = await Ticket.findOne({ _id: ticketId, tenant_id: tenantId })
+      .populate('customer_id', 'name discount_percentage')
+      .lean();
+
+    if (!ticket) {
+      return next(new NotFoundError('Ticket not found'));
+    }
+
+    const businessName = req.tenant?.tenantName || 'Parking System';
+    
+    let printableText = '';
+    
+    if (ticket.status === 'ACTIVE' || ticket.status === 'PENDING_PAYMENT') {
+      // Check-in receipt style
+      const entryTime = new Date(ticket.check_in_time);
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const formattedDate = `${entryTime.getFullYear()}-${pad(entryTime.getMonth() + 1)}-${pad(entryTime.getDate())} ${pad(entryTime.getHours())}:${pad(entryTime.getMinutes())}:${pad(entryTime.getSeconds())}`;
+      
+      const customer = ticket.customer_id as any;
+      printableText = [
+        '========================================',
+        `          ${businessName.toUpperCase().padEnd(28).substring(0, 28)}`,
+        '========================================',
+        ` TICKET NO   : ${ticket.ticket_number}`,
+        ` PLATE NO    : ${ticket.license_plate}`,
+        ` VEHICLE TYPE: ${ticket.vehicle_type}`,
+        ` ENTRY TIME  : ${formattedDate}`,
+        customer ? ` CUSTOMER    : ${customer.name} (${customer.discount_percentage}% OFF)` : '',
+        '----------------------------------------',
+        '      PLEASE SCAN QR CODE TO EXIT',
+        '========================================',
+      ].filter(Boolean).join('\n');
+    } else {
+      // Payment receipt style
+      const entryTime = new Date(ticket.check_in_time);
+      const exitTime = ticket.check_out_time ? new Date(ticket.check_out_time) : new Date();
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      
+      const fmtDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+      
+      const formattedEntryTime = fmtDate(entryTime);
+      const formattedExitTime = fmtDate(exitTime);
+      
+      const durationMs = exitTime.getTime() - entryTime.getTime();
+      const h = Math.floor(durationMs / 3_600_000);
+      const m = Math.floor((durationMs % 3_600_000) / 60_000);
+      const formattedDuration = h > 0 ? `${h}h ${m}m` : `${m}m`;
+
+      const total_due = (ticket.fare_amount || 0) + (ticket.penalty_amount || 0) - (ticket.discount_amount || 0);
+
+      printableText = [
+        '┌─────────────────────┐',
+        '│   PARKING RECEIPT   │',
+        '│                     │',
+        `│ Ticket: #${ticket.ticket_number.substring(0,8).toUpperCase()}      │`,
+        `│ Vehicle: ${ticket.vehicle_type.padEnd(10).substring(0,10)}  │`,
+        '│                     │',
+        `│ Entry: ${formattedEntryTime}        │`,
+        `│ Exit:  ${formattedExitTime}        │`,
+        `│ Duration: ${formattedDuration.padEnd(10).substring(0,10)} │`,
+        '├─────────────────────┤',
+        `│ Subtotal:   Rs. ${(ticket.fare_amount || 0).toFixed(2).padStart(5)} │`,
+        ticket.discount_amount > 0 ? `│ Discount:   - Rs. ${ticket.discount_amount.toFixed(2).padStart(5)} │` : '',
+        ticket.penalty_amount > 0 ? `│ Penalty:    + Rs. ${ticket.penalty_amount.toFixed(2).padStart(5)} │` : '',
+        `│ TOTAL:      Rs. ${total_due.toFixed(2).padStart(5)} │`,
+        '│                     │',
+        `│ Paid: ${(ticket.payment_method || 'N/A').padEnd(15).substring(0,15)} │`,
+        ticket.payment_method === 'CASH' ? `│ Received: Rs. ${(ticket.amount_received || 0).toFixed(2).padStart(5)}    │` : '',
+        ticket.payment_method === 'CASH' ? `│ Change:   Rs. ${(ticket.change_given || 0).toFixed(2).padStart(5)}     │` : '',
+        '│                     │',
+        '│   Thank You!   │',
+        '└─────────────────────┘',
+      ].filter(Boolean).join('\n');
+    }
+
+    res.status(200).json({
+      success: true,
+      printable_text: printableText,
+    });
+  } catch (err) { next(err); }
 };

@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   SafeAreaView, KeyboardAvoidingView, Platform, ScrollView,
-  ActivityIndicator, Alert,
+  ActivityIndicator, Alert, Modal, Image
 } from 'react-native';
-import { RefreshCcw, CircleUser, Car, Bike, Truck, Ticket, ChevronLeft } from 'lucide-react-native';
+import { RefreshCcw, CircleUser, Car, Bike, Truck, Ticket, ChevronLeft, CheckCircle2 } from 'lucide-react-native';
 import { colors } from '../theme/colors';
 import { useNavigation } from '@react-navigation/native';
 import { useParkingStore } from '../store/parkingStore';
 import type { VehicleType } from '../types/api.types';
+import QRCode from 'react-native-qrcode-svg';
 
 type Category = { type: VehicleType; label: string; icon: React.ReactNode };
 
@@ -25,6 +26,7 @@ const CheckInScreen = () => {
   const [plate, setPlate]           = useState('');
   const [vehicleType, setVehicleType] = useState<VehicleType>('CAR');
   const [customerCode, setCustomerCode] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleCheckIn = async () => {
     if (!plate.trim()) {
@@ -34,18 +36,17 @@ const CheckInScreen = () => {
     try {
       clearError();
       await checkIn(plate.trim().toUpperCase(), vehicleType, customerCode.trim() || undefined);
-      // Success — show receipt alert then go back
-      const res = useParkingStore.getState().lastCheckIn;
-      Alert.alert(
-        '✅ Check-In Successful',
-        `Ticket #${res?.ticket_number?.slice(0, 8).toUpperCase()}\nPlate: ${res?.license_plate}\nEntry: ${res?.check_in_time ? new Date(res.check_in_time).toLocaleTimeString() : ''}`,
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+      setShowSuccess(true);
       setPlate('');
       setCustomerCode('');
     } catch (err: any) {
       Alert.alert('Check-In Failed', err.message);
     }
+  };
+
+  const handleCloseSuccess = () => {
+    setShowSuccess(false);
+    navigation.goBack();
   };
 
   const CategoryButton = ({ item }: { item: Category }) => {
@@ -78,7 +79,7 @@ const CheckInScreen = () => {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.content}>
           <Text style={styles.title}>Vehicle Check-In</Text>
-          <Text style={styles.subtitle}>Register new entry to Zone A-4</Text>
+          <Text style={styles.subtitle}>Register new entry</Text>
 
           {/* License Plate */}
           <Text style={styles.labelBlue}>LICENSE PLATE</Text>
@@ -135,6 +136,52 @@ const CheckInScreen = () => {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal visible={showSuccess} animationType="slide" transparent presentationStyle="overFullScreen">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={{ alignItems: 'center', marginBottom: 20 }}>
+              <CheckCircle2 color={colors.success} size={48} />
+              <Text style={styles.modalTitle}>Check-In Successful</Text>
+              {lastCheckIn?.isOffline && (
+                <Text style={{ color: '#F59E0B', fontSize: 12, fontWeight: 'bold', marginTop: 4 }}>
+                  (Offline Mode — Synced Later)
+                </Text>
+              )}
+            </View>
+
+            <View style={styles.qrContainer}>
+              {lastCheckIn?.isOffline || !lastCheckIn?.qr_code_url ? (
+                <QRCode
+                  value={lastCheckIn?.ticket_number || 'UNKNOWN'}
+                  size={150}
+                />
+              ) : (
+                <Image
+                  source={{ uri: lastCheckIn.qr_code_url }}
+                  style={{ width: 150, height: 150 }}
+                />
+              )}
+            </View>
+            
+            <View style={styles.ticketDetailsBox}>
+              <Text style={styles.ticketDetailsText}>
+                Ticket: #{lastCheckIn?.ticket_number?.slice(0, 8).toUpperCase()}
+              </Text>
+              <Text style={styles.ticketDetailsText}>
+                Plate: {lastCheckIn?.license_plate}
+              </Text>
+              <Text style={styles.ticketDetailsText}>
+                Time: {lastCheckIn?.check_in_time ? new Date(lastCheckIn.check_in_time).toLocaleTimeString() : ''}
+              </Text>
+            </View>
+
+            <TouchableOpacity style={styles.closeBtn} onPress={handleCloseSuccess}>
+              <Text style={styles.closeBtnText}>DONE</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -162,6 +209,14 @@ const styles = StyleSheet.create({
   codeInput:            { color: colors.text, fontSize: 14 },
   generateButton:       { backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 56, borderRadius: 4 },
   generateButtonText:   { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
+  modalOverlay:         { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent:         { width: '100%', backgroundColor: colors.card, borderRadius: 16, padding: 24, alignItems: 'center' },
+  modalTitle:           { color: colors.text, fontSize: 22, fontWeight: 'bold', marginTop: 12 },
+  qrContainer:          { backgroundColor: '#FFF', padding: 16, borderRadius: 8, marginBottom: 20 },
+  ticketDetailsBox:     { width: '100%', backgroundColor: colors.inputBg, padding: 16, borderRadius: 8, marginBottom: 24 },
+  ticketDetailsText:    { color: colors.text, fontSize: 16, fontWeight: 'bold', textAlign: 'center', marginBottom: 4 },
+  closeBtn:             { width: '100%', backgroundColor: colors.primary, padding: 16, borderRadius: 8, alignItems: 'center' },
+  closeBtnText:         { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
 });
 
 export default CheckInScreen;

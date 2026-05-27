@@ -11,6 +11,10 @@ import {
 import { colors } from '../theme/colors';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { Ticket } from '../types/api.types';
+import QRCode from 'react-native-qrcode-svg';
+import RNPrint from 'react-native-print';
+import { Alert } from 'react-native';
+import { parkingService } from '../services/parking.service';
 
 const STATUS_COLOR: Record<string, string> = {
   ACTIVE:          colors.success,
@@ -64,6 +68,8 @@ const TicketDetailScreen = () => {
   const ticket     = (route.params as any)?.ticket as Ticket;
   const navigation2 = useNavigation();
 
+  const [isPrinting, setIsPrinting] = React.useState(false);
+
   if (!ticket) {
     return (
       <SafeAreaView style={styles.container}>
@@ -80,6 +86,31 @@ const TicketDetailScreen = () => {
   const handleAction = () => {
     if (ticket.status === 'ACTIVE' || ticket.status === 'PENDING_PAYMENT') {
       (navigation2 as any).navigate('Payment', { ticket_id: ticket._id });
+    }
+  };
+
+  const handlePrintReceipt = async () => {
+    try {
+      setIsPrinting(true);
+      const res = await parkingService.getReceipt(ticket._id);
+      if (res.success && res.printable_text) {
+        // Convert ASCII to HTML for the print service
+        const html = `
+          <html>
+            <head>
+              <style>
+                body { font-family: monospace; font-size: 16px; margin: 20px; white-space: pre-wrap; }
+              </style>
+            </head>
+            <body>${res.printable_text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</body>
+          </html>
+        `;
+        await RNPrint.print({ html });
+      }
+    } catch (err: any) {
+      Alert.alert('Print Error', err?.response?.data?.message ?? 'Failed to fetch receipt');
+    } finally {
+      setIsPrinting(false);
     }
   };
 
@@ -117,7 +148,12 @@ const TicketDetailScreen = () => {
         <View style={styles.ticketCard}>
           <View style={styles.ticketHeader}>
             <Hash color={colors.primary} size={16} />
-            <Text style={styles.ticketLabel}>TICKET NUMBER</Text>
+            <Text style={styles.ticketLabel}>TICKET QR & NUMBER</Text>
+          </View>
+          <View style={{ alignItems: 'center', marginVertical: 16 }}>
+            <View style={{ padding: 12, backgroundColor: '#FFF', borderRadius: 8 }}>
+              <QRCode value={ticket.ticket_number} size={140} />
+            </View>
           </View>
           <Text style={styles.ticketNumber}>{ticket.ticket_number}</Text>
         </View>
@@ -260,6 +296,14 @@ const TicketDetailScreen = () => {
             </Text>
           </TouchableOpacity>
         )}
+
+        <TouchableOpacity 
+          style={[styles.printButton, isPrinting && { opacity: 0.6 }]} 
+          onPress={handlePrintReceipt}
+          disabled={isPrinting}
+        >
+          <Text style={styles.printButtonText}>PRINT RECEIPT</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -299,6 +343,8 @@ const styles = StyleSheet.create({
 
   actionButton:     { backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 52, borderRadius: 8, marginTop: 8 },
   actionButtonText: { color: '#FFF', fontSize: 14, fontWeight: 'bold' },
+  printButton:      { backgroundColor: colors.inputBg, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 8, alignItems: 'center', marginTop: 12 },
+  printButtonText:  { color: colors.text, fontSize: 14, fontWeight: 'bold' },
 });
 
 export default TicketDetailScreen;

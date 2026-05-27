@@ -104,6 +104,7 @@ const HistoryScreen = () => {
   useEffect(() => {
     setLoading(true);
     load(1, filter, true).finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
   const onRefresh = async () => {

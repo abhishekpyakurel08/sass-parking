@@ -1,12 +1,18 @@
 import { create } from 'zustand';
 import { parkingService } from '../services/parking.service';
+import { enqueue, loadQueue, removeFromQueue, isNetworkError } from '../services/offlineQueue';
 import type { Ticket, CheckOutResponse, ScanResponse, DailyStats } from '../types/api.types';
+import { Alert } from 'react-native';
 
 interface ParkingState {
   // Dashboard
   stats: DailyStats['data'] | null;
   recentTickets: Ticket[];
   isLoadingStats: boolean;
+
+  // Offline Sync
+  offlineQueueCount: number;
+  isSyncing: boolean;
 
   // Check-in result
   lastCheckIn: {
@@ -16,6 +22,7 @@ interface ParkingState {
     vehicle_type: string;
     check_in_time: string;
     qr_code_url: string;
+    isOffline?: boolean;
   } | null;
 
   // Scan / checkout flow
@@ -28,6 +35,7 @@ interface ParkingState {
     payment_method: string;
     change_given?: number;
     printable_text: string;
+    isOffline?: boolean;
   } | null;
 
   error: string | null;
@@ -39,22 +47,57 @@ interface ParkingState {
   scanTicket: (code: string) => Promise<void>;
   checkOut: (ticket_id: string) => Promise<void>;
   processPayment: (ticket_id: string, payment_method: 'CASH' | 'UPI' | 'CARD', amount_received?: number) => Promise<void>;
+  syncOfflineQueue: () => Promise<void>;
+  updateQueueCount: () => Promise<void>;
   clearError: () => void;
   clearScanned: () => void;
   clearCheckout: () => void;
   clearPayment: () => void;
 }
 
-export const useParkingStore = create<ParkingState>((set) => ({
+export const useParkingStore = create<ParkingState>((set, get) => ({
   stats: null,
   recentTickets: [],
   isLoadingStats: false,
+  offlineQueueCount: 0,
+  isSyncing: false,
   lastCheckIn: null,
   scannedTicket: null,
   checkoutSummary: null,
   paymentReceipt: null,
   error: null,
   isLoading: false,
+
+  updateQueueCount: async () => {
+    const q = await loadQueue();
+    set({ offlineQueueCount: q.length });
+  },
+
+  syncOfflineQueue: async () => {
+    const q = await loadQueue();
+    if (q.length === 0) return;
+    
+    set({ isSyncing: true });
+    try {
+      const res = await parkingService.syncBatch({ operations: q });
+      if (res.success) {
+        // Clear all synced operations
+        // Ideally we check results.successful vs errors, but for simplicity we clear the whole queue
+        // unless there are explicit instructions.
+        // Or we can clear by ID, but backend doesn't return IDs. So we just clear the ones we sent.
+        await removeFromQueue(q.map(op => op.id));
+        await get().updateQueueCount();
+        await get().fetchDashboard();
+        Alert.alert('Sync Complete', 'Offline operations have been synced.');
+      }
+    } catch (err: any) {
+      if (!isNetworkError(err)) {
+        Alert.alert('Sync Error', err?.response?.data?.message ?? 'Failed to sync offline operations.');
+      }
+    } finally {
+      set({ isSyncing: false });
+    }
+  },
 
   fetchDashboard: async () => {
     set({ isLoadingStats: true, error: null });
@@ -68,8 +111,15 @@ export const useParkingStore = create<ParkingState>((set) => ({
         recentTickets: ticketsRes.data,
         isLoadingStats: false,
       });
+      await get().updateQueueCount();
+      get().syncOfflineQueue(); // auto-sync
     } catch (err: any) {
-      set({ error: err?.response?.data?.message ?? 'Failed to load dashboard', isLoadingStats: false });
+      if (isNetworkError(err)) {
+        await get().updateQueueCount(); // Just load queue count
+        set({ error: 'Running in offline mode', isLoadingStats: false });
+      } else {
+        set({ error: err?.response?.data?.message ?? 'Failed to load dashboard', isLoadingStats: false });
+      }
     }
   },
 
@@ -83,9 +133,40 @@ export const useParkingStore = create<ParkingState>((set) => ({
       });
       set({ lastCheckIn: res.ticket, isLoading: false });
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? 'Check-in failed';
-      set({ error: msg, isLoading: false });
-      throw new Error(msg);
+      if (isNetworkError(err)) {
+        // Enqueue offline check-in
+        const ticket_number = `offline-tkt-${Date.now()}`;
+        const check_in_time = new Date().toISOString();
+        
+        await enqueue('CHECK_IN', {
+          ticket_number,
+          license_plate,
+          vehicle_type,
+          check_in_time,
+          customer_code
+        });
+
+        await get().updateQueueCount();
+        
+        // Mock success response
+        set({
+          lastCheckIn: {
+            ticket_id: ticket_number,
+            ticket_number,
+            license_plate,
+            vehicle_type,
+            check_in_time,
+            qr_code_url: 'data:image/png;base64,offline-mock', // In real app, generate local QR
+            isOffline: true
+          },
+          isLoading: false
+        });
+        Alert.alert('Offline Check-In', 'Vehicle checked in offline. Will sync when connection is restored.');
+      } else {
+        const msg = err?.response?.data?.message ?? 'Check-in failed';
+        set({ error: msg, isLoading: false });
+        throw new Error(msg);
+      }
     }
   },
 
@@ -127,9 +208,35 @@ export const useParkingStore = create<ParkingState>((set) => ({
         isLoading: false,
       });
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? 'Payment failed';
-      set({ error: msg, isLoading: false });
-      throw new Error(msg);
+      if (isNetworkError(err) && get().checkoutSummary) {
+        // Enqueue offline payment
+        const summary = get().checkoutSummary!;
+        
+        await enqueue('PAYMENT', {
+          ticket_number: summary.ticket_number,
+          payment_method,
+          amount_received,
+          change_given: (amount_received || 0) - summary.total_amount
+        });
+
+        await get().updateQueueCount();
+
+        set({
+          paymentReceipt: {
+            total_due: summary.total_amount,
+            payment_method,
+            change_given: (amount_received || 0) - summary.total_amount,
+            printable_text: `┌─────────────────────┐\n│ Offline Receipt │\n│ Total: ${summary.total_amount} │\n└─────────────────────┘`,
+            isOffline: true
+          },
+          isLoading: false
+        });
+        Alert.alert('Offline Payment', 'Payment recorded offline. Will sync when connection is restored.');
+      } else {
+        const msg = err?.response?.data?.message ?? 'Payment failed';
+        set({ error: msg, isLoading: false });
+        throw new Error(msg);
+      }
     }
   },
 

@@ -8,6 +8,7 @@ import { colors } from '../theme/colors';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useParkingStore } from '../store/parkingStore';
 import type { PaymentMethod } from '../types/api.types';
+import RNPrint from 'react-native-print';
 
 // Helper to format minutes → "2h 30m"
 const fmtDuration = (mins: number) => {
@@ -42,6 +43,7 @@ const PaymentScreen = () => {
     if (passedTicketId && !checkoutSummary) {
       doCheckout(passedTicketId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const doScan = async () => {
@@ -135,9 +137,30 @@ const PaymentScreen = () => {
             {paymentReceipt.change_given != null && paymentReceipt.change_given > 0 && (
               <Text style={{ color: '#FDBA74' }}>Change: Rs. {paymentReceipt.change_given.toFixed(2)}</Text>
             )}
-            <TouchableOpacity style={[styles.confirmButton, { marginTop: 20 }]} onPress={resetAll}>
-              <Text style={styles.confirmButtonText}>NEXT VEHICLE</Text>
-            </TouchableOpacity>
+            
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
+              <TouchableOpacity 
+                style={[styles.confirmButton, { flex: 1, backgroundColor: colors.inputBg, borderWidth: 1, borderColor: colors.border }]} 
+                onPress={async () => {
+                  try {
+                    const html = `
+                      <html>
+                        <head><style>body { font-family: monospace; font-size: 16px; margin: 20px; white-space: pre-wrap; }</style></head>
+                        <body>${paymentReceipt.printable_text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</body>
+                      </html>
+                    `;
+                    await RNPrint.print({ html });
+                  } catch (err: any) {
+                    Alert.alert('Print Error', err.message);
+                  }
+                }}
+              >
+                <Text style={[styles.confirmButtonText, { color: colors.text }]}>PRINT RECEIPT</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.confirmButton, { flex: 1 }]} onPress={resetAll}>
+                <Text style={styles.confirmButtonText}>NEXT VEHICLE</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </SafeAreaView>

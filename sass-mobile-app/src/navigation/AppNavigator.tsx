@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Home, ScanLine, Clock } from 'lucide-react-native';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator, Platform } from 'react-native';
 
 import LoginScreen        from '../screens/LoginScreen';
 import DashboardScreen    from '../screens/DashboardScreen';
@@ -24,12 +24,13 @@ const MainTabs = () => (
       headerShown: false,
       tabBarStyle: {
         backgroundColor: colors.tabBar,
+        borderTopWidth: 1,
         borderTopColor: colors.border,
-        height: 60,
-        paddingBottom: 8,
-        paddingTop: 8,
+        height: Platform.OS === 'ios' ? 88 : 64,
+        paddingBottom: Platform.OS === 'ios' ? 28 : 12,
+        paddingTop: 12,
       },
-      tabBarActiveTintColor:   colors.primary,
+      tabBarActiveTintColor: colors.primary,
       tabBarInactiveTintColor: colors.textSecondary,
     }}
   >
@@ -72,7 +73,7 @@ export default function AppNavigator() {
 
   useEffect(() => {
     loadStoredUser().finally(() => setBooting(false));
-  }, []);
+  }, [loadStoredUser]);
 
   if (booting) {
     return (
@@ -85,14 +86,23 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
-        initialRouteName={isAuthenticated ? 'MainTabs' : 'Login'}
+        screenOptions={{ 
+          headerShown: false, 
+          contentStyle: { backgroundColor: colors.background },
+          animation: 'fade_from_bottom',
+          presentation: 'card',
+        }}
       >
-        <Stack.Screen name="Login"        component={LoginScreen} />
-        <Stack.Screen name="MainTabs"     component={MainTabs} />
-        <Stack.Screen name="CheckIn"      component={CheckInScreen} />
-        <Stack.Screen name="Payment"      component={PaymentScreen} />
-        <Stack.Screen name="TicketDetail" component={TicketDetailScreen} />
+        {isAuthenticated ? (
+          <>
+            <Stack.Screen name="MainTabs"     component={MainTabs} />
+            <Stack.Screen name="CheckIn"      component={CheckInScreen} />
+            <Stack.Screen name="Payment"      component={PaymentScreen} />
+            <Stack.Screen name="TicketDetail" component={TicketDetailScreen} />
+          </>
+        ) : (
+          <Stack.Screen name="Login"        component={LoginScreen} />
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );

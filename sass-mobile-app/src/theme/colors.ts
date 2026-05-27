@@ -1,14 +1,18 @@
 export const colors = {
-  background: '#121418',
-  card: '#1A1D24',
-  border: '#2A2D35',
-  text: '#FFFFFF',
-  textSecondary: '#8B92A5',
-  primary: '#3B82F6', // Blue
-  secondary: '#00C2D1', // Cyan/Teal
+  background: '#F8F9FA',      // soft-white
+  card: '#FFFFFF',            // surface
+  border: '#DADADA',          // border-light
+  text: '#1A1A1A',            // text-primary
+  textSecondary: '#6B7280',   // text-secondary
+  primary: '#111111',         // primary-dark (matte-black)
+  secondary: '#2B2B2B',       // secondary-dark (charcoal)
+  accent: '#B2BEB5',          // main-accent (ash-gray)
+  
+  // Semantic colors (kept slightly muted for professional look or kept default)
   success: '#10B981',
   danger: '#EF4444',
   warning: '#F59E0B',
-  inputBg: '#121418',
-  tabBar: '#1A1D24',
+  
+  inputBg: '#F8F9FA',         // hover-gray or soft-white for inputs
+  tabBar: '#FFFFFF',
 };
