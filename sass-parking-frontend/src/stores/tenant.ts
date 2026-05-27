@@ -6,7 +6,7 @@ import { toast } from 'vue3-toastify';
 export const useTenantStore = defineStore('tenant', () => {
   const authStore = useAuthStore();
 
-  const activeTab = ref<'overview' | 'tickets' | 'staff' | 'rates' | 'profile'>('overview');
+  const activeTab = ref<'overview' | 'tickets' | 'staff' | 'rates' | 'profile' | 'terminal'>('overview');
   const isLoading = ref(false);
 
   const revenueAnalytics = ref<{
@@ -153,9 +153,10 @@ export const useTenantStore = defineStore('tenant', () => {
   }) => {
     isLoading.value = true;
     try {
-      // Try PUT first (update), then POST (create)
-      let res = await fetch(`/api/v1/rates/${vehicleType}`, {
-        method: 'PUT',
+      const vType = vehicleType.toUpperCase();
+      // Try PATCH first (update), then POST (create)
+      let res = await fetch(`/api/v1/rates/${vType}`, {
+        method: 'PATCH',
         headers: authHeaders(),
         body: JSON.stringify(payload),
       });
@@ -163,7 +164,7 @@ export const useTenantStore = defineStore('tenant', () => {
         res = await fetch('/api/v1/rates', {
           method: 'POST',
           headers: authHeaders(),
-          body: JSON.stringify({ vehicle_type: vehicleType, ...payload }),
+          body: JSON.stringify({ vehicle_type: vType, ...payload }),
         });
       }
       if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Failed to save rate'); }
@@ -174,12 +175,122 @@ export const useTenantStore = defineStore('tenant', () => {
     finally { isLoading.value = false; }
   };
 
+  // ── Terminal / Operations ───────────────────────────────────────────────────
+  const checkInVehicle = async (payload: { license_plate?: string, vehicle_type: string, customer_code?: string }) => {
+    isLoading.value = true;
+    try {
+      const res = await fetch('/api/v1/operator/check-in', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Check-in failed'); }
+      const data = await res.json();
+      toast.success(`✅ Vehicle checked in! Ticket: ${data.ticketNumber || data.ticket?.ticket_number}`);
+      await fetchTicketHistory(1, 'ACTIVE');
+      return data;
+    } catch (err: any) { toast.error(err.message); return null; }
+    finally { isLoading.value = false; }
+  };
+
+  const checkOutVehicle = async (ticketId: string) => {
+    isLoading.value = true;
+    try {
+      const res = await fetch('/api/v1/parking/check-out', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ ticket_id: ticketId })
+      });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Checkout calculation failed'); }
+      const data = await res.json();
+      toast.success(`✅ Checkout initiated! Fare: Rs. ${data.summary.total_amount}`);
+      await fetchTicketHistory(1);
+      return data.summary;
+    } catch (err: any) { toast.error(err.message); return null; }
+    finally { isLoading.value = false; }
+  };
+
+  const processPayment = async (payload: { ticket_id: string, payment_method: string, amount_received?: number }) => {
+    isLoading.value = true;
+    try {
+      const res = await fetch('/api/v1/parking/process-payment', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Payment failed'); }
+      const data = await res.json();
+      toast.success('✅ Payment successful!');
+      await fetchTicketHistory(1);
+      return data;
+    } catch (err: any) { toast.error(err.message); return null; }
+    finally { isLoading.value = false; }
+  };
+
+  const exportReport = async () => {
+    isLoading.value = true;
+    try {
+      const res = await fetch('/api/v1/parking/export', {
+        method: 'GET',
+        headers: authHeaders()
+      });
+      if (!res.ok) { throw new Error('Failed to export CSV report'); }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `parking_report_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast.success('✅ CSV Report downloaded successfully!');
+      return true;
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to download report');
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  const updateStaff = async (id: string, payload: { name?: string; email?: string; password?: string }) => {
+    isLoading.value = true;
+    try {
+      const res = await fetch(`/api/v1/tenants/staff/${id}`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Failed to update staff'); }
+      toast.success('✅ Staff member updated!');
+      await fetchStaff();
+      return true;
+    } catch (err: any) { toast.error(err.message); return false; }
+    finally { isLoading.value = false; }
+  };
+
+  const deleteStaff = async (id: string) => {
+    isLoading.value = true;
+    try {
+      const res = await fetch(`/api/v1/tenants/staff/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders()
+      });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Failed to delete staff'); }
+      toast.success('🗑️ Staff member removed.');
+      await fetchStaff();
+      return true;
+    } catch (err: any) { toast.error(err.message); return false; }
+    finally { isLoading.value = false; }
+  };
+
   return {
     activeTab, isLoading,
     profile, fetchProfile, updateProfile,
     revenueAnalytics, fetchRevenueAnalytics,
     ticketHistory, ticketPagination, ticketFilter, fetchTicketHistory,
-    staffList, fetchStaff, createStaff,
+    staffList, fetchStaff, createStaff, updateStaff, deleteStaff,
     rates, fetchRates, upsertRate,
+    checkInVehicle, checkOutVehicle, processPayment, exportReport
   };
 });

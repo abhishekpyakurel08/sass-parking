@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import {
   getAllTenants, createTenant, updateTenant, deleteTenant,
-  getMyTenant, updateMyTenant, createStaff, getStaff,
+  getMyTenant, updateMyTenant, createStaff, getStaff, updateStaff, deleteStaff,
 } from '../controllers/tenant.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/auth.middleware.js';
@@ -24,5 +24,7 @@ router.get('/me', requireRole(UserRole.TENANT_OWNER), tenantMiddleware, getMyTen
 router.put('/me', requireRole(UserRole.TENANT_OWNER), tenantMiddleware, updateMyTenant);
 router.get('/staff', requireRole(UserRole.TENANT_OWNER), tenantMiddleware, getStaff);
 router.post('/staff', requireRole(UserRole.TENANT_OWNER), tenantMiddleware, validate(createStaffSchema), createStaff);
+router.patch('/staff/:id', requireRole(UserRole.TENANT_OWNER), tenantMiddleware, updateStaff);
+router.delete('/staff/:id', requireRole(UserRole.TENANT_OWNER), tenantMiddleware, deleteStaff);
 
 export default router;

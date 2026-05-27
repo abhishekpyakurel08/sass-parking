@@ -166,9 +166,14 @@ export const useSuperadminStore = defineStore('superadmin', () => {
 
   const fetchAuditLogs = async () => {
     isLoading.value = true;
-    await new Promise((r) => setTimeout(r, 300));
-    auditLogs.value = [];
-    isLoading.value = false;
+    try {
+      const res = await apiFetch(`/api/v1/audit-logs?limit=50`);
+      auditLogs.value = res.data;
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load audit logs');
+    } finally {
+      isLoading.value = false;
+    }
   };
 
   const fetchGlobalSettings = async () => {

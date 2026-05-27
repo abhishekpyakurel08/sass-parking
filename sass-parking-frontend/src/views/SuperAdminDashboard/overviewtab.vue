@@ -18,7 +18,7 @@ const store = useSuperadminStore();
 const weeklyBars = [
   { day: "MON", value: 50 },
   { day: "TUE", value: 45 },
-  { day: "WED", value: 85, active: true, label: "$28k" },
+  { day: "WED", value: 85, active: true, label: "Rs.28k" },
   { day: "THU", value: 60 },
   { day: "FRI", value: 55 },
   { day: "SAT", value: 72 },
@@ -27,7 +27,7 @@ const weeklyBars = [
 
 const mrr = computed(() =>
   store.stats?.total_revenue != null
-    ? `$${Number(store.stats.total_revenue).toLocaleString("en-US", { minimumFractionDigits: 0 })}`
+    ? `Rs. ${Number(store.stats.total_revenue).toLocaleString("en-US", { minimumFractionDigits: 0 })}`
     : "—"
 );
 const activeTenants = computed(() => store.stats?.active_tenants ?? "—");
@@ -201,7 +201,7 @@ const healthPct = computed(() =>
           <div class="mt-8 pt-6 border-t border-slate-700/50">
             <button
               class="flex items-center justify-between w-full text-xs font-bold tracking-wider hover:text-blue-400 transition-colors"
-              @click="store.switchTab?.('tenants')"
+              @click="store.activeTab = 'tenants'"
             >
               VIEW DETAILED BREAKDOWN <ArrowRight class="w-4 h-4" />
             </button>

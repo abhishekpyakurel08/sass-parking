@@ -562,3 +562,64 @@ export const getTickets = async (req: Request, res: Response, next: NextFunction
     });
   } catch (err) { next(err); }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/v1/parking/export  — Export entire ticket history as CSV
+// ─────────────────────────────────────────────────────────────────────────────
+export const exportReport = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const tenantId = req.tenant!.tenantId;
+    const tickets = await Ticket.find({ tenant_id: tenantId })
+      .populate('customer_id', 'name')
+      .sort({ check_in_time: -1 })
+      .lean();
+
+    const headers = [
+      'Ticket Number',
+      'License Plate',
+      'Vehicle Type',
+      'Status',
+      'Check-In Time',
+      'Check-Out Time',
+      'Fare Amount (Rs.)',
+      'Penalty Amount (Rs.)',
+      'Discount Amount (Rs.)',
+      'Total Payable (Rs.)',
+      'Payment Method',
+      'Customer Name'
+    ];
+
+    const csvRows = [headers.join(',')];
+
+    for (const t of tickets) {
+      const checkIn = t.check_in_time ? new Date(t.check_in_time).toISOString() : '';
+      const checkOut = t.check_out_time ? new Date(t.check_out_time).toISOString() : '';
+      const payable = (t.fare_amount || 0) + (t.penalty_amount || 0) - (t.discount_amount || 0);
+      const customerName = t.customer_id ? (t.customer_id as any).name : 'Standard';
+
+      const row = [
+        `"${t.ticket_number || ''}"`,
+        `"${t.license_plate || '—'}"`,
+        `"${t.vehicle_type || 'CAR'}"`,
+        `"${t.status || 'ACTIVE'}"`,
+        `"${checkIn}"`,
+        `"${checkOut}"`,
+        t.fare_amount || 0,
+        t.penalty_amount || 0,
+        t.discount_amount || 0,
+        payable,
+        `"${t.payment_method || '—'}"`,
+        `"${customerName}"`
+      ];
+
+      csvRows.push(row.join(','));
+    }
+
+    const csvContent = csvRows.join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=parking_report_${Date.now()}.csv`);
+    res.status(200).send(csvContent);
+  } catch (err) {
+    next(err);
+  }
+};

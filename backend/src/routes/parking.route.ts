@@ -6,6 +6,7 @@ import {
   scanTicket,
   handleLostTicket, 
   processPayment,   
+  exportReport,
 } from '../controllers/parking.controller.js';
 import { authenticate, requireRole } from '../middleware/auth.middleware.js';
 import { tenantMiddleware } from '../middleware/tenant.middleware.js';
@@ -34,5 +35,6 @@ router.post('/process-payment', requireRole(UserRole.GATE_STAFF, UserRole.TENANT
 router.post('/scan', requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER), validate(scanSchema), auditAction('Parking:Scan'), scanTicket);
 
 router.get('/tickets', requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER), getTickets);
+router.get('/export', requireRole(UserRole.TENANT_OWNER), exportReport);
 
 export default router;

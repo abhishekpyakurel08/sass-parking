@@ -15,20 +15,18 @@ const selectedRole = computed(() => {
   const role = String(route.query.role ?? "").trim()
   if (role === "SUPER_ADMIN") return "Super Admin"
   if (role === "TENANT_OWNER") return "Tenant Owner"
-  if (role === "GATE_STAFF") return "Gate Staff"
   return ""
 })
 
-const view = ref<"login" | "register" | "pos">("login")
+const view = ref<"login" | "register">("login")
 const isLoading = ref(false)
 const showLoginPassword = ref(false)
 const showRegisterPassword = ref(false)
 
 const loginData = reactive({ email: "", password: "", rememberMe: false })
 const registerData = reactive({ businessName: "", slug: "", ownerName: "", ownerEmail: "", password: "" })
-const posData = reactive({ apiKey: "" })
 
-const toggleView = (target: "login" | "register" | "pos") => {
+const toggleView = (target: "login" | "register") => {
   view.value = target
 }
 
@@ -55,9 +53,13 @@ const onSubmit = async () => {
       toast.success(`Welcome back, ${data.user.name}!`)
       await new Promise(r => setTimeout(r, 600))
       if (data.user.role === "GATE_STAFF") {
-        router.push("/operator")
+        toast.error("Gate Staff must use the ParkSaaS mobile app.")
+        await authStore.logout()
+        return
       } else if (data.user.role === "TENANT_OWNER") {
         router.push("/tenant")
+      } else if (data.user.role === "SUPER_ADMIN") {
+        router.push("/superadmin")
       } else {
         router.push("/")
       }
@@ -81,22 +83,6 @@ const onSubmit = async () => {
       }
       toast.success("Account created! Please sign in.")
       toggleView("login")
-    } else if (view.value === "pos") {
-      const res = await fetch("/api/v1/user/auth/pos-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(posData)
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        const msg = data.errors?.[0]?.message || data.message || "POS Login failed"
-        toast.error(msg)
-        return
-      }
-      authStore.setAuth(data.token, data.user)
-      toast.success(`POS Terminal activated.`)
-      await new Promise(r => setTimeout(r, 600))
-      router.push("/operator")
     }
   } catch {
     toast.error("Network error. Please check your connection.")
@@ -124,9 +110,8 @@ const onSubmit = async () => {
         
         <!-- Toggle Tabs with sliding indicator -->
         <div class="flex p-1.5 bg-slate-100/80 backdrop-blur-sm rounded-xl mb-10 relative">
-          <!-- Animated Background Pill -->
-          <div class="absolute inset-y-1.5 w-[calc(33.33%-6px)] bg-white rounded-lg shadow-[0_2px_8px_-2px_rgba(0,0,0,0.12)] transition-all duration-500 cubic-bezier-out"
-               :class="{'left-1.5': view === 'login', 'left-[calc(33.33%+4px)]': view === 'register', 'left-[calc(66.66%+1px)]': view === 'pos'}"></div>
+          <div class="absolute inset-y-1.5 w-[calc(50%-6px)] bg-white rounded-lg shadow-[0_2px_8px_-2px_rgba(0,0,0,0.12)] transition-all duration-500 cubic-bezier-out"
+               :class="{'left-1.5': view === 'login', 'left-[calc(50%+4px)]': view === 'register'}"></div>
           
           <button @click="toggleView('login')" 
                   class="relative flex-1 py-2.5 text-sm font-semibold transition-colors duration-300 z-10 rounded-lg outline-none"
@@ -140,11 +125,6 @@ const onSubmit = async () => {
             New Tenant
           </button>
 
-          <button @click="toggleView('pos')" 
-                  class="relative flex-1 py-2.5 text-sm font-semibold transition-colors duration-300 z-10 rounded-lg outline-none"
-                  :class="view === 'pos' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'">
-            POS Login
-          </button>
         </div>
 
         <!-- Form Container with Sliding Transitions -->
@@ -262,32 +242,6 @@ const onSubmit = async () => {
               </button>
             </form>
 
-            <!-- POS LOGIN FORM -->
-            <form v-else-if="view === 'pos'" @submit.prevent="onSubmit" class="space-y-6 w-full absolute inset-0">
-              <div class="space-y-2">
-                <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight">POS Terminal.</h2>
-                <p class="text-slate-500">Authenticate using device API Key.</p>
-              </div>
-
-              <div class="space-y-5 pt-4">
-                <div class="space-y-1.5">
-                  <label class="text-sm font-semibold text-slate-700">API Key</label>
-                  <div class="relative group">
-                    <Lock class="absolute left-3.5 top-3 h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
-                    <input v-model="posData.apiKey" type="password" placeholder="••••••••••••••••" required
-                           class="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none text-slate-900 font-medium tracking-widest" />
-                  </div>
-                </div>
-              </div>
-
-              <button type="submit" :disabled="isLoading" 
-                      class="w-full bg-[#10b981] hover:bg-[#059669] disabled:bg-[#10b981]/50 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all group shadow-xl shadow-[#10b981]/20 mt-8">
-                <Loader2 v-if="isLoading" class="w-5 h-5 animate-spin" />
-                <span v-else>Activate Terminal</span>
-                <ArrowRight v-if="!isLoading" class="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </form>
-
           </Transition>
         </div>
 
@@ -326,7 +280,7 @@ const onSubmit = async () => {
                 Enterprise-grade
               </h2>
               <h2 class="text-[40px] font-bold tracking-tight leading-[1.1] text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-200">
-                Parking Intelligence
+              Pos & Parking Management
               </h2>
             </div>
             

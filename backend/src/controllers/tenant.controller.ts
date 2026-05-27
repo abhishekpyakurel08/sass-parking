@@ -126,3 +126,42 @@ export const getStaff = async (req: Request, res: Response, next: NextFunction):
     res.status(200).json({ success: true, data: staff });
   } catch (err) { next(err); }
 };
+
+
+export const updateStaff = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { name, email, password } = req.body;
+
+    const staff = await User.findOne({ _id: id, tenant_id: req.tenant!.tenantId, role: UserRole.GATE_STAFF });
+    if (!staff) return next(new NotFoundError('Staff member not found'));
+
+    if (name) staff.name = name;
+    if (email && email !== staff.email) {
+      const existing = await User.findOne({ email, _id: { $ne: id } });
+      if (existing) return next(new ConflictError('A user with this email already exists'));
+      staff.email = email;
+    }
+    if (password) {
+      staff.password_hash = await bcrypt.hash(password, env.BCRYPT_ROUNDS);
+    }
+
+    await staff.save();
+
+    res.status(200).json({
+      success: true,
+      data: { id: staff._id, name: staff.name, email: staff.email, role: staff.role },
+    });
+  } catch (err) { next(err); }
+};
+
+
+export const deleteStaff = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const staff = await User.findOneAndDelete({ _id: id, tenant_id: req.tenant!.tenantId, role: UserRole.GATE_STAFF });
+    if (!staff) return next(new NotFoundError('Staff member not found'));
+
+    res.status(200).json({ success: true, message: 'Staff member deleted successfully' });
+  } catch (err) { next(err); }
+};
