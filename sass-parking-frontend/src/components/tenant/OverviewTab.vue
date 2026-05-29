@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useTenantStore } from '../../stores/tenant';
+import { useRouter } from 'vue-router';
 import {
   MapPin, TrendingUp, TrendingDown, Car, MoreHorizontal,
   PenLine, RefreshCcw, Download, ScanLine, BarChart3, LineChart, PieChart
 } from 'lucide-vue-next';
 
 const store = useTenantStore();
+const router = useRouter();
 
 const chartBars = computed(() => {
   const tickets = store.ticketHistory;
@@ -43,18 +45,30 @@ const chartBars = computed(() => {
 });
 
 const linePoints = computed(() => {
-  const heights = [30, 45, 28, 65, 85, 48, 70]; // Peak occupancy trend data points
+  // Build real per-weekday ticket counts from actual ticket history
+  const tickets = store.ticketHistory;
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const buckets = new Array(7).fill(0) as number[];
+  tickets.forEach((t: any) => {
+    if (t.check_in_time) buckets[new Date(t.check_in_time).getDay()]++;
+  });
+  // Reorder to start from Monday
+  const ordered = [...buckets.slice(1), buckets[0]] as number[];
+  const orderedLabels = [...days.slice(1), days[0]] as string[];
+  const maxVal = Math.max(...ordered, 1);
+  const heights = ordered.map(v => Math.max(Math.round((v / maxVal) * 100), 5));
+
   const width = 360;
   const height = 120;
   const padding = 15;
-  
+
   const points = heights.map((h, i) => {
     const x = padding + (i * (width - padding * 2)) / (heights.length - 1);
     const y = height - padding - (h * (height - padding * 2)) / 100;
     return { x, y };
   });
 
-  if (points.length === 0) return { points: [], path: '', areaPath: '', days: [] };
+  if (points.length === 0) return { points: [], path: '', areaPath: '', days: orderedLabels };
 
   let path = `M ${points[0]!.x} ${points[0]!.y}`;
   for (let i = 0; i < points.length - 1; i++) {
@@ -63,9 +77,8 @@ const linePoints = computed(() => {
   }
 
   const areaPath = `${path} L ${points[points.length - 1]!.x} ${height - padding} L ${points[0]!.x} ${height - padding} Z`;
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-  return { points, path, areaPath, days };
+  return { points, path, areaPath, days: orderedLabels };
 });
 
 const vehicleDistribution = computed(() => {
@@ -130,6 +143,9 @@ const revenueLinePoints = computed(() => {
 
   return { points, path, areaPath };
 });
+
+// Navigate to terminal tab for Quick Scan
+const goToTerminal = () => router.push({ query: { tab: 'terminal' } });
 
 const exportPDF = () => {
   const companyName = store.profile.companyName || 'Metropolis Central Lot';
@@ -268,7 +284,7 @@ const exportPDF = () => {
         <button @click="store.exportReport" :disabled="store.isLoading" class="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors">
           <Download class="w-4 h-4 text-emerald-500" /> Export CSV
         </button>
-        <button class="flex items-center gap-2 px-4 py-2.5 bg-blue-600 rounded-lg text-sm font-semibold text-white hover:bg-blue-700">
+        <button @click="goToTerminal" class="flex items-center gap-2 px-4 py-2.5 bg-blue-600 rounded-lg text-sm font-semibold text-white hover:bg-blue-700">
           <ScanLine class="w-4 h-4" /> Quick Scan
         </button>
       </div>
@@ -291,7 +307,9 @@ const exportPDF = () => {
           </div>
         </div>
         <div class="mt-6 h-3 w-full bg-blue-100 rounded-full overflow-hidden">
-          <div class="h-full bg-blue-600 rounded-full" style="width: 78%"></div>
+          <div class="h-full bg-blue-600 rounded-full transition-all duration-700"
+            :style="{ width: store.revenueAnalytics?.active_tickets ? Math.min(Math.round((store.revenueAnalytics.active_tickets / Math.max(store.ticketHistory.length, 1)) * 100), 100) + '%' : '0%' }"
+          ></div>
         </div>
         <div class="grid grid-cols-2 gap-4 mt-6">
           <div class="bg-slate-50 border border-slate-100 rounded-lg p-4">
