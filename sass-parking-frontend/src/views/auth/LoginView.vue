@@ -7,6 +7,10 @@ import { useRoute, useRouter } from "vue-router"
 import { useAuthStore } from "../../stores/auth"
 import { toast } from "vue3-toastify"
 
+// Use absolute URL so production builds (static site) route to the real backend,
+// not the static file server (which returns 405 on POST requests).
+const API_BASE = import.meta.env.VITE_API_URL ?? 'https://parking-backend.tecobit.cloud'
+
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
@@ -34,7 +38,7 @@ const onSubmit = async () => {
   isLoading.value = true
   try {
     if (view.value === "login") {
-      const res = await fetch("/api/v1/user/auth/login", {
+      const res = await fetch(`${API_BASE}/api/v1/user/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -64,7 +68,7 @@ const onSubmit = async () => {
         router.push("/")
       }
     } else if (view.value === "register") {
-      const res = await fetch("/api/v1/user/auth/onboard", {
+      const res = await fetch(`${API_BASE}/api/v1/user/auth/onboard`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

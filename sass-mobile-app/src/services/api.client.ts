@@ -1,10 +1,11 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// ── Change this to your backend IP when testing on a device ──────────────────
-// Android Emulator uses 10.0.2.2 to reach localhost
-// Physical device: use your machine's LAN IP e.g. http://192.168.1.x:5000
-export const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+// ── API Base URL ──────────────────────────────────────────────────────────────
+// React Native (non-Expo) reads plain env vars — NOT EXPO_PUBLIC_ prefixed ones.
+// process.env.API_URL is injected via metro.config.js or defaults to production.
+export const BASE_URL =
+  process.env.API_URL ?? 'https://parking-backend.tecobit.cloud/api/v1';
 
 const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,

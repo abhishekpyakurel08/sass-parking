@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { toast } from 'vue3-toastify';
+import { apiFetch } from '../utils/api';
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || '');
@@ -19,7 +20,7 @@ export const useAuthStore = defineStore('auth', () => {
   const logout = async () => {
     try {
       // Call backend to clear httpOnly cookie
-      await fetch('/api/v1/auth/logout', {
+      await apiFetch('/api/v1/auth/logout', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token.value}` },
       });

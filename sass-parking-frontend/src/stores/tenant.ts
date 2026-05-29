@@ -3,6 +3,12 @@ import { ref, reactive } from 'vue';
 import { useAuthStore } from './auth';
 import { toast } from 'vue3-toastify';
 
+// Absolute backend URL — Vite dev proxy only works in dev mode, not in
+// production static builds. Using BASE_URL ensures all fetch() calls route
+// to the real backend and don't 405 against the static file server.
+const BASE_URL: string =
+  (import.meta as any).env?.VITE_API_URL ?? 'https://parking-backend.tecobit.cloud';
+
 export const useTenantStore = defineStore('tenant', () => {
   const authStore = useAuthStore();
 
@@ -41,7 +47,7 @@ export const useTenantStore = defineStore('tenant', () => {
   const fetchProfile = async () => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/tenants/me', { headers: authHeaders() });
+      const res = await fetch(`${BASE_URL}/api/v1/tenants/me`, { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
         if (data.data) {
@@ -64,7 +70,7 @@ export const useTenantStore = defineStore('tenant', () => {
   const updateProfile = async () => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/tenants/me', {
+      const res = await fetch(`${BASE_URL}/api/v1/tenants/me`, {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify({ name: profile.companyName, contactNumber: profile.contactNumber, address: profile.address }),
@@ -78,7 +84,7 @@ export const useTenantStore = defineStore('tenant', () => {
   const fetchRevenueAnalytics = async () => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/analytics/tenant', { headers: authHeaders() });
+      const res = await fetch(`${BASE_URL}/api/v1/analytics/tenant`, { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
         revenueAnalytics.value = data.data;
@@ -97,7 +103,7 @@ export const useTenantStore = defineStore('tenant', () => {
       const params = new URLSearchParams({ page: String(page), limit: '15' });
       const s = status ?? ticketFilter.value;
       if (s && s !== 'ALL') params.set('status', s);
-      const res = await fetch(`/api/v1/parking/tickets?${params.toString()}`, { headers: authHeaders() });
+      const res = await fetch(`${BASE_URL}/api/v1/parking/tickets?${params.toString()}`, { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
         ticketHistory.value = data.data;
@@ -114,7 +120,7 @@ export const useTenantStore = defineStore('tenant', () => {
   const fetchStaff = async () => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/tenants/staff', { headers: authHeaders() });
+      const res = await fetch(`${BASE_URL}/api/v1/tenants/staff`, { headers: authHeaders() });
       if (res.ok) { const data = await res.json(); staffList.value = data.data; }
       else { const err = await res.json(); toast.error(err.message || 'Failed to load staff'); }
     } catch { toast.error('Network error loading staff'); }
@@ -124,7 +130,7 @@ export const useTenantStore = defineStore('tenant', () => {
   const createStaff = async (staffData: { name: string; email: string; password: string; gate_assignment?: string; ticket_prefix?: string }) => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/tenants/staff', {
+      const res = await fetch(`${BASE_URL}/api/v1/tenants/staff`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify(staffData),
@@ -145,7 +151,7 @@ export const useTenantStore = defineStore('tenant', () => {
   const fetchRates = async () => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/rates', { headers: authHeaders() });
+      const res = await fetch(`${BASE_URL}/api/v1/rates`, { headers: authHeaders() });
       if (res.ok) { const data = await res.json(); rates.value = data.data; }
       else { const err = await res.json(); toast.error(err.message || 'Failed to load rates'); }
     } catch { toast.error('Network error loading rates'); }
@@ -159,13 +165,13 @@ export const useTenantStore = defineStore('tenant', () => {
     try {
       const vType = vehicleType.toUpperCase();
       // Try PATCH first (update), then POST (create)
-      let res = await fetch(`/api/v1/rates/${vType}`, {
+      let res = await fetch(`${BASE_URL}/api/v1/rates/${vType}`, {
         method: 'PATCH',
         headers: authHeaders(),
         body: JSON.stringify(payload),
       });
       if (res.status === 404) {
-        res = await fetch('/api/v1/rates', {
+        res = await fetch(`${BASE_URL}/api/v1/rates`, {
           method: 'POST',
           headers: authHeaders(),
           body: JSON.stringify({ vehicle_type: vType, ...payload }),
@@ -183,7 +189,7 @@ export const useTenantStore = defineStore('tenant', () => {
   const checkInVehicle = async (payload: { license_plate?: string, vehicle_type: string, customer_code?: string }) => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/operator/check-in', {
+      const res = await fetch(`${BASE_URL}/api/v1/operator/check-in`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify(payload)
@@ -200,7 +206,7 @@ export const useTenantStore = defineStore('tenant', () => {
   const checkOutVehicle = async (ticketId: string) => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/parking/check-out', {
+      const res = await fetch(`${BASE_URL}/api/v1/parking/check-out`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({ ticket_id: ticketId })
@@ -217,7 +223,7 @@ export const useTenantStore = defineStore('tenant', () => {
   const processPayment = async (payload: { ticket_id: string, payment_method: string, amount_received?: number }) => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/parking/process-payment', {
+      const res = await fetch(`${BASE_URL}/api/v1/parking/process-payment`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify(payload)
@@ -234,7 +240,7 @@ export const useTenantStore = defineStore('tenant', () => {
   const exportReport = async () => {
     isLoading.value = true;
     try {
-      const res = await fetch('/api/v1/parking/export', {
+      const res = await fetch(`${BASE_URL}/api/v1/parking/export`, {
         method: 'GET',
         headers: authHeaders()
       });
@@ -260,7 +266,7 @@ export const useTenantStore = defineStore('tenant', () => {
   const updateStaff = async (id: string, payload: { name?: string; email?: string; password?: string; gate_assignment?: string; ticket_prefix?: string }) => {
     isLoading.value = true;
     try {
-      const res = await fetch(`/api/v1/tenants/staff/${id}`, {
+      const res = await fetch(`${BASE_URL}/api/v1/tenants/staff/${id}`, {
         method: 'PATCH',
         headers: authHeaders(),
         body: JSON.stringify(payload)
@@ -276,7 +282,7 @@ export const useTenantStore = defineStore('tenant', () => {
   const deleteStaff = async (id: string) => {
     isLoading.value = true;
     try {
-      const res = await fetch(`/api/v1/tenants/staff/${id}`, {
+      const res = await fetch(`${BASE_URL}/api/v1/tenants/staff/${id}`, {
         method: 'DELETE',
         headers: authHeaders()
       });
