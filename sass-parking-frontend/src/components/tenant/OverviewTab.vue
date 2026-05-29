@@ -268,7 +268,7 @@ const exportPDF = () => {
     <!-- Page Header -->
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
       <div>
-        <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+        <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
           {{ store.profile.companyName || 'Dark Alaric Parking Lot' }}
         </h2>
       </div>
@@ -285,13 +285,13 @@ const exportPDF = () => {
     <!-- Occupancy + Revenue Bar Chart Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Occupancy -->
-      <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200 lg:col-span-1">
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 lg:col-span-1">
         <div class="flex justify-between items-start">
           <div>
-            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">REAL-TIME OCCUPANCY</p>
-            <h3 class="text-4xl font-black text-slate-900">
+            <p class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">REAL-TIME OCCUPANCY</p>
+            <h3 class="text-4xl font-black text-slate-900 dark:text-slate-100">
               {{ store.revenueAnalytics?.active_tickets ?? '—' }}
-              <span class="text-lg font-semibold text-slate-400 ml-1">active</span>
+              <span class="text-lg font-semibold text-slate-400 dark:text-slate-500 ml-1">active</span>
             </h3>
           </div>
           <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 border border-blue-100">
@@ -304,27 +304,27 @@ const exportPDF = () => {
           ></div>
         </div>
         <div class="grid grid-cols-2 gap-4 mt-6">
-          <div class="bg-slate-50 border border-slate-100 rounded-lg p-4">
+          <div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-lg p-4">
             <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">TODAY'S REVENUE</p>
-            <p class="text-lg font-bold text-slate-900">Rs. {{ store.revenueAnalytics?.today?.toFixed(2) ?? '0.00' }}</p>
+            <p class="text-lg font-bold text-slate-900 dark:text-slate-100">Rs. {{ store.revenueAnalytics?.today?.toFixed(2) ?? '0.00' }}</p>
           </div>
-          <div class="bg-slate-50 border border-slate-100 rounded-lg p-4">
+          <div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-lg p-4">
             <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">MONTHLY REVENUE</p>
-            <p class="text-lg font-bold text-slate-900">Rs. {{ store.revenueAnalytics?.oneMonth?.toFixed(2) ?? '0.00' }}</p>
+            <p class="text-lg font-bold text-slate-900 dark:text-slate-100">Rs. {{ store.revenueAnalytics?.oneMonth?.toFixed(2) ?? '0.00' }}</p>
           </div>
         </div>
         
       </div>
 
       <!-- Revenue Line Chart -->
-      <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200 lg:col-span-2 flex flex-col justify-between">
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 lg:col-span-2 flex flex-col justify-between">
         <div class="flex justify-between items-center mb-6">
           <div class="flex items-center gap-2">
-            <LineChart class="w-4 h-4 text-blue-600" />
-            <h3 class="font-bold text-lg text-slate-900">Daily Revenue Flow</h3>
+            <LineChart class="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <h3 class="font-bold text-lg text-slate-900 dark:text-slate-100">Daily Revenue Flow</h3>
           </div>
-          <div class="flex bg-slate-50 p-1 rounded-lg border border-slate-100">
-            <span class="px-3 py-1 bg-white shadow-sm rounded-md text-xs font-bold text-slate-900">Live Trend</span>
+          <div class="flex bg-slate-50 dark:bg-slate-900 p-1 rounded-lg border border-slate-100 dark:border-slate-700">
+            <span class="px-3 py-1 bg-white dark:bg-slate-800 shadow-sm rounded-md text-xs font-bold text-slate-900 dark:text-slate-100">Live Trend</span>
           </div>
         </div>
         

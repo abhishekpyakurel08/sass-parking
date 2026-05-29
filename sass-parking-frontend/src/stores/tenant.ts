@@ -73,7 +73,7 @@ export const useTenantStore = defineStore('tenant', () => {
       const res = await fetch(`${BASE_URL}/api/v1/tenants/me`, {
         method: 'PUT',
         headers: authHeaders(),
-        body: JSON.stringify({ name: profile.companyName, contactNumber: profile.contactNumber, address: profile.address }),
+        body: JSON.stringify({ name: profile.companyName, ownerName: profile.ownerName, contactNumber: profile.contactNumber, address: profile.address }),
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Update failed'); }
       toast.success('✅ Company profile updated!');

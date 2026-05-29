@@ -3,7 +3,7 @@ import { onMounted, ref, watch } from 'vue';
 import { useTenantStore } from '../../stores/tenant';
 import { useAuthStore } from '../../stores/auth';
 import { useRoute, useRouter } from 'vue-router';
-import { Search, Bell, HelpCircle, RefreshCcw } from 'lucide-vue-next';
+import { Search, RefreshCcw, Sun, Moon } from 'lucide-vue-next';
 
 // Layout components
 import TenantSidebar from '../../components/tenant/TenantSidebar.vue';
@@ -55,10 +55,31 @@ const navigate = async (tab: string) => {
   sidebarOpen.value = false;
   router.push({ query: { tab } });
 };
+// Dark Mode toggle
+const isDarkMode = ref(localStorage.getItem('theme') === 'dark');
+const toggleDarkMode = () => {
+  isDarkMode.value = !isDarkMode.value;
+  if (isDarkMode.value) {
+    document.documentElement.classList.add('dark');
+    localStorage.setItem('theme', 'dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+    localStorage.setItem('theme', 'light');
+  }
+};
+
+onMounted(() => {
+  if (isDarkMode.value || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    isDarkMode.value = true;
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+});
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 text-slate-900 font-sans">
+  <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200">
     <div class="flex h-screen overflow-hidden">
 
       <!-- ── Sidebar ─────────────────────────────────────────────── -->
@@ -75,10 +96,10 @@ const navigate = async (tab: string) => {
       <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         <!-- Sticky Top Header -->
-        <header class="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center gap-4 shrink-0">
+        <header class="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-3 flex items-center gap-4 shrink-0 transition-colors duration-200">
           <!-- Hamburger (mobile) -->
           <button @click="sidebarOpen = true"
-            class="lg:hidden text-slate-600 hover:text-slate-900 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+            class="lg:hidden text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
@@ -93,10 +114,14 @@ const navigate = async (tab: string) => {
 
           <!-- Right actions -->
           <div class="ml-auto flex items-center gap-3">
-            <div class="flex items-center gap-2.5 border-l pl-3">
-              <img src="https://i.pravatar.cc/150?img=11" class="w-8 h-8 rounded-full object-cover border-2 border-white shadow" />
+            <button @click="toggleDarkMode" class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <Sun v-if="isDarkMode" class="w-5 h-5" />
+              <Moon v-else class="w-5 h-5" />
+            </button>
+            <div class="flex items-center gap-2.5 border-l dark:border-slate-700 pl-3">
+              <img src="https://i.pravatar.cc/150?img=11" class="w-8 h-8 rounded-full object-cover border-2 border-white dark:border-slate-800 shadow" />
               <div class="hidden md:block text-right">
-                <p class="text-sm font-bold text-slate-900 leading-none">{{ authStore.user?.name || store.profile.companyName || 'Owner' }}</p>
+                <p class="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">{{ authStore.user?.name || store.profile.companyName || 'Owner' }}</p>
                 <p class="text-[10px] text-slate-400 mt-0.5">Tenant Admin</p>
               </div>
             </div>
