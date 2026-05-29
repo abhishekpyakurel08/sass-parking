@@ -106,6 +106,17 @@ app.use(
   })
 );
 
+// ─── Root Route ──────
+app.get('/', (_req: Request, res: Response) => {
+  res.status(200).json({
+    success: true,
+    message: 'Welcome to ParkSaaS Pro API',
+    version: '1.0.0',
+    docs: '/api-docs',
+    health: '/health'
+  });
+});
+
 // ─── Health Check ──────
 app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({
