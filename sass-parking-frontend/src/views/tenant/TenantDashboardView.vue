@@ -126,7 +126,6 @@ const navigate = async (tab: string) => {
               <StaffTab     v-else-if="activeTab === 'staff'" />
               <RatesTab     v-else-if="activeTab === 'lots'" />
               <TicketsTab   v-else-if="activeTab === 'tickets'" />
-              <TerminalTab  v-else-if="activeTab === 'terminal'" />
               <SettingsTab  v-else-if="activeTab === 'settings'" />
               <OverviewTab  v-else />
             </template>

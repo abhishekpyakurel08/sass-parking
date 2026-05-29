@@ -147,8 +147,7 @@ const revenueLinePoints = computed(() => {
   return { points, path, areaPath };
 });
 
-// Navigate to terminal tab for Quick Scan
-const goToTerminal = () => router.push({ query: { tab: 'terminal' } });
+// Navigation logic removed as Terminal Tab is removed
 
 const exportPDF = () => {
   const companyName = store.profile.companyName || 'Metropolis Central Lot';
@@ -286,9 +285,6 @@ const exportPDF = () => {
         </button>
         <button @click="store.exportReport" :disabled="store.isLoading" class="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors">
           <Download class="w-4 h-4 text-emerald-500" /> Export CSV
-        </button>
-        <button @click="goToTerminal" class="flex items-center gap-2 px-4 py-2.5 bg-blue-600 rounded-lg text-sm font-semibold text-white hover:bg-blue-700">
-          <ScanLine class="w-4 h-4" /> Quick Scan
         </button>
       </div>
     </div>
