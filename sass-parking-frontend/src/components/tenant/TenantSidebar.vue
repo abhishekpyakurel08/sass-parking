@@ -22,7 +22,6 @@ const navItems = [
   { tab: 'lots',      label: 'Parking Rates',   icon: ParkingSquare },
   { tab: 'tickets',   label: 'Parking Tickets', icon: TicketIcon },
   { tab: 'staff',     label: 'Staff',            icon: Users },
-  { tab: 'terminal',  label: 'Terminal',         icon: Terminal },
 ];
 </script>
 
