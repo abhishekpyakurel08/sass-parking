@@ -367,7 +367,7 @@ const exportPDF = () => {
     <!-- Line & Pie Chart Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Peak Occupancy Line Graph -->
-      <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200 lg:col-span-2 flex flex-col">
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 lg:col-span-2 flex flex-col">
         <div class="flex justify-between items-center mb-5">
           <div class="flex items-center gap-2">
             <LineChart class="w-4 h-4 text-emerald-500" />
@@ -410,7 +410,7 @@ const exportPDF = () => {
       </div>
 
       <!-- Vehicle Type Pie/Donut Chart -->
-      <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200 lg:col-span-1 flex flex-col justify-between">
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 lg:col-span-1 flex flex-col justify-between">
         <div class="flex justify-between items-center mb-4">
           <div class="flex items-center gap-2">
             <PieChart class="w-4 h-4 text-amber-500" />
@@ -455,25 +455,25 @@ const exportPDF = () => {
 
     <!-- KPI Row -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200 border-l-4 border-l-blue-600">
-        <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">TODAY'S REVENUE</p>
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 border-l-4 border-l-blue-600">
+        <p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">TODAY'S REVENUE</p>
         <div class="flex items-baseline gap-3">
-          <h3 class="text-2xl font-black text-slate-900">Rs. {{ store.revenueAnalytics?.today?.toFixed(2) ?? '0.00' }}</h3>
-          <span class="text-xs font-bold text-green-600 flex items-center gap-0.5"><TrendingUp class="w-3 h-3" /> Live</span>
+          <h3 class="text-2xl font-black text-slate-900 dark:text-slate-100">Rs. {{ store.revenueAnalytics?.today?.toFixed(2) ?? '0.00' }}</h3>
+          <span class="text-xs font-bold text-green-600 dark:text-green-500 flex items-center gap-0.5"><TrendingUp class="w-3 h-3" /> Live</span>
         </div>
       </div>
-      <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200 border-l-4 border-l-blue-600">
-        <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">3-MONTH REVENUE</p>
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 border-l-4 border-l-blue-600">
+        <p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">3-MONTH REVENUE</p>
         <div class="flex items-baseline gap-3">
-          <h3 class="text-2xl font-black text-slate-900">Rs. {{ store.revenueAnalytics?.threeMonths?.toFixed(0) ?? '0' }}</h3>
-          <span class="text-xs font-medium text-slate-500">last 90 days</span>
+          <h3 class="text-2xl font-black text-slate-900 dark:text-slate-100">Rs. {{ store.revenueAnalytics?.threeMonths?.toFixed(0) ?? '0' }}</h3>
+          <span class="text-xs font-medium text-slate-500 dark:text-slate-400">last 90 days</span>
         </div>
       </div>
-      <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200 border-l-4 border-l-blue-600">
-        <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">ACTIVE TICKETS</p>
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 border-l-4 border-l-blue-600">
+        <p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">ACTIVE TICKETS</p>
         <div class="flex items-baseline gap-3">
-          <h3 class="text-2xl font-black text-slate-900">{{ store.revenueAnalytics?.active_tickets ?? 0 }}</h3>
-          <span class="text-xs font-medium text-slate-500">vehicles parked</span>
+          <h3 class="text-2xl font-black text-slate-900 dark:text-slate-100">{{ store.revenueAnalytics?.active_tickets ?? 0 }}</h3>
+          <span class="text-xs font-medium text-slate-500 dark:text-slate-400">vehicles parked</span>
         </div>
       </div>
     </div>
@@ -481,55 +481,55 @@ const exportPDF = () => {
     <!-- Active Vehicles Table + Rate Config -->
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
       <!-- Active Vehicles -->
-      <div class="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="p-5 border-b border-slate-100 flex justify-between items-center">
-          <h3 class="font-bold text-lg text-slate-900">Active Vehicles</h3>
-          <span class="px-2.5 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-md border border-blue-100 uppercase tracking-wider">LIVE FEED</span>
+      <div class="xl:col-span-2 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div class="p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+          <h3 class="font-bold text-lg text-slate-900 dark:text-slate-100">Active Vehicles</h3>
+          <span class="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold rounded-md border border-blue-100 dark:border-blue-800 uppercase tracking-wider">LIVE FEED</span>
         </div>
-        <div v-if="store.isLoading" class="py-10 text-center text-slate-400">
+        <div v-if="store.isLoading" class="py-10 text-center text-slate-400 dark:text-slate-500">
           <RefreshCcw class="w-5 h-5 animate-spin inline-block mr-2" /> Loading…
         </div>
-        <div v-else-if="store.ticketHistory.length === 0" class="py-10 text-center text-slate-400 font-medium">
+        <div v-else-if="store.ticketHistory.length === 0" class="py-10 text-center text-slate-400 dark:text-slate-500 font-medium">
           No active vehicles found.
         </div>
         <div v-else class="overflow-x-auto">
           <div class="min-w-[600px]">
             <table class="w-full">
-              <thead class="bg-slate-50/50 border-b border-slate-100">
+              <thead class="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700">
                 <tr>
-                  <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">VEHICLE / LICENSE</th>
-                  <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">TYPE</th>
-                  <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">CHECK-IN</th>
-                  <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">STATUS</th>
-                  <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">ACTION</th>
+                  <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">VEHICLE / LICENSE</th>
+                  <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">TYPE</th>
+                  <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">CHECK-IN</th>
+                  <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">STATUS</th>
+                  <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">ACTION</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-slate-50">
-                <tr v-for="ticket in store.ticketHistory.slice(0, 8)" :key="ticket._id" class="hover:bg-slate-50/50">
+              <tbody class="divide-y divide-slate-50 dark:divide-slate-700/50">
+                <tr v-for="ticket in store.ticketHistory.slice(0, 8)" :key="ticket._id" class="hover:bg-slate-50/50 dark:hover:bg-slate-700/50">
                   <td class="px-5 py-4">
                     <div class="flex items-center gap-3">
-                      <div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-500">
+                      <div class="w-8 h-8 rounded bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400">
                         <Car class="w-4 h-4" />
                       </div>
                       <div>
-                        <p class="font-bold text-sm text-slate-900">{{ ticket.license_plate || '—' }}</p>
-                        <p class="text-[10px] text-slate-500">{{ ticket.ticket_number?.slice(0, 12) || ticket._id?.slice(-8) }}</p>
+                        <p class="font-bold text-sm text-slate-900 dark:text-slate-100">{{ ticket.license_plate || '—' }}</p>
+                        <p class="text-[10px] text-slate-500 dark:text-slate-400">{{ ticket.ticket_number?.slice(0, 12) || ticket._id?.slice(-8) }}</p>
                       </div>
                     </div>
                   </td>
-                  <td class="px-5 py-4 text-sm text-slate-600">{{ ticket.vehicle_type || '—' }}</td>
-                  <td class="px-5 py-4 text-sm text-slate-600">
+                  <td class="px-5 py-4 text-sm text-slate-600 dark:text-slate-400">{{ ticket.vehicle_type || '—' }}</td>
+                  <td class="px-5 py-4 text-sm text-slate-600 dark:text-slate-400">
                     {{ ticket.check_in_time ? new Date(ticket.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—' }}
                   </td>
                   <td class="px-5 py-4">
                     <span class="px-2 py-1 border rounded-md text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 w-max"
-                      :class="ticket.status === 'PAID' ? 'text-green-600 bg-green-50 border-green-200' : 'text-blue-600 bg-blue-50 border-blue-200'">
-                      <span class="w-1.5 h-1.5 rounded-full" :class="ticket.status === 'PAID' ? 'bg-green-500' : 'bg-blue-600'"></span>
+                      :class="ticket.status === 'PAID' ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800' : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800'">
+                      <span class="w-1.5 h-1.5 rounded-full" :class="ticket.status === 'PAID' ? 'bg-green-500' : 'bg-blue-600 dark:bg-blue-500'"></span>
                       {{ ticket.status }}
                     </span>
                   </td>
                   <td class="px-5 py-4">
-                    <button class="text-slate-400 hover:text-slate-600"><MoreHorizontal class="w-5 h-5" /></button>
+                    <button class="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"><MoreHorizontal class="w-5 h-5" /></button>
                   </td>
                 </tr>
               </tbody>
@@ -539,36 +539,36 @@ const exportPDF = () => {
       </div>
 
       <!-- Rate Config Widget -->
-      <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
         <div class="flex justify-between items-center mb-6">
-          <h3 class="font-bold text-lg text-slate-900">Rate Config</h3>
-          <button class="text-blue-600 hover:bg-blue-50 p-1.5 rounded-md"><PenLine class="w-5 h-5" /></button>
+          <h3 class="font-bold text-lg text-slate-900 dark:text-slate-100">Rate Config</h3>
+          <button class="text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-1.5 rounded-md"><PenLine class="w-5 h-5" /></button>
         </div>
-        <div v-if="store.isLoading" class="text-center py-6 text-slate-400">
+        <div v-if="store.isLoading" class="text-center py-6 text-slate-400 dark:text-slate-500">
           <RefreshCcw class="w-5 h-5 animate-spin inline-block" />
         </div>
         <div v-else-if="store.rates.length === 0" class="text-center py-6">
-          <p class="text-slate-400 text-sm font-medium mb-3">No rates configured yet.</p>
+          <p class="text-slate-400 dark:text-slate-500 text-sm font-medium mb-3">No rates configured yet.</p>
         </div>
         <div v-else class="space-y-3">
           <div v-for="rate in store.rates.slice(0, 3)" :key="rate._id || rate.vehicle_type"
-            class="border border-dashed border-slate-300 rounded-lg p-3 flex justify-between items-center">
+            class="border border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-3 flex justify-between items-center">
             <div>
-              <p class="text-sm font-bold text-slate-900 capitalize">{{ rate.vehicle_type?.toLowerCase() || 'Rate' }}</p>
-              <p class="text-[10px] font-medium text-slate-500 uppercase tracking-wider">PER {{ rate.billing_unit || 'HOUR' }}</p>
+              <p class="text-sm font-bold text-slate-900 dark:text-slate-100 capitalize">{{ rate.vehicle_type?.toLowerCase() || 'Rate' }}</p>
+              <p class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">PER {{ rate.billing_unit || 'HOUR' }}</p>
             </div>
-            <span class="text-lg font-black text-slate-900">Rs. {{ rate.rate_per_hour ?? rate.amount ?? '—' }}</span>
+            <span class="text-lg font-black text-slate-900 dark:text-slate-100">Rs. {{ rate.rate_per_hour ?? rate.amount ?? '—' }}</span>
           </div>
         </div>
-        <hr class="my-5 border-slate-100" />
+        <hr class="my-5 border-slate-100 dark:border-slate-700" />
         <div>
           <div class="flex justify-between items-center mb-3">
-            <p class="text-sm font-bold text-slate-900">Dynamic Pricing</p>
+            <p class="text-sm font-bold text-slate-900 dark:text-slate-100">Dynamic Pricing</p>
             <div class="w-10 h-6 bg-blue-600 rounded-full relative cursor-pointer">
               <div class="w-4 h-4 bg-white rounded-full absolute right-1 top-1 shadow-sm"></div>
             </div>
           </div>
-          <p class="text-xs text-slate-500 leading-relaxed">Rates increase by 15% when occupancy exceeds 90% capacity.</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">Rates increase by 15% when occupancy exceeds 90% capacity.</p>
         </div>
       </div>
     </div>
