@@ -3,7 +3,7 @@ import { loginUser, registerTenantOwner, logoutUser, posLogin } from '../control
 import { validate } from '../middleware/validate.middleware.js';
 import { loginSchema, registerSchema } from '../utils/validation.schemas.js';
 
-const router = Router();
+const router: Router = Router();
 
 // Onboard a new business + master account
 router.post('/auth/onboard', validate(registerSchema), registerTenantOwner);

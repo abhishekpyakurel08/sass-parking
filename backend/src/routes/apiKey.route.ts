@@ -5,7 +5,7 @@ import { tenantMiddleware } from '../middleware/tenant.middleware.js';
 import { auditAction } from '../middleware/auditLogger.js';
 import { UserRole } from '../types/enums.js';
 
-const router = Router();
+const router: Router = Router();
 
 // Only TENANT_OWNER and GATE_STAFF (Operator) can manage API keys
 router.use(authenticate);

@@ -4,7 +4,7 @@ import { authenticate, requireRole } from '../middleware/auth.middleware.js';
 import { tenantMiddleware } from '../middleware/tenant.middleware.js';
 import { UserRole } from '../types/enums.js';
 
-const router = Router();
+const router: Router = Router();
 router.use(authenticate);
 
 // Global — SUPER_ADMIN only (no tenant middleware — intentionally unrestricted)

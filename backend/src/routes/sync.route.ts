@@ -5,7 +5,7 @@ import { tenantMiddleware } from '../middleware/tenant.middleware.js';
 import { auditAction } from '../middleware/auditLogger.js';
 import { UserRole } from '../types/enums.js';
 
-const router = Router();
+const router: Router = Router();
 
 // Only gate staff and tenant owners can sync offline data
 router.use(authenticate);

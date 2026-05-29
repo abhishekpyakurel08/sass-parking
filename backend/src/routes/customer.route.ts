@@ -13,7 +13,7 @@ import { validate } from '../middleware/validate.middleware.js';
 import { createCustomerSchema, updateCustomerSchema, regenerateCustomerQrSchema } from '../utils/validation.schemas.js';
 import { UserRole } from '../types/enums.js';
 
-const router = Router();
+const router: Router = Router();
 router.use(authenticate, tenantMiddleware, requireRole(UserRole.TENANT_OWNER)); // Only TENANT_OWNER can manage customers
 
 router.route('/')

@@ -4,7 +4,7 @@ import { validate } from '../middleware/validate.middleware.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { registerSchema, loginSchema, refreshTokenSchema } from '../utils/validation.schemas.js';
 
-const router = Router();
+const router: Router = Router();
 
 // POST /api/v1/auth/register
 router.post('/register', validate(registerSchema), register);

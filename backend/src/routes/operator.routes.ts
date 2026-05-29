@@ -8,7 +8,7 @@ import { tenantMiddleware } from '../middleware/tenant.middleware.js';
 import { UserRole } from '../types/enums.js';
 import { auditAction } from '../middleware/auditLogger.js';
 
-const router = Router();
+const router: Router = Router();
 router.use(authenticate, tenantMiddleware);
 
 router.post(

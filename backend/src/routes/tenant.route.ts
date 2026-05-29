@@ -10,7 +10,7 @@ import { validate } from '../middleware/validate.middleware.js';
 import { createTenantSchema, updateTenantSchema, createStaffSchema } from '../utils/validation.schemas.js';
 import { UserRole } from '../types/enums.js';
 
-const router = Router();
+const router: Router = Router();
 router.use(authenticate);
 
 // SUPER_ADMIN routes

@@ -23,7 +23,7 @@ import { UserRole } from '../types/enums.js';
 
 import { auditAction } from '../middleware/auditLogger.js';
 
-const router = Router();
+const router: Router = Router();
 router.use(authenticate, tenantMiddleware);
 
 router.post('/check-in',  requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER), validate(checkInSchema), auditAction('Parking:CheckIn'), checkIn);
