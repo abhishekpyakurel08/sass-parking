@@ -220,6 +220,39 @@ export const useTenantStore = defineStore('tenant', () => {
     finally { isLoading.value = false; }
   };
 
+  const lostTicketVehicle = async (payload: { vehicle_type: string; license_plate: string; assumed_duration_hours: number }) => {
+    isLoading.value = true;
+    try {
+      const res = await fetch(`${BASE_URL}/api/v1/parking/lost-ticket`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Lost ticket failed'); }
+      const data = await res.json();
+      toast.success(`⚠️ Lost ticket processed. Total: Rs. ${data.summary.total_amount}`);
+      await fetchTicketHistory(1);
+      // Return a checkout-summary-shaped object so TerminalTab can proceed to payment
+      return {
+        ticket_id: data.summary.ticket_id,
+        ticket_number: data.summary.ticket_number,
+        license_plate: data.summary.license_plate,
+        vehicle_type: data.summary.vehicle_type,
+        check_in_time: new Date(Date.now() - payload.assumed_duration_hours * 3600000).toISOString(),
+        check_out_time: new Date().toISOString(),
+        duration_minutes: payload.assumed_duration_hours * 60,
+        duration_display: `${payload.assumed_duration_hours}h 0m`,
+        breakdown: [{ label: 'Lost Ticket Penalty', amount: data.summary.lost_ticket_penalty }],
+        subtotal: data.summary.base_amount,
+        discount: 0,
+        total_amount: data.summary.total_amount,
+        audit_alert: payload.assumed_duration_hours > 48,
+        status: 'PENDING_PAYMENT',
+      };
+    } catch (err: any) { toast.error(err.message); return null; }
+    finally { isLoading.value = false; }
+  };
+
   const processPayment = async (payload: { ticket_id: string, payment_method: string, amount_received?: number }) => {
     isLoading.value = true;
     try {
@@ -301,6 +334,6 @@ export const useTenantStore = defineStore('tenant', () => {
     ticketHistory, ticketPagination, ticketFilter, fetchTicketHistory,
     staffList, fetchStaff, createStaff, updateStaff, deleteStaff,
     rates, fetchRates, upsertRate,
-    checkInVehicle, checkOutVehicle, processPayment, exportReport
+    checkInVehicle, checkOutVehicle, lostTicketVehicle, processPayment, exportReport
   };
 });

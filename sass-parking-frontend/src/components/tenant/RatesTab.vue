@@ -28,22 +28,25 @@ const saveRate = async () => {
 };
 
 const initializeRates = async () => {
-  await store.upsertRate('CAR',   { rate_per_hour: 50, grace_period_minutes: 5, lost_ticket_penalty: 500 });
-  await store.upsertRate('BIKE',  { rate_per_hour: 20, grace_period_minutes: 5, lost_ticket_penalty: 200 });
-  await store.upsertRate('TRUCK', { rate_per_hour: 100, grace_period_minutes: 5, lost_ticket_penalty: 1000 });
+  // Business Rule v1: 2-Wheeler = NPR 40/hr, 4-Wheeler = NPR 80/hr
+  await store.upsertRate('CAR',   { rate_per_hour: 80, grace_period_minutes: 15, lost_ticket_penalty: 200 });
+  await store.upsertRate('BIKE',  { rate_per_hour: 40, grace_period_minutes: 15, lost_ticket_penalty: 200 });
+  await store.upsertRate('TRUCK', { rate_per_hour: 100, grace_period_minutes: 15, lost_ticket_penalty: 200 });
+  await store.upsertRate('SUV',   { rate_per_hour: 80, grace_period_minutes: 15, lost_ticket_penalty: 200 });
+  await store.upsertRate('BUS',   { rate_per_hour: 100, grace_period_minutes: 15, lost_ticket_penalty: 200 });
 };
 </script>
 
 <template>
   <div class="max-w-3xl mx-auto space-y-6">
     <!-- Header -->
-    <div class="flex justify-between items-center">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
       <div>
         <h2 class="text-2xl font-bold text-slate-900">Parking Rates</h2>
-        <p class="text-slate-500 text-sm mt-1">Configure fare rates per vehicle type.</p>
+        <p class="text-slate-500 text-sm mt-1">Billing Rule v1 · 2-Wheeler: Rs.40/hr · 4-Wheeler: Rs.80/hr · 15 min grace FREE</p>
       </div>
       <button v-if="store.rates.length === 0" @click="initializeRates" :disabled="store.isLoading"
-        class="flex items-center gap-2 px-4 py-2.5 bg-blue-600 rounded-lg text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors">
+        class="flex items-center gap-2 px-4 py-2.5 bg-blue-600 rounded-lg text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors self-start sm:self-auto">
         <RefreshCcw class="w-4 h-4" :class="store.isLoading ? 'animate-spin' : ''" /> Initialize Rates
       </button>
     </div>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useTenantStore } from '../../stores/tenant';
-import { LogIn, LogOut, QrCode, Banknote, CreditCard, Smartphone, Car, MoreHorizontal } from 'lucide-vue-next';
+import { LogIn, LogOut, QrCode, Banknote, CreditCard, Smartphone, AlertTriangle, X } from 'lucide-vue-next';
 
 const store = useTenantStore();
 
@@ -11,6 +11,10 @@ const checkOutCode = ref('');
 
 const paymentForm = ref({ ticket_id: '', amount_received: 0, payment_method: 'CASH' });
 const pendingCheckout = ref<any>(null);
+
+// Lost ticket modal
+const showLostModal = ref(false);
+const lostForm = ref({ vehicle_type: 'CAR', license_plate: '', assumed_hours: '4' });
 
 const handleCheckIn = async () => {
   const payload: any = { vehicle_type: checkInForm.value.vehicle_type };
@@ -44,6 +48,22 @@ const handleProcessPayment = async () => {
   if (ok) {
     pendingCheckout.value = null;
     checkOutCode.value = '';
+  }
+};
+
+const handleLostTicket = async () => {
+  const hours = parseFloat(lostForm.value.assumed_hours);
+  if (!lostForm.value.license_plate.trim() || isNaN(hours) || hours <= 0) return;
+  const summary = await store.lostTicketVehicle({
+    vehicle_type: lostForm.value.vehicle_type,
+    license_plate: lostForm.value.license_plate.trim().toUpperCase(),
+    assumed_duration_hours: hours,
+  });
+  if (summary) {
+    pendingCheckout.value = summary;
+    paymentForm.value.ticket_id = summary.ticket_id || summary._id;
+    paymentForm.value.amount_received = summary.total_amount ?? 0;
+    showLostModal.value = false;
   }
 };
 </script>
@@ -107,18 +127,26 @@ const handleProcessPayment = async () => {
             <label class="text-xs font-bold text-slate-500 uppercase block mb-1">Ticket Number / License Plate</label>
             <div class="flex gap-2">
               <input v-model="checkOutCode" type="text" placeholder="Enter ID to scan" class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-green-500 uppercase" />
-              <button @click="handleCheckOutScan" class="px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-sm">Scan</button>
+              <button @click="handleCheckOutScan" :disabled="store.isLoading" class="px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-sm disabled:opacity-50">Scan</button>
             </div>
           </div>
           
-          <!-- Quick lost ticket button -->
+          <!-- Lost ticket button -->
           <div class="mt-4 pt-4 border-t border-slate-100 text-center">
-            <button class="text-red-500 hover:text-red-700 text-sm font-bold underline">Lost Ticket Override</button>
+            <button @click="showLostModal = true" class="text-red-500 hover:text-red-700 text-sm font-bold underline flex items-center gap-1 mx-auto">
+              <AlertTriangle class="w-3.5 h-3.5" /> Lost Ticket Override
+            </button>
           </div>
         </div>
 
         <div v-else class="space-y-4 animate-in fade-in">
-          <!-- Premium Hourly Calculations Breakdown Receipt -->
+          <!-- Audit Alert Banner -->
+          <div v-if="pendingCheckout.audit_alert" class="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl p-3">
+            <AlertTriangle class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+            <p class="text-xs font-bold text-red-600">OVERSTAY ALERT: Vehicle parked &gt;48h — supervisor review required before exit.</p>
+          </div>
+
+          <!-- Fare Breakdown Receipt -->
           <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3 text-sm">
             <div class="flex justify-between items-center pb-2 border-b border-slate-200/60">
               <span class="font-black text-slate-900 uppercase tracking-wide">{{ pendingCheckout.license_plate }}</span>
@@ -129,42 +157,42 @@ const handleProcessPayment = async () => {
             
             <div class="space-y-1.5 text-xs text-slate-600">
               <div class="flex justify-between">
-                <span>Check-In Time:</span>
+                <span>Check-In:</span>
                 <span class="font-semibold text-slate-800">
                   {{ new Date(pendingCheckout.check_in_time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }}
                 </span>
               </div>
               <div class="flex justify-between" v-if="pendingCheckout.check_out_time">
-                <span>Check-Out Time:</span>
+                <span>Check-Out:</span>
                 <span class="font-semibold text-slate-800">
                   {{ new Date(pendingCheckout.check_out_time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }}
                 </span>
               </div>
               <div class="flex justify-between">
-                <span>Total Duration:</span>
+                <span>Duration:</span>
                 <span class="font-semibold text-slate-800">
-                  {{ Math.floor((pendingCheckout.duration_minutes || 0) / 60) }}h {{ Math.round((pendingCheckout.duration_minutes || 0) % 60) }}m
+                  {{ pendingCheckout.duration_display || (Math.floor((pendingCheckout.duration_minutes||0)/60)+'h '+ Math.round((pendingCheckout.duration_minutes||0)%60)+'m') }}
                 </span>
-              </div>
-              <div class="flex justify-between" v-if="pendingCheckout.rate_per_hour">
-                <span>Hourly Parking Rate:</span>
-                <span class="font-semibold text-slate-800">Rs. {{ pendingCheckout.rate_per_hour }} / hr</span>
               </div>
             </div>
 
-            <!-- Detailed Cost Breakdown -->
+            <!-- Itemised Billing Breakdown -->
             <div class="pt-2 border-t border-dashed border-slate-300 space-y-1 text-xs">
-              <div class="flex justify-between text-slate-500">
-                <span>Subtotal (Duration × Rate):</span>
-                <span class="font-semibold">Rs. {{ pendingCheckout.subtotal ?? pendingCheckout.fare_amount ?? 0 }}</span>
-              </div>
+              <template v-if="pendingCheckout.breakdown && pendingCheckout.breakdown.length">
+                <div v-for="(item, i) in pendingCheckout.breakdown" :key="i" class="flex justify-between text-slate-600">
+                  <span>{{ item.label }}</span>
+                  <span class="font-semibold">Rs. {{ item.amount }}</span>
+                </div>
+              </template>
+              <template v-else>
+                <div class="flex justify-between text-slate-500">
+                  <span>Subtotal:</span>
+                  <span class="font-semibold">Rs. {{ pendingCheckout.subtotal ?? pendingCheckout.fare_amount ?? 0 }}</span>
+                </div>
+              </template>
               <div class="flex justify-between text-green-600 font-semibold" v-if="pendingCheckout.discount">
-                <span>Discount Applied:</span>
+                <span>Discount:</span>
                 <span>- Rs. {{ pendingCheckout.discount }}</span>
-              </div>
-              <div class="flex justify-between text-red-500 font-semibold" v-if="pendingCheckout.penalty_amount">
-                <span>Lost Penalty:</span>
-                <span>+ Rs. {{ pendingCheckout.penalty_amount }}</span>
               </div>
               <div class="flex justify-between text-slate-900 font-bold text-sm pt-2 border-t border-slate-200">
                 <span>Total Exit Payable:</span>
@@ -196,4 +224,58 @@ const handleProcessPayment = async () => {
       </div>
     </div>
   </div>
+
+  <!-- Lost Ticket Modal -->
+  <Teleport to="body">
+    <Transition name="fade">
+      <div v-if="showLostModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <div class="flex items-center gap-2">
+              <AlertTriangle class="w-5 h-5 text-red-500" />
+              <h3 class="font-bold text-slate-900">Lost Ticket Override</h3>
+            </div>
+            <button @click="showLostModal = false" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100">
+              <X class="w-4 h-4" />
+            </button>
+          </div>
+          <div class="px-6 py-5 space-y-4">
+            <div>
+              <label class="text-xs font-bold text-slate-500 uppercase block mb-1">Vehicle Type</label>
+              <select v-model="lostForm.vehicle_type" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:border-red-400">
+                <option value="CAR">Car 🚗</option>
+                <option value="BIKE">Motorbike 🏍️</option>
+                <option value="TRUCK">Truck 🚛</option>
+                <option value="SUV">SUV 🚙</option>
+                <option value="BUS">Bus 🚌</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-bold text-slate-500 uppercase block mb-1">License Plate</label>
+              <input v-model="lostForm.license_plate" type="text" placeholder="e.g. BA-12-PA-3456"
+                class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-red-400 uppercase" />
+            </div>
+            <div>
+              <label class="text-xs font-bold text-slate-500 uppercase block mb-1">Assumed Duration (hours)</label>
+              <input v-model="lostForm.assumed_hours" type="number" min="1" placeholder="4"
+                class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-red-400" />
+            </div>
+            <p class="text-xs text-slate-500">A flat penalty of <strong>Rs. 200</strong> will be added to the calculated fare.</p>
+          </div>
+          <div class="px-6 pb-5 flex gap-3">
+            <button @click="handleLostTicket" :disabled="store.isLoading"
+              class="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-sm disabled:opacity-50">
+              Generate Penalty & Process
+            </button>
+            <button @click="showLostModal = false" class="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg text-sm font-bold">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
+
+<style scoped>
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+</style>
