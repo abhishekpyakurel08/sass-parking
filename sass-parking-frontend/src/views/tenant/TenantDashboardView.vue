@@ -13,7 +13,6 @@ import OverviewTab  from '../../components/tenant/OverviewTab.vue';
 import StaffTab     from '../../components/tenant/StaffTab.vue';
 import RatesTab     from '../../components/tenant/RatesTab.vue';
 import TicketsTab   from '../../components/tenant/TicketsTab.vue';
-import TerminalTab  from '../../components/tenant/TerminalTab.vue';
 import SettingsTab  from '../../components/tenant/SettingsTab.vue';
 
 const store     = useTenantStore();
