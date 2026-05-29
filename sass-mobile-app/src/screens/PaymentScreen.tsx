@@ -297,6 +297,41 @@ const PaymentScreen = () => {
             <Text style={styles.timeText}>{checkoutSummary ? fmtDuration(checkoutSummary.duration_minutes) : '—'}</Text>
           </View>
 
+          {/* ── Billing Breakdown ─────────────────────────────────────── */}
+          {checkoutSummary?.breakdown && checkoutSummary.breakdown.length > 0 && (
+            <View style={styles.breakdownContainer}>
+              <Text style={styles.smallLabel}>FARE BREAKDOWN</Text>
+              {checkoutSummary.breakdown.map((item, idx) => (
+                <View key={idx} style={styles.breakdownRow}>
+                  <Text style={styles.breakdownLabel}>{item.label}</Text>
+                  <Text style={styles.breakdownAmount}>Rs. {item.amount.toFixed(0)}</Text>
+                </View>
+              ))}
+              {(checkoutSummary.discount ?? 0) > 0 && (
+                <View style={styles.breakdownRow}>
+                  <Text style={[styles.breakdownLabel, { color: colors.success }]}>Discount</Text>
+                  <Text style={[styles.breakdownAmount, { color: colors.success }]}>
+                    - Rs. {checkoutSummary.discount.toFixed(0)}
+                  </Text>
+                </View>
+              )}
+              <View style={[styles.breakdownRow, styles.breakdownTotal]}>
+                <Text style={styles.breakdownTotalLabel}>TOTAL</Text>
+                <Text style={styles.breakdownTotalAmount}>Rs. {totalDue.toFixed(0)}</Text>
+              </View>
+            </View>
+          )}
+
+          {/* ── Overstay Audit Alert ──────────────────────────────────── */}
+          {checkoutSummary?.audit_alert && (
+            <View style={styles.auditAlertBanner}>
+              <AlertTriangle color="#EF4444" size={16} />
+              <Text style={styles.auditAlertText}>
+                OVERSTAY ALERT: Vehicle parked &gt;48h. Supervisor review required.
+              </Text>
+            </View>
+          )}
+
           <View style={styles.totalDueContainer}>
             <Text style={styles.smallLabel}>TOTAL DUE</Text>
             <Text style={styles.totalDueValue}>Rs. {totalDue.toFixed(0)}</Text>
@@ -476,6 +511,50 @@ const styles = StyleSheet.create({
   confirmButtonText:  { color: '#FFF', fontSize: 14, fontWeight: 'bold' },
   penaltyLinkContainer: { alignItems: 'center' },
   penaltyLinkText:    { color: '#FCA5A5', fontSize: 12, textDecorationLine: 'underline' },
+
+  // ── Billing breakdown table ───────────────────────────────────────────────
+  breakdownContainer: {
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 4,
+    padding: 12,
+    marginBottom: 16,
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  breakdownLabel:  { color: colors.textSecondary, fontSize: 12 },
+  breakdownAmount: { color: colors.text, fontSize: 12, fontWeight: 'bold' },
+  breakdownTotal: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    marginTop: 4,
+    paddingTop: 8,
+  },
+  breakdownTotalLabel:  { color: colors.text, fontSize: 13, fontWeight: 'bold' },
+  breakdownTotalAmount: { color: colors.success, fontSize: 14, fontWeight: 'bold' },
+
+  // ── Overstay audit alert ──────────────────────────────────────────────────
+  auditAlertBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    borderRadius: 4,
+    padding: 10,
+    marginBottom: 16,
+  },
+  auditAlertText: {
+    color: '#EF4444',
+    fontSize: 11,
+    fontWeight: 'bold',
+    flex: 1,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

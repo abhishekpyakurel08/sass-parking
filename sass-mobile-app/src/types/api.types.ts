@@ -26,6 +26,12 @@ export type VehicleType = 'CAR' | 'BIKE' | 'TRUCK' | 'SUV' | 'BUS' | 'VAN';
 export type TicketStatus = 'ACTIVE' | 'PENDING_PAYMENT' | 'PAID' | 'EXPIRED' | 'LOST';
 export type PaymentMethod = 'CASH' | 'UPI' | 'CARD';
 
+/** One line item from the billing engine breakdown */
+export interface BillingLineItem {
+  label: string;   // e.g. "Hour 1", "Hour 2 (≤30 min — half)"
+  amount: number;  // NPR
+}
+
 export interface CheckInPayload {
   license_plate?: string;
   vehicle_type: VehicleType;
@@ -97,11 +103,13 @@ export interface CheckOutResponse {
     check_in_time: string;
     check_out_time: string;
     duration_minutes: number;
-    chargeable_duration_minutes: number;
+    duration_display: string;          // e.g. "2h 10m"
     rate_per_hour: number;
-    subtotal: number;
+    breakdown: BillingLineItem[];      // itemised fare lines
+    subtotal: number;                  // gross before discount
     discount: number;
-    total_amount: number;
+    total_amount: number;              // net payable
+    audit_alert: boolean;             // true if overstay > 48h
     status: TicketStatus;
   };
 }
