@@ -80,8 +80,8 @@ const handleProcessPayment = async () => {
           </div>
 
           <div v-if="checkInMode === 'MANUAL'">
-            <label class="text-xs font-bold text-slate-500 uppercase block mb-1">License Plate</label>
-            <input v-model="checkInForm.license_plate" type="text" placeholder="BA-12-PA-3456" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500 uppercase" />
+            <label class="text-xs font-bold text-slate-500 uppercase block mb-1">License Plate <span class="text-slate-300 font-normal normal-case">(optional)</span></label>
+            <input v-model="checkInForm.license_plate" type="text" placeholder="e.g. BA-12-PA-3456" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500 uppercase" />
           </div>
 
           <div v-if="checkInMode === 'QR'">

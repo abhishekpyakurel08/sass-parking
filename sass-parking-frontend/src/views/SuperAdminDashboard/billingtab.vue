@@ -1,603 +1,230 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from "vue";
-import { useSuperadminStore } from "../../stores/superadmin.ts";
-import { CreditCard, TrendingUp, DollarSign, Users } from "lucide-vue-next";
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useSuperadminStore } from "../../stores/superadmin";
+import { CreditCard, TrendingUp, DollarSign, Users, RefreshCcw, Info } from "lucide-vue-next";
 
-const superadminStore = useSuperadminStore();
+const store = useSuperadminStore();
 
-// --- Reactive Dark Mode Detection ---
-const isDarkMode = ref(false);
-const updateDarkMode = () => {
-  isDarkMode.value = document.documentElement.classList.contains("dark");
-};
-let themeObserver: MutationObserver | null = null;
-
+const isDark = ref(document.documentElement.classList.contains("dark"));
+let observer: MutationObserver | null = null;
 onMounted(() => {
-  updateDarkMode();
-  themeObserver = new MutationObserver(updateDarkMode);
-  themeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ["class"],
-  });
-  window.addEventListener("themechange", () => updateDarkMode());
+  observer = new MutationObserver(() => { isDark.value = document.documentElement.classList.contains("dark"); });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 });
-onUnmounted(() => {
-  themeObserver?.disconnect();
-});
+onUnmounted(() => observer?.disconnect());
 
-// Computations for SVG Distribution Bars
-const computedTierDistribution = computed(() => {
-  const dist = superadminStore.stats?.tierDistribution || [];
-  return dist.map((d) => {
-    const price = d.name.toUpperCase() === "BASIC" 
-      ? 12500 
-      : d.name.toUpperCase() === "PREMIUM" 
-        ? 35000 
-        : 85000;
+const PLAN_PRICES: Record<string, number> = { BASIC: 12500, PREMIUM: 35000, ENTERPRISE: 85000 };
+const PLAN_ICONS = [DollarSign, Users, TrendingUp];
+const PLAN_COLORS_LIGHT = ["bg-zinc-100 text-zinc-700", "bg-amber-50 text-amber-700", "bg-violet-50 text-violet-700"];
+const PLAN_COLORS_DARK  = ["bg-zinc-800 text-zinc-300", "bg-amber-950/30 text-amber-300", "bg-violet-950/30 text-violet-300"];
+
+const tierDist = computed(() => store.tierDistribution);
+const totalMRR = computed(() => store.monthlyRecurringRevenue);
+
+const fmtRs = (n: number) => `Rs. ${n.toLocaleString('en-IN')}`;
+
+// SVG donut segments
+const donutSegments = computed(() => {
+  if (totalMRR.value === 0) return [];
+  const colors = ['#3b82f6', '#f59e0b', '#8b5cf6'];
+  let cumPct = 0;
+  return tierDist.value.map((tier, idx) => {
+    const pct = (tier.mrrContribution / totalMRR.value) * 100;
+    const startPct = cumPct;
+    cumPct += pct;
+    const toRad = (p: number) => (p / 100) * 2 * Math.PI - Math.PI / 2;
+    const r = 45, cx = 60, cy = 60, ir = 28;
+    const s = toRad(startPct), e = toRad(cumPct);
+    const x1 = cx + r * Math.cos(s), y1 = cy + r * Math.sin(s);
+    const x2 = cx + r * Math.cos(e), y2 = cy + r * Math.sin(e);
+    const x3 = cx + ir * Math.cos(e), y3 = cy + ir * Math.sin(e);
+    const x4 = cx + ir * Math.cos(s), y4 = cy + ir * Math.sin(s);
+    const large = pct > 50 ? 1 : 0;
     return {
-      ...d,
-      mrrContribution: d.count * price
-    };
-  });
-});
-
-const maxTierCount = computed(() => {
-  const distributions = computedTierDistribution.value;
-  if (distributions.length === 0) return 1;
-  return Math.max(...distributions.map((d) => d.count), 1);
-});
-
-const maxMRR = computed(() => {
-  const distributions = computedTierDistribution.value;
-  if (distributions.length === 0) return 1;
-  return Math.max(...distributions.map((d) => d.mrrContribution), 1);
-});
-
-// Chart colors
-const chartColors = computed(() => ({
-  text: isDarkMode.value ? "#F8F9FA" : "#1A1A1A", // Soft White vs Rich Black
-  textMuted: isDarkMode.value ? "#B2BEB5" : "#6B7280", // Ash Gray vs Gray
-  track: isDarkMode.value ? "#2B2B2B" : "#E5E7EB", // Charcoal vs Cool Gray
-  bar1: isDarkMode.value ? "#F8F9FA" : "#111111", // Soft White vs Matte Black
-  bar2: "#B2BEB5", // Ash Gray (Main Accent)
-  bar3: isDarkMode.value ? "#6B7280" : "#DADADA", // Gray vs Light Gray
-  border: isDarkMode.value ? "#111111" : "#DADADA", // Matte Black vs Light Gray
-  cardBg: isDarkMode.value ? "#2B2B2B" : "#ffffff", // Charcoal vs White
-  cardBorder: isDarkMode.value ? "#111111" : "#DADADA", // Matte Black vs Light Gray
-}));
-
-// Donut chart data
-const donutData = computed(() => {
-  const tiers = computedTierDistribution.value;
-  const total = superadminStore.stats?.monthlyRecurringRevenue || 1;
-  const colors = [
-    chartColors.value.bar1,
-    chartColors.value.bar2,
-    chartColors.value.bar3,
-  ];
-
-  let cumulativePercent = 0;
-  return tiers.map((tier, idx) => {
-    const percent = ((tier.mrrContribution || 0) / total) * 100;
-    const startAngle = (cumulativePercent / 100) * Math.PI * 2 - Math.PI / 2;
-    cumulativePercent += percent;
-    const endAngle = (cumulativePercent / 100) * Math.PI * 2 - Math.PI / 2;
-
-    // Calculate SVG arc path
-    const radius = 45;
-    const cx = 60;
-    const cy = 60;
-    const innerRadius = 30;
-
-    const x1 = cx + radius * Math.cos(startAngle);
-    const y1 = cy + radius * Math.sin(startAngle);
-    const x2 = cx + radius * Math.cos(endAngle);
-    const y2 = cy + radius * Math.sin(endAngle);
-    const x3 = cx + innerRadius * Math.cos(endAngle);
-    const y3 = cy + innerRadius * Math.sin(endAngle);
-    const x4 = cx + innerRadius * Math.cos(startAngle);
-    const y4 = cy + innerRadius * Math.sin(startAngle);
-
-    const largeArc = percent > 50 ? 1 : 0;
-
-    const path = [
-      `M ${x1} ${y1}`,
-      `A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`,
-      `L ${x3} ${y3}`,
-      `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${x4} ${y4}`,
-      "Z",
-    ].join(" ");
-
-    return {
-      name: tier.name,
-      percent,
-      count: tier.count,
-      mrr: tier.mrrContribution || 0,
+      name: tier.name, pct, count: tier.count, mrr: tier.mrrContribution,
       color: colors[idx % colors.length],
-      path,
+      path: `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${x3} ${y3} A ${ir} ${ir} 0 ${large} 0 ${x4} ${y4} Z`,
     };
   });
 });
 
-// Tooltip for donut
-const donutTooltip = ref<{
-  name: string;
-  value: number;
-  percent: number;
-} | null>(null);
+const hoveredSegment = ref<null | { name: string; mrr: number; pct: number }>(null);
 </script>
 
 <template>
   <div class="space-y-6">
-    <!-- Revenue Metrics Summary -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div
-        v-for="(tierStats, idx) in computedTierDistribution"
-        :key="tierStats.name"
-        class="p-6 rounded-2xl border shadow-sm relative overflow-hidden transition-all duration-300"
-        :class="[
-          isDarkMode
-            ? 'bg-zinc-900 border-zinc-800'
-            : 'bg-white border-slate-200',
-          idx === 0 ? 'ring-1 ring-zinc-900/5 dark:ring-zinc-700/30' : '',
-        ]"
-      >
-        <div class="flex items-center gap-2 mb-3">
-          <div
-            class="w-8 h-8 rounded-lg flex items-center justify-center"
-            :class="[
-              idx === 0 ? (isDarkMode ? 'bg-zinc-800' : 'bg-zinc-100') : '',
-              idx === 1 ? (isDarkMode ? 'bg-zinc-800/70' : 'bg-slate-100') : '',
-              idx === 2 ? (isDarkMode ? 'bg-zinc-800/50' : 'bg-gray-100') : '',
-            ]"
-          >
-            <DollarSign
-              v-if="idx === 0"
-              class="w-4 h-4"
-              :class="isDarkMode ? 'text-zinc-300' : 'text-zinc-700'"
-            />
-            <Users
-              v-if="idx === 1"
-              class="w-4 h-4"
-              :class="isDarkMode ? 'text-zinc-400' : 'text-zinc-600'"
-            />
-            <TrendingUp
-              v-if="idx === 2"
-              class="w-4 h-4"
-              :class="isDarkMode ? 'text-zinc-500' : 'text-zinc-500'"
-            />
-          </div>
-          <p
-            class="text-[10px] font-black uppercase tracking-widest"
-            :class="isDarkMode ? 'text-zinc-500' : 'text-zinc-400'"
-          >
-            {{ tierStats.name }} Plan
-          </p>
-        </div>
-
-        <h3
-          class="text-2xl font-black font-mono"
-          :class="isDarkMode ? 'text-white' : 'text-slate-900'"
-        >
-          Rs. {{ (tierStats.mrrContribution || 0).toLocaleString() }}
-        </h3>
-        <p
-          class="text-xs mt-1"
-          :class="isDarkMode ? 'text-zinc-500' : 'text-slate-400'"
-        >
-          Monthly Recurring Revenue
-        </p>
-
-        <div
-          class="flex justify-between items-center text-[10px] mt-4 pt-3 border-t"
-          :class="
-            isDarkMode
-              ? 'border-zinc-800 text-zinc-500'
-              : 'border-slate-100 text-slate-400'
-          "
-        >
-          <span class="font-semibold">{{ tierStats.count }} Active Plans</span>
-          <span class="font-bold">
-            {{
-              (
-                ((tierStats.mrrContribution || 0) /
-                  (superadminStore.stats?.monthlyRecurringRevenue || 1)) *
-                100
-              ).toFixed(0)
-            }}% share
-          </span>
-        </div>
-      </div>
+    <!-- Empty State -->
+    <div v-if="store.tenants.length === 0"
+      class="rounded-2xl border p-10 text-center transition-colors"
+      :class="isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-200'">
+      <Info class="w-8 h-8 mx-auto mb-3" :class="isDark ? 'text-zinc-500' : 'text-slate-300'" />
+      <p class="text-sm font-bold" :class="isDark ? 'text-zinc-400' : 'text-slate-500'">No tenant billing data available.</p>
+      <p class="text-xs mt-1" :class="isDark ? 'text-zinc-600' : 'text-slate-400'">Load tenants from the Tenants tab first.</p>
+      <button @click="store.fetchTenants()" class="mt-4 flex items-center gap-2 mx-auto px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors">
+        <RefreshCcw class="w-3.5 h-3.5" :class="store.isLoading ? 'animate-spin' : ''" />
+        Load Tenants
+      </button>
     </div>
 
-    <!-- Charts Row -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Enhanced Horizontal Bar Chart -->
-      <div
-        class="rounded-2xl p-6 border shadow-sm space-y-4 transition-colors duration-300"
-        :class="
-          isDarkMode
-            ? 'bg-zinc-900 border-zinc-800'
-            : 'bg-white border-slate-200'
-        "
-      >
-        <div>
-          <h4
-            class="font-bold text-sm"
-            :class="isDarkMode ? 'text-white' : 'text-slate-900'"
-          >
-            Active Subscriptions by Tier
-          </h4>
-          <p
-            class="text-xs mt-1"
-            :class="isDarkMode ? 'text-zinc-500' : 'text-slate-400'"
-          >
-            Distribution of active accounts across plan tiers
-          </p>
+    <template v-else>
+      <!-- Tier MRR Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div v-for="(tier, idx) in tierDist" :key="tier.name"
+          class="rounded-2xl border p-5 transition-colors relative overflow-hidden"
+          :class="isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-200 shadow-sm'">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center" :class="isDark ? PLAN_COLORS_DARK[idx] : PLAN_COLORS_LIGHT[idx]">
+              <component :is="PLAN_ICONS[idx]" class="w-4 h-4" />
+            </div>
+            <span class="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 border rounded"
+              :class="isDark ? PLAN_COLORS_DARK[idx] + ' border-zinc-700' : PLAN_COLORS_LIGHT[idx] + ' border-zinc-200'">
+              {{ tier.name }}
+            </span>
+          </div>
+          <h3 class="text-2xl font-black" :class="isDark ? 'text-white' : 'text-slate-900'">
+            {{ fmtRs(tier.mrrContribution) }}
+          </h3>
+          <p class="text-xs mt-1" :class="isDark ? 'text-zinc-500' : 'text-slate-400'">Monthly Recurring Revenue</p>
+          <div class="flex justify-between items-center text-[10px] mt-3 pt-3 border-t"
+            :class="isDark ? 'border-zinc-800 text-zinc-500' : 'border-slate-100 text-slate-400'">
+            <span class="font-semibold">{{ tier.count }} active plan{{ tier.count !== 1 ? 's' : '' }}</span>
+            <span class="font-bold">
+              {{ totalMRR > 0 ? ((tier.mrrContribution / totalMRR) * 100).toFixed(0) : 0 }}% share
+            </span>
+          </div>
         </div>
+        <!-- Total MRR Summary Card -->
+        <div v-if="tierDist.length < 3"
+          class="rounded-2xl border p-5 transition-colors flex flex-col justify-between"
+          :class="isDark ? 'bg-zinc-800/40 border-zinc-800' : 'bg-slate-50 border-slate-200'">
+          <p class="text-[10px] font-bold uppercase tracking-wider" :class="isDark ? 'text-zinc-600' : 'text-slate-400'">Total Platform MRR</p>
+          <h3 class="text-2xl font-black mt-2" :class="isDark ? 'text-white' : 'text-slate-900'">{{ fmtRs(totalMRR) }}</h3>
+          <p class="text-xs" :class="isDark ? 'text-zinc-500' : 'text-slate-400'">Across {{ store.tenants.length }} tenants</p>
+        </div>
+      </div>
 
-        <div class="py-2">
-          <svg viewBox="0 0 420 160" class="w-full h-36 overflow-visible">
-            <g
-              v-for="(tier, idx) in computedTierDistribution"
-              :key="tier.name"
-            >
-              <!-- Tier icon circle -->
-              <circle
-                :cx="16"
-                :cy="28 + idx * 50"
-                r="12"
-                :fill="chartColors.track"
-              />
-              <text
-                :x="16"
-                :y="32 + idx * 50"
-                text-anchor="middle"
-                class="text-[10px] font-black"
-                :fill="chartColors.text"
-              >
-                {{ tier.name.charAt(0) }}
-              </text>
-
-              <!-- Label -->
-              <text
-                x="34"
-                :y="32 + idx * 50"
-                class="text-xs font-bold capitalize"
-                :fill="chartColors.text"
-              >
-                {{ tier.name.toLowerCase() }}
-              </text>
-
-              <!-- Track background -->
-              <rect
-                x="100"
-                :y="20 + idx * 50"
-                width="260"
-                height="16"
-                rx="8"
-                :fill="chartColors.track"
-              />
-
-              <!-- Fill bar with animated width -->
-              <rect
-                x="100"
-                :y="20 + idx * 50"
-                :width="Math.max((tier.count / maxTierCount) * 260, 4)"
-                height="16"
-                rx="8"
-                :fill="
-                  idx === 0
-                    ? chartColors.bar1
-                    : idx === 1
-                      ? chartColors.bar2
-                      : chartColors.bar3
-                "
-                class="transition-all duration-700 ease-out"
-              />
-
-              <!-- Percentage label inside bar if wide enough -->
-              <text
-                v-if="tier.count / maxTierCount > 0.15"
-                :x="100 + ((tier.count / maxTierCount) * 260) / 2"
-                :y="31 + idx * 50"
-                text-anchor="middle"
-                class="text-[9px] font-black"
-                fill="white"
-              >
-                {{ ((tier.count / maxTierCount) * 100).toFixed(0) }}%
-              </text>
-
-              <!-- Count badge -->
-              <text
-                :x="375"
-                :y="32 + idx * 50"
-                class="text-xs font-mono font-bold"
-                :fill="chartColors.text"
-              >
-                {{ tier.count }}
-              </text>
+      <!-- Charts Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- Bar Chart -->
+        <div class="rounded-2xl border p-5 transition-colors"
+          :class="isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-200 shadow-sm'">
+          <h4 class="font-bold text-sm mb-1" :class="isDark ? 'text-white' : 'text-slate-900'">Subscriptions by Tier</h4>
+          <p class="text-xs mb-4" :class="isDark ? 'text-zinc-500' : 'text-slate-400'">Active accounts across plan tiers</p>
+          <div v-if="tierDist.length === 0" class="py-8 text-center text-xs" :class="isDark ? 'text-zinc-600' : 'text-slate-300'">No data</div>
+          <svg v-else viewBox="0 0 420 160" class="w-full h-36 overflow-visible">
+            <g v-for="(tier, idx) in tierDist" :key="tier.name">
+              <text :x="16" :y="30 + idx * 50" text-anchor="middle" class="text-xs font-bold"
+                :fill="isDark ? '#a1a1aa' : '#374151'" font-size="10">{{ tier.name.charAt(0) }}</text>
+              <text :x="44" :y="30 + idx * 50" class="text-xs font-bold capitalize"
+                :fill="isDark ? '#d4d4d8' : '#374151'" font-size="11">{{ tier.name.toLowerCase() }}</text>
+              <!-- Track -->
+              <rect x="110" :y="18 + idx * 50" width="250" height="16" rx="8"
+                :fill="isDark ? '#27272a' : '#f1f5f9'" />
+              <!-- Fill -->
+              <rect x="110" :y="18 + idx * 50"
+                :width="Math.max(store.tenants.length > 0 ? (tier.count / Math.max(...tierDist.map(d => d.count), 1)) * 250 : 4, 4)"
+                height="16" rx="8"
+                :fill="['#3b82f6','#f59e0b','#8b5cf6'][idx % 3]"
+                class="transition-all duration-700" />
+              <!-- Count -->
+              <text :x="375" :y="30 + idx * 50" font-size="11" font-weight="700"
+                :fill="isDark ? '#fff' : '#111827'">{{ tier.count }}</text>
             </g>
           </svg>
         </div>
-      </div>
 
-      <!-- Enhanced Donut Chart -->
-      <div
-        class="rounded-2xl p-6 border shadow-sm flex flex-col justify-between transition-colors duration-300"
-        :class="
-          isDarkMode
-            ? 'bg-zinc-900 border-zinc-800'
-            : 'bg-white border-slate-200'
-        "
-      >
-        <div>
-          <h4
-            class="font-bold text-sm"
-            :class="isDarkMode ? 'text-white' : 'text-slate-900'"
-          >
-            MRR Revenue Share
-          </h4>
-          <p
-            class="text-xs mt-1"
-            :class="isDarkMode ? 'text-zinc-500' : 'text-slate-400'"
-          >
-            Income distribution across subscription tiers
-          </p>
-        </div>
-
-        <div class="flex items-center gap-6 py-4">
-          <!-- Donut Chart -->
-          <div class="relative flex-shrink-0">
-            <svg viewBox="0 0 120 120" class="w-32 h-32">
-              <!-- Background ring -->
-              <circle
-                cx="60"
-                cy="60"
-                r="45"
-                fill="none"
-                :stroke="chartColors.track"
-                stroke-width="15"
-              />
-
-              <!-- Segments -->
-              <path
-                v-for="(segment, idx) in donutData"
-                :key="idx"
-                :d="segment.path"
-                :fill="segment.color"
-                class="transition-all duration-300 hover:opacity-80 cursor-pointer"
-                @mouseenter="
-                  donutTooltip = {
-                    name: segment.name,
-                    value: segment.mrr,
-                    percent: segment.percent,
-                  }
-                "
-                @mouseleave="donutTooltip = null"
-              />
-
-              <!-- Center text -->
-              <text
-                x="60"
-                y="56"
-                text-anchor="middle"
-                class="text-[10px] font-bold"
-                :fill="chartColors.textMuted"
-              >
-                Total MRR
-              </text>
-              <text
-                x="60"
-                y="72"
-                text-anchor="middle"
-                class="text-xs font-black"
-                :fill="chartColors.text"
-              >
-                {{
-                  (superadminStore.stats?.monthlyRecurringRevenue || 0) >
-                  1000000
-                    ? "1M+"
-                    : (
-                        (superadminStore.stats?.monthlyRecurringRevenue || 0) /
-                        1000
-                      ).toFixed(0) + "k"
-                }}
-              </text>
-            </svg>
-
-            <!-- Floating tooltip -->
-            <div
-              v-if="donutTooltip"
-              class="absolute -top-2 left-full ml-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 px-3 py-2 rounded-lg shadow-lg text-xs whitespace-nowrap z-10"
-            >
-              <p class="font-bold">{{ donutTooltip.name }}</p>
-              <p class="font-mono text-[10px] opacity-80">
-                Rs. {{ donutTooltip.value.toLocaleString() }} ({{
-                  donutTooltip.percent.toFixed(1)
-                }}%)
-              </p>
-            </div>
-          </div>
-
-          <!-- Legend -->
-          <div class="flex-1 space-y-3">
-            <div
-              v-for="(tier, idx) in computedTierDistribution"
-              :key="tier.name"
-              class="flex items-center justify-between py-2 border-b last:border-0"
-              :class="isDarkMode ? 'border-zinc-800' : 'border-slate-100'"
-              @mouseenter="
-                donutTooltip = {
-                  name: tier.name,
-                  value: tier.mrrContribution || 0,
-                  percent:
-                    ((tier.mrrContribution || 0) /
-                      (superadminStore.stats?.monthlyRecurringRevenue || 1)) *
-                    100,
-                }
-              "
-              @mouseleave="donutTooltip = null"
-            >
-              <div class="flex items-center gap-2">
-                <span
-                  class="w-3 h-3 rounded-sm"
-                  :class="[
-                    idx === 0
-                      ? isDarkMode
-                        ? 'bg-zinc-300'
-                        : 'bg-zinc-950'
-                      : '',
-                    idx === 1
-                      ? isDarkMode
-                        ? 'bg-zinc-500'
-                        : 'bg-zinc-600'
-                      : '',
-                    idx === 2
-                      ? isDarkMode
-                        ? 'bg-zinc-700'
-                        : 'bg-zinc-400'
-                      : '',
-                  ]"
-                ></span>
-                <span
-                  class="text-xs font-bold capitalize"
-                  :class="isDarkMode ? 'text-zinc-300' : 'text-slate-700'"
-                >
-                  {{ tier.name.toLowerCase() }}
-                </span>
+        <!-- Donut Chart -->
+        <div class="rounded-2xl border p-5 transition-colors"
+          :class="isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-200 shadow-sm'">
+          <h4 class="font-bold text-sm mb-1" :class="isDark ? 'text-white' : 'text-slate-900'">MRR Revenue Share</h4>
+          <p class="text-xs mb-4" :class="isDark ? 'text-zinc-500' : 'text-slate-400'">Income distribution across tiers</p>
+          <div class="flex items-center gap-6">
+            <!-- SVG Donut -->
+            <div class="relative flex-shrink-0">
+              <svg viewBox="0 0 120 120" class="w-32 h-32">
+                <circle cx="60" cy="60" r="45" fill="none" :stroke="isDark ? '#27272a' : '#f1f5f9'" stroke-width="17" />
+                <path v-for="seg in donutSegments" :key="seg.name" :d="seg.path" :fill="seg.color"
+                  class="transition-opacity hover:opacity-80 cursor-pointer"
+                  @mouseenter="hoveredSegment = { name: seg.name, mrr: seg.mrr, pct: seg.pct }"
+                  @mouseleave="hoveredSegment = null" />
+                <text x="60" y="55" text-anchor="middle" font-size="8" font-weight="600" :fill="isDark ? '#71717a' : '#9ca3af'">Total MRR</text>
+                <text x="60" y="70" text-anchor="middle" font-size="10" font-weight="900" :fill="isDark ? '#fff' : '#111827'">
+                  {{ totalMRR >= 1000000 ? (totalMRR / 1000000).toFixed(1) + 'M' : (totalMRR / 1000).toFixed(0) + 'k' }}
+                </text>
+              </svg>
+              <!-- Tooltip -->
+              <div v-if="hoveredSegment"
+                class="absolute -top-2 left-full ml-2 px-3 py-2 rounded-lg text-xs whitespace-nowrap z-10 shadow-xl"
+                :class="isDark ? 'bg-white text-zinc-900' : 'bg-zinc-900 text-white'">
+                <p class="font-bold">{{ hoveredSegment.name }}</p>
+                <p class="opacity-70 text-[10px]">{{ fmtRs(hoveredSegment.mrr) }} ({{ hoveredSegment.pct.toFixed(1) }}%)</p>
               </div>
-              <div class="text-right">
-                <span
-                  class="text-xs font-bold font-mono block"
-                  :class="isDarkMode ? 'text-white' : 'text-slate-900'"
-                >
-                  {{
-                    (
-                      ((tier.mrrContribution || 0) /
-                        (superadminStore.stats?.monthlyRecurringRevenue || 1)) *
-                      100
-                    ).toFixed(0)
-                  }}%
-                </span>
-                <span
-                  class="text-[10px]"
-                  :class="isDarkMode ? 'text-zinc-500' : 'text-slate-400'"
-                >
-                  {{ tier.count }} accounts
-                </span>
+            </div>
+            <!-- Legend -->
+            <div class="flex-1 space-y-2.5">
+              <div v-for="(seg, idx) in donutSegments" :key="seg.name"
+                class="flex items-center justify-between py-2 border-b last:border-0"
+                :class="isDark ? 'border-zinc-800' : 'border-slate-100'"
+                @mouseenter="hoveredSegment = { name: seg.name, mrr: seg.mrr, pct: seg.pct }"
+                @mouseleave="hoveredSegment = null">
+                <div class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-sm" :style="{ backgroundColor: seg.color }"></span>
+                  <span class="text-xs font-bold capitalize" :class="isDark ? 'text-zinc-300' : 'text-slate-700'">
+                    {{ seg.name.toLowerCase() }}
+                  </span>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs font-bold font-mono" :class="isDark ? 'text-white' : 'text-slate-900'">{{ seg.pct.toFixed(0) }}%</p>
+                  <p class="text-[10px]" :class="isDark ? 'text-zinc-500' : 'text-slate-400'">{{ seg.count }} accts</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Billing Ledger -->
-    <div class="space-y-4 pt-2">
-      <h3
-        class="text-sm font-bold uppercase tracking-wider pb-3 border-b transition-colors duration-300"
-        :class="
-          isDarkMode
-            ? 'text-white border-zinc-800'
-            : 'text-slate-900 border-slate-200'
-        "
-      >
-        Billing and Revenue by Partner
-      </h3>
-      <div
-        class="rounded-2xl shadow-sm border overflow-hidden transition-colors duration-300"
-        :class="
-          isDarkMode
-            ? 'bg-zinc-900 border-zinc-800'
-            : 'bg-white border-slate-200'
-        "
-      >
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr
-              class="text-xs font-bold border-b uppercase tracking-wider transition-colors duration-300"
-              :class="
-                isDarkMode
-                  ? 'bg-zinc-800/50 text-zinc-400 border-zinc-800'
-                  : 'bg-slate-50 text-slate-400 border-slate-200'
-              "
-            >
-              <th class="px-6 py-4">Partner Name</th>
-              <th class="px-6 py-4">Current Plan</th>
-              <th class="px-6 py-4">Billing Cycle</th>
-              <th class="px-6 py-4">Monthly Rate</th>
-              <th class="px-6 py-4">Next Payment Date</th>
-              <th class="px-6 py-4 font-mono">Total Paid To Date</th>
-            </tr>
-          </thead>
-          <tbody class="text-xs font-semibold">
-            <tr
-              v-for="t in superadminStore.tenants"
-              :key="t._id"
-              class="border-b transition-colors duration-200"
-              :class="[
-                isDarkMode
-                  ? 'border-zinc-800 hover:bg-zinc-800/30 text-zinc-300'
-                  : 'border-slate-150 hover:bg-slate-50/50 text-slate-700',
-              ]"
-            >
-              <td
-                class="px-6 py-3.5 font-bold"
-                :class="isDarkMode ? 'text-white' : 'text-slate-900'"
-              >
-                {{ t.companyName }}
-              </td>
-              <td class="px-6 py-3.5">
-                <span
-                  class="px-2 py-0.5 border font-mono text-[9px] font-bold uppercase rounded-md transition-colors duration-300"
-                  :class="
-                    isDarkMode
-                      ? 'bg-zinc-800 text-zinc-200 border-zinc-700'
-                      : 'bg-zinc-100 text-zinc-900 border-zinc-200'
-                  "
-                >
-                  {{ t.subscriptionPlan }}
-                </span>
-              </td>
-              <td
-                class="px-6 py-3.5 text-[10px] font-bold uppercase"
-                :class="isDarkMode ? 'text-zinc-500' : 'text-zinc-400'"
-              >
-                Monthly
-              </td>
-              <td
-                class="px-6 py-3.5 font-mono"
-                :class="isDarkMode ? 'text-zinc-200' : 'text-zinc-900'"
-              >
-                Rs.
-                {{
-                  (t.subscriptionPlan === "BASIC" ? 12500 : t.subscriptionPlan === "PREMIUM" ? 35000 : 85000).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                  })
-                }}
-              </td>
-              <td
-                class="px-6 py-3.5 font-mono text-[11px]"
-                :class="isDarkMode ? 'text-zinc-500' : 'text-slate-400'"
-              >
-                2026-06-01
-              </td>
-              <td
-                class="px-6 py-3.5 font-mono font-bold"
-                :class="isDarkMode ? 'text-white' : 'text-zinc-900'"
-              >
-                Rs.
-                {{
-                  (t.subscriptionPlan === "BASIC" ? 150000 : t.subscriptionPlan === "PREMIUM" ? 420000 : 1020000).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                  })
-                }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Billing Ledger -->
+      <div class="space-y-2">
+        <h3 class="text-sm font-bold" :class="isDark ? 'text-white' : 'text-slate-900'">Partner Billing Ledger</h3>
+        <div class="rounded-2xl border overflow-hidden transition-colors"
+          :class="isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-200 shadow-sm'">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left">
+              <thead class="text-[10px] font-bold uppercase tracking-wider border-b"
+                :class="isDark ? 'bg-zinc-800/50 text-zinc-500 border-zinc-800' : 'bg-slate-50 text-slate-400 border-slate-200'">
+                <tr>
+                  <th class="px-5 py-3">Partner</th>
+                  <th class="px-5 py-3">Plan</th>
+                  <th class="px-5 py-3">Monthly Rate</th>
+                  <th class="px-5 py-3">Billing Cycle</th>
+                  <th class="px-5 py-3">Est. Next Payment</th>
+                  <th class="px-5 py-3">Est. Total Paid</th>
+                </tr>
+              </thead>
+              <tbody class="text-xs divide-y" :class="isDark ? 'divide-zinc-800' : 'divide-slate-100'">
+                <tr v-for="t in store.tenants" :key="t._id" class="transition-colors"
+                  :class="isDark ? 'hover:bg-zinc-800/20 text-zinc-300' : 'hover:bg-slate-50 text-slate-700'">
+                  <td class="px-5 py-3 font-bold" :class="isDark ? 'text-white' : 'text-slate-900'">{{ t.companyName || t.name }}</td>
+                  <td class="px-5 py-3">
+                    <span class="px-2 py-0.5 border rounded text-[9px] font-black uppercase"
+                      :class="isDark ? 'bg-zinc-800 text-zinc-300 border-zinc-700' : 'bg-zinc-100 text-zinc-800 border-zinc-200'">
+                      {{ t.subscriptionPlan || 'BASIC' }}
+                    </span>
+                  </td>
+                  <td class="px-5 py-3 font-mono font-bold">
+                    {{ fmtRs(PLAN_PRICES[t.subscriptionPlan?.toUpperCase()] ?? 12500) }}
+                  </td>
+                  <td class="px-5 py-3 text-[10px] font-bold uppercase" :class="isDark ? 'text-zinc-500' : 'text-zinc-400'">Monthly</td>
+                  <td class="px-5 py-3 font-mono text-[10px]" :class="isDark ? 'text-zinc-500' : 'text-slate-400'">2026-06-01</td>
+                  <td class="px-5 py-3 font-mono font-bold" :class="isDark ? 'text-white' : 'text-zinc-900'">
+                    {{ fmtRs((PLAN_PRICES[t.subscriptionPlan?.toUpperCase()] ?? 12500) * 12) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>

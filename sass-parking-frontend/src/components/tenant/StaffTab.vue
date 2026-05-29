@@ -7,23 +7,23 @@ const store = useTenantStore();
 
 // ─── Create Form ───────────────────────────────────────────────────────────
 const showCreateForm = ref(false);
-const createForm = ref({ name: '', email: '', password: '' });
+const createForm = ref({ name: '', email: '', password: '', gate_assignment: 'BOTH', ticket_prefix: '' });
 
 const handleCreate = async () => {
   const ok = await store.createStaff(createForm.value);
   if (ok) {
     showCreateForm.value = false;
-    createForm.value = { name: '', email: '', password: '' };
+    createForm.value = { name: '', email: '', password: '', gate_assignment: 'BOTH', ticket_prefix: '' };
   }
 };
 
 // ─── Edit Modal ────────────────────────────────────────────────────────────
 const editingStaff = ref<null | { _id: string; name: string; email: string }>(null);
-const editForm = ref({ name: '', email: '', password: '' });
+const editForm = ref({ name: '', email: '', password: '', gate_assignment: 'BOTH', ticket_prefix: '' });
 
 const openEdit = (staff: any) => {
   editingStaff.value = staff;
-  editForm.value = { name: staff.name, email: staff.email, password: '' };
+  editForm.value = { name: staff.name, email: staff.email, password: '', gate_assignment: staff.gate_assignment || 'BOTH', ticket_prefix: staff.ticket_prefix || '' };
 };
 
 const handleUpdate = async () => {
@@ -32,6 +32,8 @@ const handleUpdate = async () => {
   if (editForm.value.name) payload.name = editForm.value.name;
   if (editForm.value.email) payload.email = editForm.value.email;
   if (editForm.value.password) payload.password = editForm.value.password;
+  payload.gate_assignment = editForm.value.gate_assignment;
+  payload.ticket_prefix = editForm.value.ticket_prefix;
   const ok = await store.updateStaff(editingStaff.value._id, payload);
   if (ok) editingStaff.value = null;
 };
@@ -72,7 +74,7 @@ const handleDelete = async () => {
             <X class="w-4 h-4" />
           </button>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Full Name</label>
             <input v-model="createForm.name" type="text" placeholder="Jane Doe"
@@ -87,6 +89,21 @@ const handleDelete = async () => {
             <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Password</label>
             <input v-model="createForm.password" type="password" placeholder="••••••••"
               class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Gate Assignment</label>
+            <select v-model="createForm.gate_assignment"
+              class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+              <option value="ENTRY">Entry Only</option>
+              <option value="EXIT">Exit Only</option>
+              <option value="BOTH">Both</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Ticket Prefix <span class="text-slate-300 font-normal normal-case">(optional)</span></label>
+            <input v-model="createForm.ticket_prefix" type="text" placeholder="e.g. P-T-R-2APW"
+              class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none mb-1" />
+            <p class="text-[10px] text-slate-400">If blank, a prefix like P-T-R-XXXX is auto-generated.</p>
           </div>
         </div>
         <div class="flex gap-3 pt-2">
@@ -130,6 +147,8 @@ const handleDelete = async () => {
             <th class="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Email</th>
             <th class="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Role</th>
             <th class="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+            <th class="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Gate Assignment</th>
+            <th class="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Prefix</th>
             <th class="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
           </tr>
         </thead>
@@ -153,6 +172,12 @@ const handleDelete = async () => {
               <span class="flex items-center gap-1.5 text-green-600 text-xs font-bold w-max">
                 <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Active
               </span>
+            </td>
+            <td class="px-6 py-4 text-sm font-medium text-slate-700">
+              {{ staff.gate_assignment || 'BOTH' }}
+            </td>
+            <td class="px-6 py-4 text-sm text-slate-500">
+              {{ staff.ticket_prefix || '-' }}
             </td>
             <td class="px-6 py-4">
               <div class="flex items-center gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
@@ -210,6 +235,23 @@ const handleDelete = async () => {
               <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">New Password <span class="text-slate-300 font-normal normal-case">(leave blank to keep current)</span></label>
               <input v-model="editForm.password" type="password" placeholder="••••••••"
                 class="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Gate Assignment</label>
+                <select v-model="editForm.gate_assignment"
+                  class="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow">
+                  <option value="ENTRY">Entry Only</option>
+                  <option value="EXIT">Exit Only</option>
+                  <option value="BOTH">Both</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Ticket Prefix <span class="text-slate-300 font-normal normal-case">(optional)</span></label>
+                <input v-model="editForm.ticket_prefix" type="text" placeholder="e.g. P-T-R-2APW"
+                  class="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow mb-1" />
+                <p class="text-[10px] text-slate-400">If blank, a prefix like P-T-R-XXXX is auto-generated.</p>
+              </div>
             </div>
           </div>
 

@@ -1,402 +1,140 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useSuperadminStore } from "../../stores/superadmin";
-import {
-  Search,
-  Plus,
-  Key,
-  User,
-  Mail,
-  Shield,
-  Building2,
-} from "lucide-vue-next";
+import { Search, Plus, Key, User, Mail, Shield, Building2, ShieldCheck, RefreshCcw, X } from "lucide-vue-next";
 
-const superadminStore = useSuperadminStore();
+const store = useSuperadminStore();
 
-// --- Reactive Dark Mode Detection ---
-const isDarkMode = ref(false);
-const updateDarkMode = () => {
-  isDarkMode.value = document.documentElement.classList.contains("dark");
-};
-let themeObserver: MutationObserver | null = null;
-
+const isDark = ref(document.documentElement.classList.contains("dark"));
+let observer: MutationObserver | null = null;
 onMounted(() => {
-  updateDarkMode();
-  themeObserver = new MutationObserver(updateDarkMode);
-  themeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ["class"],
-  });
-  window.addEventListener("themechange", () => updateDarkMode());
+  observer = new MutationObserver(() => { isDark.value = document.documentElement.classList.contains("dark"); });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  store.fetchGlobalUsers();
 });
-onUnmounted(() => {
-  themeObserver?.disconnect();
-});
+onUnmounted(() => observer?.disconnect());
 
-const userSearch = ref("");
-const userRoleFilter = ref("ALL");
-const showUserForm = ref(false);
+const q          = ref("");
+const roleFilter = ref("ALL");
 
-const newUserForm = reactive({
-  name: "",
-  email: "",
-  password: "",
-  role: "TENANT_OWNER",
-  tenantId: "",
-});
+const filteredUsers = computed(() =>
+  store.globalUsers.filter((u) => {
+    const matchQ = !q.value ||
+      (u.name || "").toLowerCase().includes(q.value.toLowerCase()) ||
+      (u.email || "").toLowerCase().includes(q.value.toLowerCase());
+    const matchR = roleFilter.value === "ALL" || u.role === roleFilter.value;
+    return matchQ && matchR;
+  })
+);
 
-const handleCreateUser = async () => {
-  const success = await superadminStore.createGlobalUser(newUserForm);
-  if (success) {
-    showUserForm.value = false;
-    Object.assign(newUserForm, {
-      name: "",
-      email: "",
-      password: "",
-      role: "TENANT_OWNER",
-      tenantId: "",
-    });
-  }
+const roleStyle = (role: string) => {
+  if (role === "TENANT_OWNER") return isDark.value ? "bg-violet-950/30 text-violet-300 border-violet-800" : "bg-violet-50 text-violet-700 border-violet-200";
+  if (role === "SUPER_ADMIN")  return isDark.value ? "bg-blue-950/30 text-blue-300 border-blue-800" : "bg-blue-50 text-blue-700 border-blue-200";
+  return isDark.value ? "bg-emerald-950/30 text-emerald-300 border-emerald-800" : "bg-emerald-50 text-emerald-700 border-emerald-200";
 };
 
-const filteredUsers = computed(() => {
-  return superadminStore.globalUsers.filter((u) => {
-    const matchesQuery =
-      u.name.toLowerCase().includes(userSearch.value.toLowerCase()) ||
-      u.email.toLowerCase().includes(userSearch.value.toLowerCase());
-    const matchesRole =
-      userRoleFilter.value === "ALL" || u.role === userRoleFilter.value;
-    return matchesQuery && matchesRole;
-  });
-});
-
-// Role styling
-const getRoleStyle = (role: string) => {
-  if (role === "TENANT_OWNER") {
-    return {
-      light: "bg-violet-50 text-violet-700 border-violet-200",
-      dark: "bg-violet-950/30 text-violet-400 border-violet-900/50",
-      label: "Partner Owner",
-    };
-  }
-  return {
-    light: "bg-blue-50 text-blue-700 border-blue-200",
-    dark: "bg-blue-950/30 text-blue-400 border-blue-900/50",
-    label: "Staff Operator",
-  };
+const roleLabel = (role: string) => {
+  if (role === "TENANT_OWNER") return "Tenant Owner";
+  if (role === "SUPER_ADMIN")  return "Super Admin";
+  return "Staff Operator";
 };
 </script>
 
 <template>
   <div class="space-y-4">
-    <!-- Controls -->
-    <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
-      <div class="flex flex-1 gap-3 w-full">
+    <!-- Controls Bar -->
+    <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+      <div class="flex flex-1 gap-2 w-full">
         <div class="relative flex-1">
-          <Search
-            class="w-4 h-4 absolute left-3.5 top-3.5"
-            :class="isDarkMode ? 'text-zinc-500' : 'text-zinc-400'"
-          />
-          <input
-            v-model="userSearch"
-            type="text"
-            placeholder="Search profiles by name or email..."
-            class="w-full pl-11 pr-4 py-2.5 border rounded-xl text-xs outline-none font-semibold transition-colors duration-300"
-            :class="
-              isDarkMode
-                ? 'bg-zinc-900 border-zinc-800 text-white focus:ring-4 focus:ring-zinc-800 focus:border-zinc-700'
-                : 'bg-white border-zinc-200 text-slate-900 focus:ring-4 focus:ring-zinc-900/5 focus:border-zinc-950'
-            "
-          />
+          <Search class="w-4 h-4 absolute left-3 top-3" :class="isDark ? 'text-zinc-500' : 'text-slate-400'" />
+          <input v-model="q" type="text" placeholder="Search profiles by name or email…"
+            :class="`w-full pl-10 pr-4 py-2.5 border rounded-xl text-sm outline-none transition-colors ${isDark ? 'bg-zinc-900 border-zinc-800 text-white placeholder-zinc-600 focus:border-zinc-600' : 'bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-blue-400'}`" />
         </div>
-        <select
-          v-model="userRoleFilter"
-          class="px-4 py-2.5 border rounded-xl font-bold outline-none text-xs transition-colors duration-300"
-          :class="
-            isDarkMode
-              ? 'bg-zinc-900 border-zinc-800 text-zinc-300 focus:ring-4 focus:ring-zinc-800 focus:border-zinc-700'
-              : 'bg-white border-zinc-200 text-zinc-700 focus:ring-4 focus:ring-zinc-900/5 focus:border-zinc-950'
-          "
-        >
+        <select v-model="roleFilter"
+          :class="`px-3 py-2.5 border rounded-xl font-bold text-xs outline-none transition-colors ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-300' : 'bg-white border-slate-200 text-slate-700'}`">
           <option value="ALL">All Roles</option>
-          <option value="TENANT_OWNER">Partner Owner</option>
+          <option value="TENANT_OWNER">Tenant Owner</option>
           <option value="GATE_STAFF">Staff Operator</option>
+          <option value="SUPER_ADMIN">Super Admin</option>
         </select>
       </div>
-      <button
-        @click="showUserForm = !showUserForm"
-        class="w-full md:w-auto px-5 py-2.5 font-bold rounded-xl flex items-center justify-center gap-2 text-xs uppercase tracking-wider transition-all duration-300"
-        :class="
-          showUserForm
-            ? isDarkMode
-              ? 'bg-zinc-800 text-white hover:bg-zinc-700'
-              : 'bg-zinc-200 text-zinc-900 hover:bg-zinc-300'
-            : isDarkMode
-              ? 'bg-zinc-100 text-zinc-900 hover:bg-white'
-              : 'bg-zinc-950 text-white hover:bg-black'
-        "
-      >
-        <Plus class="w-4 h-4" />
-        {{ showUserForm ? "Close Form" : "Add User" }}
+      <button @click="store.fetchGlobalUsers()" class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap border"
+        :class="isDark ? 'border-zinc-700 text-zinc-300 hover:bg-zinc-800' : 'border-slate-200 text-slate-700 hover:bg-slate-50'">
+        <RefreshCcw class="w-4 h-4" :class="store.isLoading ? 'animate-spin' : ''" /> Refresh
       </button>
     </div>
 
-    <!-- Registration Panel -->
-    <div
-      v-if="showUserForm"
-      class="p-6 rounded-2xl border shadow-sm max-w-xl space-y-4 transition-colors duration-300"
-      :class="
-        isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-200'
-      "
-    >
-      <h3
-        class="text-xs font-black uppercase tracking-widest"
-        :class="isDarkMode ? 'text-white' : 'text-zinc-900'"
-      >
-        Create User Profile
-      </h3>
-      <form @submit.prevent="handleCreateUser" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label
-              class="text-[10px] font-black uppercase"
-              :class="isDarkMode ? 'text-zinc-500' : 'text-zinc-500'"
-              >Full Name</label
-            >
-            <div class="relative">
-              <User
-                class="w-4 h-4 absolute left-3 top-3"
-                :class="isDarkMode ? 'text-zinc-600' : 'text-zinc-400'"
-              />
-              <input
-                v-model="newUserForm.name"
-                type="text"
-                required
-                class="mt-1 w-full pl-10 pr-3 py-2 border rounded-xl text-xs font-semibold outline-none transition-colors duration-300"
-                :class="
-                  isDarkMode
-                    ? 'bg-zinc-800 border-zinc-700 text-white focus:border-zinc-500'
-                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-zinc-400'
-                "
-              />
-            </div>
-          </div>
-          <div>
-            <label
-              class="text-[10px] font-black uppercase"
-              :class="isDarkMode ? 'text-zinc-500' : 'text-zinc-500'"
-              >Email Address</label
-            >
-            <div class="relative">
-              <Mail
-                class="w-4 h-4 absolute left-3 top-3"
-                :class="isDarkMode ? 'text-zinc-600' : 'text-zinc-400'"
-              />
-              <input
-                v-model="newUserForm.email"
-                type="email"
-                required
-                class="mt-1 w-full pl-10 pr-3 py-2 border rounded-xl text-xs font-semibold outline-none transition-colors duration-300"
-                :class="
-                  isDarkMode
-                    ? 'bg-zinc-800 border-zinc-700 text-white focus:border-zinc-500'
-                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-zinc-400'
-                "
-              />
-            </div>
-          </div>
-          <div>
-            <label
-              class="text-[10px] font-black uppercase"
-              :class="isDarkMode ? 'text-zinc-500' : 'text-zinc-500'"
-              >Password</label
-            >
-            <div class="relative">
-              <Shield
-                class="w-4 h-4 absolute left-3 top-3"
-                :class="isDarkMode ? 'text-zinc-600' : 'text-zinc-400'"
-              />
-              <input
-                v-model="newUserForm.password"
-                type="password"
-                required
-                class="mt-1 w-full pl-10 pr-3 py-2 border rounded-xl text-xs font-semibold outline-none transition-colors duration-300"
-                :class="
-                  isDarkMode
-                    ? 'bg-zinc-800 border-zinc-700 text-white focus:border-zinc-500'
-                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-zinc-400'
-                "
-              />
-            </div>
-          </div>
-          <div>
-            <label
-              class="text-[10px] font-black uppercase"
-              :class="isDarkMode ? 'text-zinc-500' : 'text-zinc-500'"
-              >User Role</label
-            >
-            <select
-              v-model="newUserForm.role"
-              class="mt-1 w-full px-3 py-2 border rounded-xl text-xs font-bold outline-none transition-colors duration-300"
-              :class="
-                isDarkMode
-                  ? 'bg-zinc-800 border-zinc-700 text-white focus:border-zinc-500'
-                  : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-zinc-400'
-              "
-            >
-              <option value="TENANT_OWNER">Partner Owner</option>
-              <option value="GATE_STAFF">Staff Operator</option>
-            </select>
-          </div>
-          <div class="md:col-span-2">
-            <label
-              class="text-[10px] font-black uppercase"
-              :class="isDarkMode ? 'text-zinc-500' : 'text-zinc-500'"
-              >Assign Partner</label
-            >
-            <div class="relative">
-              <Building2
-                class="w-4 h-4 absolute left-3 top-3"
-                :class="isDarkMode ? 'text-zinc-600' : 'text-zinc-400'"
-              />
-              <select
-                v-model="newUserForm.tenantId"
-                required
-                class="mt-1 w-full pl-10 pr-3 py-2 border rounded-xl text-xs font-bold outline-none transition-colors duration-300"
-                :class="
-                  isDarkMode
-                    ? 'bg-zinc-800 border-zinc-700 text-white focus:border-zinc-500'
-                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-zinc-400'
-                "
-              >
-                <option value="" disabled>Select Partner</option>
-                <option
-                  v-for="t in superadminStore.tenants"
-                  :key="t._id"
-                  :value="t._id"
-                >
-                  {{ t.companyName }}
-                </option>
-              </select>
-            </div>
-          </div>
-        </div>
-        <button
-          type="submit"
-          class="w-full font-black py-2.5 rounded-xl uppercase tracking-wider text-xs shadow-md transition-all duration-300"
-          :class="
-            isDarkMode
-              ? 'bg-zinc-100 text-zinc-900 hover:bg-white'
-              : 'bg-zinc-900 text-white hover:bg-black'
-          "
-        >
-          Create User Credentials
-        </button>
-      </form>
+    <div class="p-4 rounded-xl border flex gap-3 transition-colors"
+      :class="isDark ? 'bg-blue-950/20 border-blue-900/50 text-blue-400' : 'bg-blue-50 border-blue-100 text-blue-700'">
+      <ShieldCheck class="w-5 h-5 flex-shrink-0" />
+      <div class="text-sm font-medium">
+        Users are managed by their respective Tenant Owners. This directory provides a global view of all staff and owners across the platform. Super Admin capabilities include viewing access and audit trails.
+      </div>
     </div>
 
     <!-- Users Table -->
-    <div
-      class="rounded-2xl shadow-sm border overflow-hidden transition-colors duration-300"
-      :class="
-        isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-200'
-      "
-    >
-      <table class="w-full text-left border-collapse">
-        <thead>
-          <tr
-            class="text-xs font-bold border-b uppercase tracking-wider transition-colors duration-300"
-            :class="
-              isDarkMode
-                ? 'bg-zinc-800/50 text-zinc-400 border-zinc-800'
-                : 'bg-slate-50 text-slate-400 border-slate-200'
-            "
-          >
-            <th class="px-6 py-4">User Details</th>
-            <th class="px-6 py-4">Role</th>
-            <th class="px-6 py-4">Partner Name</th>
-            <th class="px-6 py-4">API Access Key</th>
-          </tr>
-        </thead>
-        <tbody class="text-xs">
-          <tr
-            v-for="user in filteredUsers"
-            :key="user._id"
-            class="border-b transition-colors duration-200"
-            :class="[
-              isDarkMode
-                ? 'border-zinc-850 hover:bg-zinc-800/30'
-                : 'border-slate-150 hover:bg-slate-50/40',
-            ]"
-          >
-            <td class="px-6 py-4">
-              <div class="flex items-center gap-3">
-                <div
-                  class="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black"
-                  :class="
-                    isDarkMode
-                      ? 'bg-zinc-800 text-zinc-400'
-                      : 'bg-zinc-100 text-zinc-600'
-                  "
-                >
-                  {{ user.name?.charAt(0)?.toUpperCase() || "?" }}
+    <div class="rounded-2xl border overflow-hidden transition-colors"
+      :class="isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-200 shadow-sm'">
+      <div v-if="store.isLoading && store.globalUsers.length === 0" class="py-12 flex items-center justify-center gap-2"
+        :class="isDark ? 'text-zinc-500' : 'text-slate-400'">
+        <RefreshCcw class="w-4 h-4 animate-spin" /> Loading global directory…
+      </div>
+      <div v-else-if="filteredUsers.length === 0" class="py-12 text-center text-sm" :class="isDark ? 'text-zinc-500' : 'text-slate-400'">
+        No users match your filters.
+      </div>
+      <div v-else class="overflow-x-auto">
+        <table class="w-full text-left">
+          <thead class="text-[10px] font-bold uppercase tracking-wider border-b"
+            :class="isDark ? 'bg-zinc-800/50 text-zinc-500 border-zinc-800' : 'bg-slate-50 text-slate-400 border-slate-200'">
+            <tr>
+              <th class="px-5 py-3">User Details</th>
+              <th class="px-5 py-3">Role</th>
+              <th class="px-5 py-3">Tenant Association</th>
+              <th class="px-5 py-3">Identifiers</th>
+            </tr>
+          </thead>
+          <tbody class="text-xs divide-y" :class="isDark ? 'divide-zinc-800' : 'divide-slate-100'">
+            <tr v-for="u in filteredUsers" :key="u._id" class="group transition-colors"
+              :class="isDark ? 'hover:bg-zinc-800/20' : 'hover:bg-slate-50/60'">
+              <td class="px-5 py-3.5">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center font-black text-sm"
+                    :class="isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-zinc-100 text-zinc-600'">
+                    {{ u.name?.charAt(0)?.toUpperCase() || '?' }}
+                  </div>
+                  <div>
+                    <p class="font-bold" :class="isDark ? 'text-white' : 'text-slate-900'">{{ u.name }}</p>
+                    <p class="text-[10px] mt-0.5" :class="isDark ? 'text-zinc-500' : 'text-slate-500'">{{ u.email }}</p>
+                  </div>
                 </div>
-                <div>
-                  <p
-                    class="font-bold"
-                    :class="isDarkMode ? 'text-white' : 'text-slate-900'"
-                  >
-                    {{ user.name }}
-                  </p>
-                  <p
-                    class="text-[10px] font-bold mt-0.5"
-                    :class="isDarkMode ? 'text-zinc-500' : 'text-zinc-400'"
-                  >
-                    {{ user.email }}
-                  </p>
+              </td>
+              <td class="px-5 py-3.5">
+                <span class="px-2 py-0.5 border rounded text-[9px] font-black uppercase" :class="roleStyle(u.role)">
+                  {{ roleLabel(u.role) }}
+                </span>
+              </td>
+              <td class="px-5 py-3.5 font-bold" :class="isDark ? 'text-zinc-300' : 'text-slate-700'">
+                <div v-if="u.tenantName" class="flex items-center gap-1.5">
+                  <Building2 class="w-3.5 h-3.5" :class="isDark ? 'text-zinc-500' : 'text-zinc-400'" />
+                  {{ u.tenantName }}
                 </div>
-              </div>
-            </td>
-            <td class="px-6 py-4">
-              <span
-                class="px-2 py-0.5 border font-mono text-[9px] font-black uppercase rounded-md transition-colors duration-300"
-                :class="[
-                  isDarkMode
-                    ? getRoleStyle(user.role).dark
-                    : getRoleStyle(user.role).light,
-                ]"
-              >
-                {{ getRoleStyle(user.role).label }}
-              </span>
-            </td>
-            <td
-              class="px-6 py-4 font-bold"
-              :class="isDarkMode ? 'text-zinc-300' : 'text-zinc-600'"
-            >
-              <div class="flex items-center gap-1.5">
-                <Building2
-                  class="w-3 h-3"
-                  :class="isDarkMode ? 'text-zinc-600' : 'text-zinc-400'"
-                />
-                {{ user.tenantName }}
-              </div>
-            </td>
-            <td class="px-6 py-4 font-mono text-[10px]">
-              <div
-                class="flex items-center gap-1.5 border px-2 py-0.5 rounded-lg inline-block w-fit transition-colors duration-300"
-                :class="
-                  isDarkMode
-                    ? 'bg-zinc-800 border-zinc-700 text-zinc-400'
-                    : 'bg-zinc-50 border-zinc-150 text-zinc-500'
-                "
-              >
-                <Key class="w-3.5 h-3.5" />
-                <span>{{ user.apiKey }}</span>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+                <div v-else class="text-[10px] font-medium opacity-50">Global / System</div>
+              </td>
+              <td class="px-5 py-3.5 font-mono text-[10px]" :class="isDark ? 'text-zinc-500' : 'text-slate-500'">
+                <div v-if="u.gate_assignment" class="flex items-center gap-1.5 px-2 py-1 border rounded w-max"
+                  :class="isDark ? 'border-zinc-800 bg-zinc-800/50' : 'border-slate-200 bg-slate-50'">
+                  Gate: {{ u.gate_assignment }}
+                </div>
+                <div v-if="u.ticket_prefix" class="flex items-center gap-1.5 px-2 py-1 border rounded w-max mt-1"
+                  :class="isDark ? 'border-zinc-800 bg-zinc-800/50' : 'border-slate-200 bg-slate-50'">
+                  Prefix: {{ u.ticket_prefix }}
+                </div>
+                <div v-if="!u.gate_assignment && !u.ticket_prefix">—</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>

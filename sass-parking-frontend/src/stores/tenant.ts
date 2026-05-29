@@ -121,7 +121,7 @@ export const useTenantStore = defineStore('tenant', () => {
     finally { isLoading.value = false; }
   };
 
-  const createStaff = async (staffData: { name: string; email: string; password: string }) => {
+  const createStaff = async (staffData: { name: string; email: string; password: string; gate_assignment?: string; ticket_prefix?: string }) => {
     isLoading.value = true;
     try {
       const res = await fetch('/api/v1/tenants/staff', {
@@ -129,12 +129,16 @@ export const useTenantStore = defineStore('tenant', () => {
         headers: authHeaders(),
         body: JSON.stringify(staffData),
       });
-      if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Failed to create operator'); }
-      toast.success('✅ Operator account created!');
+      if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Failed to create staff'); }
+      toast.success('🎉 Operator account created!');
       await fetchStaff();
       return true;
-    } catch (err: any) { toast.error(err.message); return false; }
-    finally { isLoading.value = false; }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create staff');
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
   };
 
   // ── Rates ─────────────────────────────────────────────────────────────────────
@@ -253,7 +257,7 @@ export const useTenantStore = defineStore('tenant', () => {
     }
   };
 
-  const updateStaff = async (id: string, payload: { name?: string; email?: string; password?: string }) => {
+  const updateStaff = async (id: string, payload: { name?: string; email?: string; password?: string; gate_assignment?: string; ticket_prefix?: string }) => {
     isLoading.value = true;
     try {
       const res = await fetch(`/api/v1/tenants/staff/${id}`, {

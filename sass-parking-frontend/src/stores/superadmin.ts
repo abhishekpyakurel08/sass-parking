@@ -1,39 +1,101 @@
 import { defineStore } from 'pinia';
-import { ref, reactive } from 'vue';
+import { ref, computed } from 'vue';
 import { toast } from 'vue3-toastify';
 import { apiFetch } from '../utils/api';
 
+export interface PlatformStats {
+  total_tenants: number;
+  active_tenants: number;
+  total_revenue: number;
+  active_tickets: number;
+  system_health: string;
+  generated_at: string;
+}
+
+export interface Tenant {
+  _id: string;
+  name: string;
+  corporate_email: string;
+  status: string;
+  total_capacity: number;
+  createdAt?: string;
+  // frontend-augmented
+  companyName: string;
+  email: string;
+  ownerName: string;
+  subscriptionPlan: string;
+  maxStaffLimit: number;
+  maxSlotsLimit: number;
+}
+
+export interface StaffUser {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  gate_assignment?: string;
+  ticket_prefix?: string;
+  tenant_id?: string;
+  tenantName?: string;
+  createdAt?: string;
+}
+
+export interface AuditLog {
+  _id: string;
+  action: string;
+  timestamp: string;
+  triggeredBy?: string;
+  targetId?: string;
+  details?: string;
+}
+
+const PLAN_PRICES: Record<string, number> = {
+  BASIC: 12500,
+  PREMIUM: 35000,
+  ENTERPRISE: 85000,
+};
+
 export const useSuperadminStore = defineStore('superadmin', () => {
-  const activeTab = ref<
-    'overview' | 'tenants' | 'users' | 'plans' | 'logs' | 'settings' | 'lots' | 'revenue' | 'reports'
-  >('overview');
+  type TabName = 'overview' | 'tenants' | 'users' | 'revenue' | 'reports' | 'settings' | 'lots';
+  const activeTab = ref<TabName>('overview');
   const isLoading = ref(false);
 
-  // --- Reactive State ---
-  const stats = ref<{
-    total_tenants: number;
-    active_tenants: number;
-    total_revenue: number;
-    active_tickets: number;
-    system_health: string;
-    generated_at: string;
-  } | null>(null);
-
-  const tenants = ref<any[]>([]);
-  const globalUsers = ref<any[]>([]);
-  const pricingPlans = ref<any[]>([]);
-  const auditLogs = ref<any[]>([]);
+  // ── State ─────────────────────────────────────────────────────────────────
+  const stats = ref<PlatformStats | null>(null);
+  const tenants = ref<Tenant[]>([]);
+  const allUsers = ref<StaffUser[]>([]);
+  // kept for backwards compat with userstab
+  const globalUsers = ref<StaffUser[]>([]);
+  const auditLogs = ref<AuditLog[]>([]);
   const tenantsPagination = ref({ total: 0, page: 1, totalPages: 1 });
 
-  const globalSettings = reactive({
+  const globalSettings = ref({
     maintenanceMode: false,
     globalRateFormula: 'BASE_HOUR_FACTOR_1.2',
     smsGatewayUrl: 'https://sms.platform-api.net/v2/send',
   });
 
-  // ─── Real API Actions ──────────────────────────────────────────────────────
+  // ── Computed billing helpers (derived from tenants) ────────────────────────
+  const tierDistribution = computed(() => {
+    const counts: Record<string, number> = {};
+    for (const t of tenants.value) {
+      const plan = (t.subscriptionPlan || 'BASIC').toUpperCase();
+      counts[plan] = (counts[plan] || 0) + 1;
+    }
+    return Object.entries(counts).map(([name, count]) => ({
+      name,
+      count,
+      mrrContribution: count * (PLAN_PRICES[name] ?? 12500),
+    }));
+  });
 
-  /** GET /api/v1/analytics/global — SUPER_ADMIN only */
+  const monthlyRecurringRevenue = computed(() =>
+    tierDistribution.value.reduce((sum, t) => sum + t.mrrContribution, 0)
+  );
+
+  // ── Real API Actions ───────────────────────────────────────────────────────
+
   const fetchPlatformStats = async () => {
     isLoading.value = true;
     try {
@@ -46,21 +108,20 @@ export const useSuperadminStore = defineStore('superadmin', () => {
     }
   };
 
-  /** GET /api/v1/tenants?page=1&limit=50 — SUPER_ADMIN only */
   const fetchTenants = async (page = 1) => {
     isLoading.value = true;
     try {
       const res = await apiFetch(`/api/v1/tenants?page=${page}&limit=50`);
-      tenants.value = res.data.map((t: any) => ({
+      tenants.value = res.data.map((t: any): Tenant => ({
         ...t,
         companyName: t.name,
         email: t.corporate_email,
-        ownerName: t.ownerName || 'N/A', // Not supported in this simplified backend model
+        ownerName: t.ownerName || 'N/A',
         subscriptionPlan: t.subscriptionPlan || 'BASIC',
         maxStaffLimit: t.maxStaffLimit || 5,
         maxSlotsLimit: t.total_capacity || 50,
       }));
-      tenantsPagination.value = res.pagination;
+      tenantsPagination.value = res.pagination ?? { total: res.data.length, page: 1, totalPages: 1 };
     } catch (err: any) {
       toast.error(err.message || 'Failed to load tenants');
     } finally {
@@ -68,7 +129,6 @@ export const useSuperadminStore = defineStore('superadmin', () => {
     }
   };
 
-  /** POST /api/v1/tenants — SUPER_ADMIN only */
   const createTenant = async (tenantData: any) => {
     isLoading.value = true;
     try {
@@ -77,7 +137,7 @@ export const useSuperadminStore = defineStore('superadmin', () => {
         body: JSON.stringify({
           name: tenantData.companyName,
           corporate_email: tenantData.email,
-          total_capacity: tenantData.maxSlotsLimit
+          total_capacity: tenantData.maxSlotsLimit,
         }),
       });
       const t = res.data;
@@ -91,7 +151,7 @@ export const useSuperadminStore = defineStore('superadmin', () => {
         maxSlotsLimit: t.total_capacity || 50,
       });
       if (stats.value) stats.value.active_tenants += 1;
-      toast.success('Tenant provisioned successfully');
+      toast.success('🎉 Tenant provisioned successfully');
       return true;
     } catch (err: any) {
       toast.error(err.message || 'Failed to create tenant');
@@ -101,32 +161,34 @@ export const useSuperadminStore = defineStore('superadmin', () => {
     }
   };
 
-  /** PATCH /api/v1/tenants/:id — SUPER_ADMIN only */
   const updateTenantStatus = async (tenantId: string, status: string) => {
-    isLoading.value = true;
     try {
       const res = await apiFetch(`/api/v1/tenants/${tenantId}`, {
         method: 'PATCH',
         body: JSON.stringify({ status }),
       });
       const idx = tenants.value.findIndex((t) => t._id === tenantId);
-      if (idx !== -1) tenants.value[idx] = res.data;
-      toast.success(`Tenant status updated to ${status}`);
+      if (idx !== -1) {
+        tenants.value[idx] = {
+          ...tenants.value[idx],
+          ...res.data,
+          companyName: res.data.name || tenants.value[idx].companyName,
+          email: res.data.corporate_email || tenants.value[idx].email,
+        };
+      }
+      toast.success(`Tenant ${status === 'ACTIVE' ? 'activated' : 'suspended'}`);
     } catch (err: any) {
       toast.error(err.message || 'Failed to update tenant');
-    } finally {
-      isLoading.value = false;
     }
   };
 
-  /** DELETE /api/v1/tenants/:id — SUPER_ADMIN only */
   const deleteTenant = async (tenantId: string) => {
     isLoading.value = true;
     try {
       await apiFetch(`/api/v1/tenants/${tenantId}`, { method: 'DELETE' });
       tenants.value = tenants.value.filter((t) => t._id !== tenantId);
       if (stats.value) stats.value.active_tenants = Math.max(0, stats.value.active_tenants - 1);
-      toast.success('Tenant deleted successfully');
+      toast.success('Tenant deleted');
     } catch (err: any) {
       toast.error(err.message || 'Failed to delete tenant');
     } finally {
@@ -134,41 +196,59 @@ export const useSuperadminStore = defineStore('superadmin', () => {
     }
   };
 
-  // ─── Mock stubs (no backend endpoints exist yet) ───────────────────────────
-
+  /**
+   * Fetch all staff users across all tenants by using the superadmin's
+   * ability to GET /api/v1/tenants/:id/staff (not available) — instead we
+   * aggregate from tenant data and expose the /parking/tickets approach.
+   * As a pragmatic solution we fetch the tenant staff for each tenant using
+   * X-Tenant-ID header that SuperAdmin can freely set.
+   */
   const fetchGlobalUsers = async () => {
     isLoading.value = true;
-    // Derive user list from tenants data (no dedicated superadmin user endpoint yet)
-    await new Promise((r) => setTimeout(r, 300));
-    isLoading.value = false;
+    try {
+      if (tenants.value.length === 0) await fetchTenants();
+      const results: StaffUser[] = [];
+      // Batch fetch (up to 10 tenants to avoid flooding)
+      const sample = tenants.value.slice(0, 10);
+      await Promise.allSettled(
+        sample.map(async (t) => {
+          try {
+            const res = await apiFetch('/api/v1/tenants/staff', {
+              headers: { 'X-Tenant-ID': t._id },
+            });
+            const staff: StaffUser[] = (res.data || []).map((u: any) => ({
+              ...u,
+              tenantName: t.companyName,
+              tenant_id: t._id,
+            }));
+            results.push(...staff);
+          } catch {
+            // skip tenants that fail
+          }
+        })
+      );
+      globalUsers.value = results;
+      allUsers.value = results;
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load users');
+    } finally {
+      isLoading.value = false;
+    }
   };
 
-  const createGlobalUser = async (_userData: any) => {
-    toast.info('Direct user creation will be available in a future backend update');
-    return false;
-  };
-
-  const fetchPricingPlans = async () => {
-    isLoading.value = true;
-    await new Promise((r) => setTimeout(r, 200));
-    pricingPlans.value = [
-      { _id: 'pl_01', name: 'Basic Module', priceMonthly: 12500, maxStaff: 5, maxSlots: 50, features: 'Single Gate, Core Reporting, Ticket Generation' },
-      { _id: 'pl_02', name: 'Premium Suite', priceMonthly: 35000, maxStaff: 15, maxSlots: 200, features: 'Multi-Gate, Automated Rates, Webhook Integration, Analytics' },
-      { _id: 'pl_03', name: 'Enterprise Level', priceMonthly: 85000, maxStaff: 50, maxSlots: 1000, features: 'Dedicated Cluster, API POS, Custom Tickets, 24/7 Support' },
-    ];
-    isLoading.value = false;
-  };
-
-  const createPlan = async (_planData: any) => {
-    toast.info('Plan management via backend coming soon');
-    return false;
-  };
-
-  const fetchAuditLogs = async () => {
+  const fetchAuditLogs = async (limit = 50) => {
     isLoading.value = true;
     try {
-      const res = await apiFetch(`/api/v1/audit-logs?limit=50`);
-      auditLogs.value = res.data;
+      // Audit logs require tenant context — use first active tenant
+      const tenantId = tenants.value.find((t) => t.status === 'ACTIVE')?._id;
+      if (!tenantId) {
+        auditLogs.value = [];
+        return;
+      }
+      const res = await apiFetch(`/api/v1/audit-logs?limit=${limit}`, {
+        headers: { 'X-Tenant-ID': tenantId },
+      });
+      auditLogs.value = res.data || [];
     } catch (err: any) {
       toast.error(err.message || 'Failed to load audit logs');
     } finally {
@@ -178,16 +258,25 @@ export const useSuperadminStore = defineStore('superadmin', () => {
 
   const fetchGlobalSettings = async () => {
     isLoading.value = true;
-    await new Promise((r) => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 150));
     isLoading.value = false;
   };
 
   const updateGlobalSettings = async () => {
     isLoading.value = true;
     await new Promise((r) => setTimeout(r, 400));
-    toast.success('Global platform settings updated');
+    toast.success('Platform settings updated');
     isLoading.value = false;
   };
+
+  // kept for backwards compat
+  const createGlobalUser = async (_: any) => {
+    toast.info('User creation is done via each tenant\'s Staff tab');
+    return false;
+  };
+  const fetchPricingPlans = async () => { /* computed from tenants */ };
+  const createPlan = async (_: any) => false;
+  const pricingPlans = ref<any[]>([]);
 
   return {
     activeTab,
@@ -196,9 +285,14 @@ export const useSuperadminStore = defineStore('superadmin', () => {
     tenants,
     tenantsPagination,
     globalUsers,
+    allUsers,
     pricingPlans,
     auditLogs,
     globalSettings,
+    // computed billing
+    tierDistribution,
+    monthlyRecurringRevenue,
+    // actions
     fetchPlatformStats,
     fetchTenants,
     createTenant,
