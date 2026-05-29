@@ -42,8 +42,8 @@ const initializeRates = async () => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
       <div>
-        <h2 class="text-2xl font-bold text-slate-900">Parking Rates</h2>
-        <p class="text-slate-500 text-sm mt-1">Billing Rule v1 · 2-Wheeler: Rs.40/hr · 4-Wheeler: Rs.80/hr · 15 min grace FREE</p>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Parking Rates</h2>
+        <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">Billing Rule v1 · 2-Wheeler: Rs.40/hr · 4-Wheeler: Rs.80/hr · 15 min grace FREE</p>
       </div>
       <button v-if="store.rates.length === 0" @click="initializeRates" :disabled="store.isLoading"
         class="flex items-center gap-2 px-4 py-2.5 bg-blue-600 rounded-lg text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors self-start sm:self-auto">
@@ -58,10 +58,10 @@ const initializeRates = async () => {
 
     <!-- Empty State -->
     <div v-else-if="store.rates.length === 0"
-      class="bg-white rounded-xl p-12 text-center border border-slate-200 shadow-sm">
-      <ParkingSquare class="w-12 h-12 text-slate-200 mx-auto mb-4" />
-      <p class="font-bold text-slate-700 mb-1">No rates configured yet</p>
-      <p class="text-slate-500 text-sm mb-6">Initialize standard pricing to start collecting fares.</p>
+      class="bg-white dark:bg-slate-800 rounded-xl p-12 text-center border border-slate-200 dark:border-slate-700 shadow-sm">
+      <ParkingSquare class="w-12 h-12 text-slate-200 dark:text-slate-600 mx-auto mb-4" />
+      <p class="font-bold text-slate-700 dark:text-slate-300 mb-1">No rates configured yet</p>
+      <p class="text-slate-500 dark:text-slate-400 text-sm mb-6">Initialize standard pricing to start collecting fares.</p>
       <button @click="initializeRates"
         class="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 inline-flex items-center gap-2">
         <RefreshCcw class="w-4 h-4" /> Initialize Default Rates
@@ -71,7 +71,7 @@ const initializeRates = async () => {
     <!-- Rate Cards -->
     <div v-else class="space-y-4">
       <div v-for="rate in store.rates" :key="rate._id || rate.vehicle_type"
-        class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
 
         <!-- Rate Header -->
         <div class="p-6">
@@ -79,14 +79,14 @@ const initializeRates = async () => {
             <div class="flex items-center gap-3">
               <span class="text-2xl">{{ vehicleEmoji[rate.vehicle_type] || '🚘' }}</span>
               <div>
-                <p class="font-bold text-slate-900 capitalize text-lg">{{ rate.vehicle_type?.toLowerCase() }}</p>
-                <p class="text-xs text-slate-500 uppercase tracking-wider mt-0.5">Per {{ rate.billing_unit || 'HOUR' }}</p>
+                <p class="font-bold text-slate-900 dark:text-slate-100 capitalize text-lg">{{ rate.vehicle_type?.toLowerCase() }}</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-0.5">Per {{ rate.billing_unit || 'HOUR' }}</p>
               </div>
             </div>
             <div class="flex items-center gap-3">
-              <span class="text-2xl font-black text-slate-900">Rs. {{ rate.rate_per_hour ?? rate.amount ?? '—' }}</span>
+              <span class="text-2xl font-black text-slate-900 dark:text-slate-100">Rs. {{ rate.rate_per_hour ?? rate.amount ?? '—' }}</span>
               <button @click="startEditRate(rate)"
-                class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg border border-blue-100 transition-colors">
+                class="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg border border-blue-100 dark:border-blue-800 transition-colors">
                 <PenLine class="w-4 h-4" />
               </button>
             </div>
@@ -94,10 +94,10 @@ const initializeRates = async () => {
 
           <!-- Summary pills -->
           <div v-if="editingRate !== rate.vehicle_type" class="mt-4 flex gap-3 flex-wrap">
-            <span class="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600">
+            <span class="px-2.5 py-1 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400">
               Grace: {{ rate.grace_period_minutes ?? 5 }} min
             </span>
-            <span class="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600">
+            <span class="px-2.5 py-1 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400">
               Lost ticket penalty: Rs. {{ rate.lost_ticket_penalty ?? 0 }}
             </span>
           </div>
@@ -106,21 +106,21 @@ const initializeRates = async () => {
         <!-- Inline Edit Form -->
         <Transition name="slide-down">
           <div v-if="editingRate === rate.vehicle_type"
-            class="border-t border-slate-100 bg-slate-50 px-6 py-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+            class="border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-6 py-5 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label class="text-xs font-bold text-slate-500 mb-1.5 block">Rate / Hour (Rs.)</label>
+              <label class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">Rate / Hour (Rs.)</label>
               <input v-model.number="rateForm.rate_per_hour" type="number" min="0"
-                class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white" />
+                class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-800" />
             </div>
             <div>
-              <label class="text-xs font-bold text-slate-500 mb-1.5 block">Grace Period (min)</label>
+              <label class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">Grace Period (min)</label>
               <input v-model.number="rateForm.grace_period_minutes" type="number" min="0"
-                class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white" />
+                class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-800" />
             </div>
             <div>
-              <label class="text-xs font-bold text-slate-500 mb-1.5 block">Lost Ticket Penalty (Rs.)</label>
+              <label class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">Lost Ticket Penalty (Rs.)</label>
               <input v-model.number="rateForm.lost_ticket_penalty" type="number" min="0"
-                class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white" />
+                class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-800" />
             </div>
             <div class="md:col-span-3 flex gap-3 pt-1">
               <button @click="saveRate" :disabled="store.isLoading"
@@ -128,7 +128,7 @@ const initializeRates = async () => {
                 <Save class="w-4 h-4" /> Save Rate
               </button>
               <button @click="editingRate = null"
-                class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+                class="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">Cancel</button>
             </div>
           </div>
         </Transition>

@@ -51,10 +51,10 @@ const filteredTickets = computed(() => {
 });
 
 const statusStyles: Record<string, string> = {
-  ACTIVE:           'text-blue-700 bg-blue-50 border-blue-200',
-  PENDING_PAYMENT:  'text-amber-700 bg-amber-50 border-amber-200',
-  PAID:             'text-green-700 bg-green-50 border-green-200',
-  EXPIRED:          'text-slate-600 bg-slate-50 border-slate-200',
+  ACTIVE:           'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800',
+  PENDING_PAYMENT:  'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800',
+  PAID:             'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800',
+  EXPIRED:          'text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700',
 };
 
 const statusIcons: Record<string, any> = {
@@ -90,12 +90,12 @@ const statuses = ['ALL', 'ACTIVE', 'PENDING_PAYMENT', 'PAID'] as const;
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div>
-        <h2 class="text-2xl font-bold text-slate-900">Parking Tickets</h2>
-        <p class="text-slate-500 text-sm mt-0.5">
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Parking Tickets</h2>
+        <p class="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
           {{ store.ticketPagination.total }} total tickets
         </p>
       </div>
-      <button @click="store.fetchTicketHistory(currentPage)" class="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50">
+      <button @click="store.fetchTicketHistory(currentPage)" class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
         <RefreshCcw class="w-4 h-4" :class="store.isLoading ? 'animate-spin' : ''" /> Refresh
       </button>
     </div>
@@ -104,9 +104,9 @@ const statuses = ['ALL', 'ACTIVE', 'PENDING_PAYMENT', 'PAID'] as const;
     <div class="flex flex-col sm:flex-row gap-3">
       <!-- Search -->
       <div class="relative flex-1 max-w-sm">
-        <Search class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <Search class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
         <input v-model="search" type="text" placeholder="Search by plate, ticket #…"
-          class="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+          class="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
       </div>
       <!-- Status pills -->
       <div class="flex gap-1.5 flex-wrap">
@@ -116,7 +116,7 @@ const statuses = ['ALL', 'ACTIVE', 'PENDING_PAYMENT', 'PAID'] as const;
             'px-3 py-1.5 rounded-lg text-xs font-bold border transition-all',
             statusFilter === s
               ? 'bg-blue-600 text-white border-blue-600'
-              : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+              : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
           ]">
           {{ s.replace('_', ' ') }}
         </button>
@@ -124,70 +124,70 @@ const statuses = ['ALL', 'ACTIVE', 'PENDING_PAYMENT', 'PAID'] as const;
     </div>
 
     <!-- Table card -->
-    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
       <!-- Loading -->
-      <div v-if="store.isLoading" class="py-16 text-center text-slate-400">
+      <div v-if="store.isLoading" class="py-16 text-center text-slate-400 dark:text-slate-500">
         <RefreshCcw class="w-6 h-6 animate-spin inline-block mb-2" />
         <p class="text-sm font-medium">Loading tickets…</p>
       </div>
 
       <!-- Empty -->
       <div v-else-if="filteredTickets.length === 0" class="py-16 text-center">
-        <Ticket class="w-10 h-10 text-slate-300 mx-auto mb-3" />
-        <p class="text-slate-500 font-semibold">No tickets found</p>
-        <p class="text-slate-400 text-sm mt-1">Try adjusting your filter or search.</p>
+        <Ticket class="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+        <p class="text-slate-500 dark:text-slate-400 font-semibold">No tickets found</p>
+        <p class="text-slate-400 dark:text-slate-500 text-sm mt-1">Try adjusting your filter or search.</p>
       </div>
 
       <!-- Data table -->
       <div v-else class="overflow-x-auto">
         <table class="w-full text-left min-w-[640px]">
-          <thead class="bg-slate-50 border-b border-slate-100">
+          <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700">
             <tr>
-              <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ticket / Vehicle</th>
-              <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Type</th>
-              <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Check-In</th>
-              <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Duration</th>
-              <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Amount</th>
-              <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
-              <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider"></th>
+              <th class="px-5 py-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Ticket / Vehicle</th>
+              <th class="px-5 py-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Type</th>
+              <th class="px-5 py-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Check-In</th>
+              <th class="px-5 py-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Duration</th>
+              <th class="px-5 py-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Amount</th>
+              <th class="px-5 py-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+              <th class="px-5 py-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider"></th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-50">
+          <tbody class="divide-y divide-slate-50 dark:divide-slate-700/50">
             <tr v-for="ticket in filteredTickets" :key="ticket._id"
-              class="hover:bg-slate-50/60 cursor-pointer transition-colors"
+              class="hover:bg-slate-50/60 dark:hover:bg-slate-700/60 cursor-pointer transition-colors"
               @click="openDetail(ticket)">
               <td class="px-5 py-4">
                 <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                  <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0">
                     <Car class="w-4 h-4" />
                   </div>
                   <div>
-                    <p class="font-bold text-sm text-slate-900">{{ ticket.license_plate || '—' }}</p>
-                    <p class="text-[10px] text-slate-400 font-mono">{{ ticket.ticket_number?.slice(0,16) || ticket._id?.slice(-10) }}</p>
+                    <p class="font-bold text-sm text-slate-900 dark:text-slate-100">{{ ticket.license_plate || '—' }}</p>
+                    <p class="text-[10px] text-slate-400 dark:text-slate-500 font-mono">{{ ticket.ticket_number?.slice(0,16) || ticket._id?.slice(-10) }}</p>
                   </div>
                 </div>
               </td>
               <td class="px-5 py-4">
-                <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-black uppercase">{{ ticket.vehicle_type || '—' }}</span>
+                <span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded text-[10px] font-black uppercase">{{ ticket.vehicle_type || '—' }}</span>
               </td>
-              <td class="px-5 py-4 text-sm text-slate-600">{{ formatTime(ticket.check_in_time) }}</td>
+              <td class="px-5 py-4 text-sm text-slate-600 dark:text-slate-400">{{ formatTime(ticket.check_in_time) }}</td>
               <td class="px-5 py-4">
-                <span class="flex items-center gap-1 text-sm text-slate-600">
-                  <Clock class="w-3.5 h-3.5 text-slate-400" />
+                <span class="flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
+                  <Clock class="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                   {{ duration(ticket.check_in_time, ticket.check_out_time) }}
                 </span>
               </td>
-              <td class="px-5 py-4 font-bold text-sm text-slate-900">
+              <td class="px-5 py-4 font-bold text-sm text-slate-900 dark:text-slate-100">
                 {{ ticket.fare_amount != null ? `Rs. ${ticket.fare_amount}` : '—' }}
               </td>
               <td class="px-5 py-4">
-                <span :class="['px-2 py-1 border rounded-md text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 w-max', statusStyles[ticket.status] || 'text-slate-500 bg-slate-50 border-slate-200']">
+                <span :class="['px-2 py-1 border rounded-md text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 w-max', statusStyles[ticket.status] || 'text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700']">
                   <component :is="statusIcons[ticket.status] || Circle" class="w-3 h-3" />
                   {{ ticket.status }}
                 </span>
               </td>
               <td class="px-5 py-4">
-                <ChevronRight class="w-4 h-4 text-slate-400" />
+                <ChevronRight class="w-4 h-4 text-slate-400 dark:text-slate-500" />
               </td>
             </tr>
           </tbody>
@@ -196,18 +196,18 @@ const statuses = ['ALL', 'ACTIVE', 'PENDING_PAYMENT', 'PAID'] as const;
 
       <!-- Pagination -->
       <div v-if="store.ticketPagination.totalPages > 1"
-        class="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50/50">
-        <p class="text-xs text-slate-500">
+        class="flex items-center justify-between px-5 py-3 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30">
+        <p class="text-xs text-slate-500 dark:text-slate-400">
           Page {{ currentPage }} of {{ store.ticketPagination.totalPages }}
-          <span class="text-slate-400">({{ store.ticketPagination.total }} total)</span>
+          <span class="text-slate-400 dark:text-slate-500">({{ store.ticketPagination.total }} total)</span>
         </p>
         <div class="flex gap-1">
           <button @click="goToPage(currentPage - 1)" :disabled="currentPage <= 1"
-            class="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-white disabled:opacity-40">
+            class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 disabled:opacity-40 transition-colors">
             <ChevronLeft class="w-4 h-4" />
           </button>
           <button @click="goToPage(currentPage + 1)" :disabled="currentPage >= store.ticketPagination.totalPages"
-            class="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-white disabled:opacity-40">
+            class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 disabled:opacity-40 transition-colors">
             <ChevRight class="w-4 h-4" />
           </button>
         </div>
@@ -225,15 +225,15 @@ const statuses = ['ALL', 'ACTIVE', 'PENDING_PAYMENT', 'PAID'] as const;
       <!-- Panel -->
       <Transition name="slide-right">
         <aside v-if="showDetail && selectedTicket"
-          class="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl z-50 flex flex-col overflow-y-auto">
+          class="fixed inset-y-0 right-0 w-full max-w-md bg-white dark:bg-slate-900 shadow-2xl z-50 flex flex-col overflow-y-auto border-l border-slate-200 dark:border-slate-800">
 
           <!-- Panel Header -->
-          <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100 shrink-0">
+          <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800 shrink-0">
             <div>
-              <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Ticket Detail</p>
-              <p class="font-black text-slate-900 text-lg mt-0.5">{{ selectedTicket.license_plate || 'Unknown' }}</p>
+              <p class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Ticket Detail</p>
+              <p class="font-black text-slate-900 dark:text-slate-100 text-lg mt-0.5">{{ selectedTicket.license_plate || 'Unknown' }}</p>
             </div>
-            <button @click="closeDetail" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
+            <button @click="closeDetail" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 transition-colors">
               <X class="w-5 h-5" />
             </button>
           </div>
@@ -249,61 +249,61 @@ const statuses = ['ALL', 'ACTIVE', 'PENDING_PAYMENT', 'PAID'] as const;
           <!-- Ticket Info -->
           <div class="px-6 py-5 space-y-5 flex-1">
             <!-- Ticket ID -->
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Ticket Number</p>
-              <p class="font-mono text-sm font-bold text-slate-800 break-all">{{ selectedTicket.ticket_number || selectedTicket._id }}</p>
+            <div class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
+              <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Ticket Number</p>
+              <p class="font-mono text-sm font-bold text-slate-800 dark:text-slate-200 break-all">{{ selectedTicket.ticket_number || selectedTicket._id }}</p>
             </div>
 
             <!-- Timing block -->
             <div class="grid grid-cols-2 gap-3">
-              <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Check-In</p>
-                <p class="text-sm font-semibold text-slate-900">{{ formatTime(selectedTicket.check_in_time) }}</p>
+              <div class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
+                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Check-In</p>
+                <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ formatTime(selectedTicket.check_in_time) }}</p>
               </div>
-              <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Check-Out</p>
-                <p class="text-sm font-semibold text-slate-900">{{ selectedTicket.check_out_time ? formatTime(selectedTicket.check_out_time) : 'Still Active' }}</p>
+              <div class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
+                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Check-Out</p>
+                <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ selectedTicket.check_out_time ? formatTime(selectedTicket.check_out_time) : 'Still Active' }}</p>
               </div>
             </div>
 
             <!-- Duration + Vehicle -->
             <div class="grid grid-cols-2 gap-3">
-              <div class="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                <p class="text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-1">Duration</p>
-                <p class="text-xl font-black text-blue-700">{{ duration(selectedTicket.check_in_time, selectedTicket.check_out_time) }}</p>
+              <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-xl p-4">
+                <p class="text-[10px] font-bold text-blue-400 dark:text-blue-500 uppercase tracking-wider mb-1">Duration</p>
+                <p class="text-xl font-black text-blue-700 dark:text-blue-400">{{ duration(selectedTicket.check_in_time, selectedTicket.check_out_time) }}</p>
               </div>
-              <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Vehicle Type</p>
-                <p class="text-sm font-black text-slate-900 uppercase">{{ selectedTicket.vehicle_type || '—' }}</p>
+              <div class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
+                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Vehicle Type</p>
+                <p class="text-sm font-black text-slate-900 dark:text-slate-100 uppercase">{{ selectedTicket.vehicle_type || '—' }}</p>
               </div>
             </div>
 
             <!-- Fare -->
-            <div v-if="selectedTicket.fare_amount != null" class="bg-green-50 border border-green-200 rounded-xl p-5 flex justify-between items-center">
+            <div v-if="selectedTicket.fare_amount != null" class="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-xl p-5 flex justify-between items-center">
               <div>
-                <p class="text-[10px] font-bold text-green-500 uppercase tracking-wider mb-1">Total Fare</p>
-                <p class="text-3xl font-black text-green-700">Rs. {{ selectedTicket.fare_amount }}</p>
+                <p class="text-[10px] font-bold text-green-500 dark:text-green-600 uppercase tracking-wider mb-1">Total Fare</p>
+                <p class="text-3xl font-black text-green-700 dark:text-green-400">Rs. {{ selectedTicket.fare_amount }}</p>
               </div>
-              <div v-if="selectedTicket.payment_method" class="flex items-center gap-2 text-green-600">
+              <div v-if="selectedTicket.payment_method" class="flex items-center gap-2 text-green-600 dark:text-green-500">
                 <component :is="paymentIcon[selectedTicket.payment_method] || CreditCard" class="w-5 h-5" />
                 <span class="text-xs font-bold uppercase">{{ selectedTicket.payment_method }}</span>
               </div>
             </div>
 
             <!-- Notes -->
-            <div v-if="selectedTicket.notes" class="bg-amber-50 border border-amber-200 rounded-xl p-4">
-              <p class="text-[10px] font-bold text-amber-500 uppercase tracking-wider mb-1">Notes</p>
-              <p class="text-sm text-amber-800">{{ selectedTicket.notes }}</p>
+            <div v-if="selectedTicket.notes" class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+              <p class="text-[10px] font-bold text-amber-500 dark:text-amber-600 uppercase tracking-wider mb-1">Notes</p>
+              <p class="text-sm text-amber-800 dark:text-amber-400">{{ selectedTicket.notes }}</p>
             </div>
 
             <!-- Operator / Staff -->
-            <div v-if="selectedTicket.operator_id" class="flex items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
-              <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm">
+            <div v-if="selectedTicket.operator_id" class="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl">
+              <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-700 dark:text-blue-400 font-bold text-sm">
                 {{ selectedTicket.operator_id?.toString().slice(-2) }}
               </div>
               <div>
-                <p class="text-[10px] font-bold text-slate-400 uppercase">Processed by</p>
-                <p class="text-sm font-bold text-slate-900">Gate Staff</p>
+                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Processed by</p>
+                <p class="text-sm font-bold text-slate-900 dark:text-slate-100">Gate Staff</p>
               </div>
             </div>
           </div>
