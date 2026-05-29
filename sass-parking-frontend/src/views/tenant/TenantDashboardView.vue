@@ -118,13 +118,6 @@ onMounted(() => {
               <Sun v-if="isDarkMode" class="w-5 h-5" />
               <Moon v-else class="w-5 h-5" />
             </button>
-            <div class="flex items-center gap-2.5 border-l dark:border-slate-700 pl-3">
-              <img src="https://i.pravatar.cc/150?img=11" class="w-8 h-8 rounded-full object-cover border-2 border-white dark:border-slate-800 shadow" />
-              <div class="hidden md:block text-right">
-                <p class="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">{{ authStore.user?.name || store.profile.companyName || 'Owner' }}</p>
-                <p class="text-[10px] text-slate-400 mt-0.5">Tenant Admin</p>
-              </div>
-            </div>
           </div>
         </header>
 
