@@ -1,6 +1,6 @@
 import { Schema, model } from 'mongoose';
 import { IUser } from '../types/user.types.js';
-import { UserRole } from '../types/enums.js';
+import { UserRole, GateAssignment } from '../types/enums.js';
 
 const UserSchema = new Schema<IUser>(
   {
@@ -9,6 +9,8 @@ const UserSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password_hash: { type: String, required: true },
     role: { type: String, enum: Object.values(UserRole), required: true },
+    gate_assignment: { type: String, enum: Object.values(GateAssignment), default: GateAssignment.BOTH },
+    ticket_prefix: { type: String, default: '' },
     refresh_token: { type: String, default: null },
   },
   { timestamps: true }

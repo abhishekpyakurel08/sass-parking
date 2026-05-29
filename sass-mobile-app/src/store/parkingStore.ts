@@ -24,6 +24,7 @@ interface ParkingState {
     qr_code_url: string;
     isOffline?: boolean;
   } | null;
+  lastCheckInReceiptText: string | null;
 
   // Scan / checkout flow
   scannedTicket: ScanResponse['ticket'] | null;
@@ -46,7 +47,8 @@ interface ParkingState {
   checkIn: (license_plate: string, vehicle_type: string, customer_code?: string) => Promise<void>;
   scanTicket: (code: string) => Promise<void>;
   checkOut: (ticket_id: string) => Promise<void>;
-  processPayment: (ticket_id: string, payment_method: 'CASH' | 'UPI' | 'CARD', amount_received?: number) => Promise<void>;
+  lostTicket: (vehicle_type: string, license_plate: string, assumed_duration_hours: number) => Promise<void>;
+  processPayment: (ticket_id: string, payment_method: 'CASH' | 'UPI' | 'CARD', amount_received?: number, transaction_reference?: string) => Promise<void>;
   syncOfflineQueue: () => Promise<void>;
   updateQueueCount: () => Promise<void>;
   clearError: () => void;
@@ -62,6 +64,7 @@ export const useParkingStore = create<ParkingState>((set, get) => ({
   offlineQueueCount: 0,
   isSyncing: false,
   lastCheckIn: null,
+  lastCheckInReceiptText: null,
   scannedTicket: null,
   checkoutSummary: null,
   paymentReceipt: null,
@@ -124,23 +127,25 @@ export const useParkingStore = create<ParkingState>((set, get) => ({
   },
 
   checkIn: async (license_plate, vehicle_type, customer_code) => {
-    set({ isLoading: true, error: null, lastCheckIn: null });
+    set({ isLoading: true, error: null, lastCheckIn: null, lastCheckInReceiptText: null });
+    const formattedPlate = license_plate.trim().toUpperCase();
     try {
       const res = await parkingService.checkIn({
-        license_plate,
+        license_plate: formattedPlate || undefined,
         vehicle_type: vehicle_type as any,
         customer_code,
       });
-      set({ lastCheckIn: res.ticket, isLoading: false });
+      set({ lastCheckIn: res.ticket, lastCheckInReceiptText: res.receipt?.printable_text || null, isLoading: false });
     } catch (err: any) {
       if (isNetworkError(err)) {
         // Enqueue offline check-in
         const ticket_number = `offline-tkt-${Date.now()}`;
         const check_in_time = new Date().toISOString();
+        const fallbackPlate = formattedPlate || `GUEST-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
         
         await enqueue('CHECK_IN', {
           ticket_number,
-          license_plate,
+          license_plate: fallbackPlate,
           vehicle_type,
           check_in_time,
           customer_code
@@ -153,12 +158,13 @@ export const useParkingStore = create<ParkingState>((set, get) => ({
           lastCheckIn: {
             ticket_id: ticket_number,
             ticket_number,
-            license_plate,
+            license_plate: fallbackPlate,
             vehicle_type,
             check_in_time,
             qr_code_url: 'data:image/png;base64,offline-mock', // In real app, generate local QR
             isOffline: true
           },
+          lastCheckInReceiptText: `┌──────────────────────────────────────────┐\n│            OFFLINE CHECK-IN              │\n│ Ticket No: ${ticket_number.slice(0, 8).toUpperCase()}                      │\n│ Plate:     ${fallbackPlate.padEnd(30)}│\n│ Time:      ${new Date(check_in_time).toLocaleTimeString().padEnd(30)}│\n└──────────────────────────────────────────┘`,
           isLoading: false
         });
         Alert.alert('Offline Check-In', 'Vehicle checked in offline. Will sync when connection is restored.');
@@ -194,10 +200,48 @@ export const useParkingStore = create<ParkingState>((set, get) => ({
     }
   },
 
-  processPayment: async (ticket_id, payment_method, amount_received) => {
+  lostTicket: async (vehicle_type, license_plate, assumed_duration_hours) => {
+    set({ isLoading: true, error: null, checkoutSummary: null });
+    try {
+      const res = await parkingService.lostTicket({
+        vehicle_type: vehicle_type as any,
+        license_plate,
+        assumed_duration_hours,
+      });
+      set({
+        checkoutSummary: {
+          ticket_id: res.summary.ticket_id,
+          ticket_number: res.summary.ticket_number,
+          license_plate: res.summary.license_plate,
+          vehicle_type: res.summary.vehicle_type,
+          check_in_time: new Date(Date.now() - assumed_duration_hours * 60 * 60 * 1000).toISOString(),
+          check_out_time: new Date().toISOString(),
+          duration_minutes: assumed_duration_hours * 60,
+          chargeable_duration_minutes: assumed_duration_hours * 60,
+          rate_per_hour: assumed_duration_hours > 0 ? res.summary.base_amount / assumed_duration_hours : 0,
+          subtotal: res.summary.base_amount,
+          discount: 0,
+          total_amount: res.summary.total_amount,
+          status: 'PENDING_PAYMENT',
+        },
+        isLoading: false,
+      });
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? 'Lost ticket override failed';
+      set({ error: msg, isLoading: false });
+      throw new Error(msg);
+    }
+  },
+
+  processPayment: async (ticket_id, payment_method, amount_received, transaction_reference) => {
     set({ isLoading: true, error: null, paymentReceipt: null });
     try {
-      const res = await parkingService.processPayment({ ticket_id, payment_method, amount_received });
+      const res = await parkingService.processPayment({
+        ticket_id,
+        payment_method,
+        amount_received,
+        transaction_reference,
+      });
       set({
         paymentReceipt: {
           total_due: res.receipt.total_due,

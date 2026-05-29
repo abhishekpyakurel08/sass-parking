@@ -7,7 +7,7 @@ import { VehicleType } from '../types/enums.js';
 export const createRate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const tenantId = req.tenant!.tenantId;
-    const { vehicle_type, rate_per_hour, lost_ticket_penalty, grace_period_minutes } = req.body; // Include grace_period_minutes
+    const { vehicle_type, rate_per_hour, lost_ticket_penalty, grace_period_minutes } = req.body; 
 
     const existingRate = await HourlyRate.findOne({ tenant_id: tenantId, vehicle_type });
     if (existingRate) {

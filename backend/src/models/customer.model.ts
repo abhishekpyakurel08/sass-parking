@@ -6,14 +6,12 @@ const CustomerSchema = new Schema<ICustomer>(
   {
     tenant_id: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true },
     name: { type: String, required: true, trim: true },
-    customer_code: { type: String, required: true, unique: true, trim: true }, // For NFC or external ID
+    customer_code: { type: String, required: true, unique: true, trim: true }, 
     email: { type: String, trim: true, sparse: true, lowercase: true },
     phone_number: { type: String, trim: true, sparse: true },
     status: { type: String, enum: Object.values(CustomerStatus), default: CustomerStatus.ACTIVE },
     discount_percentage: { type: Number, default: 0, min: 0, max: 100 },
-    qr_data: { type: String, unique: true, sparse: true }, // Data encoded in customer's QR, e.g., customer_code
-    visit_history: [{ type: Schema.Types.ObjectId, ref: 'Ticket' }],
-    total_savings: { type: Number, default: 0 },
+    qr_data: { type: String, unique: true, sparse: true }, 
   },
   { timestamps: true }
 );

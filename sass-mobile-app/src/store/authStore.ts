@@ -7,6 +7,8 @@ interface User {
   email: string;
   role: string;
   tenant_id: string;
+  gate_assignment?: 'ENTRY' | 'EXIT' | 'BOTH';
+  ticket_prefix?: string;
 }
 
 interface AuthState {

@@ -106,6 +106,8 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
           email: user.email,
           role: user.role,
           tenant_id: user.tenant_id,
+          gate_assignment: user.gate_assignment,
+          ticket_prefix: user.ticket_prefix,
         },
       },
     });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   SafeAreaView, KeyboardAvoidingView, Platform, ScrollView,
@@ -8,6 +8,7 @@ import { RefreshCcw, CircleUser, Car, Bike, Truck, Ticket, ChevronLeft, CheckCir
 import { colors } from '../theme/colors';
 import { useNavigation } from '@react-navigation/native';
 import { useParkingStore } from '../store/parkingStore';
+import { useAuthStore } from '../store/authStore';
 import type { VehicleType } from '../types/api.types';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -22,6 +23,14 @@ const CATEGORIES: Category[] = [
 const CheckInScreen = () => {
   const navigation = useNavigation();
   const { checkIn, lastCheckIn, isLoading, clearError } = useParkingStore();
+  const { user } = useAuthStore();
+
+  useEffect(() => {
+    if (user?.role === 'GATE_STAFF' && user?.gate_assignment === 'EXIT') {
+      Alert.alert('Access Denied', 'You are only authorized to process exits.');
+      navigation.goBack();
+    }
+  }, [user, navigation]);
 
   const [plate, setPlate]           = useState('');
   const [vehicleType, setVehicleType] = useState<VehicleType>('CAR');
@@ -29,10 +38,6 @@ const CheckInScreen = () => {
   const [showSuccess, setShowSuccess] = useState(false);
 
   const handleCheckIn = async () => {
-    if (!plate.trim()) {
-      Alert.alert('Missing License Plate', 'Please enter a license plate number.');
-      return;
-    }
     try {
       clearError();
       await checkIn(plate.trim().toUpperCase(), vehicleType, customerCode.trim() || undefined);
@@ -82,7 +87,7 @@ const CheckInScreen = () => {
           <Text style={styles.subtitle}>Register new entry</Text>
 
           {/* License Plate */}
-          <Text style={styles.labelBlue}>LICENSE PLATE</Text>
+          <Text style={styles.labelBlue}>LICENSE PLATE (OPTIONAL)</Text>
           <View style={styles.plateInputContainer}>
             <TextInput
               style={styles.plateInput}

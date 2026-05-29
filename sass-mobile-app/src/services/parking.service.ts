@@ -10,9 +10,17 @@ import type {
   ProcessPaymentResponse,
   TicketsResponse,
   DailyStats,
+  LostTicketPayload,
+  LostTicketResponse,
 } from '../types/api.types';
 
 export const parkingService = {
+  // POST /api/v1/parking/lost-ticket
+  async lostTicket(payload: LostTicketPayload): Promise<LostTicketResponse> {
+    const { data } = await api.post<LostTicketResponse>('/parking/lost-ticket', payload);
+    return data;
+  },
+
   // POST /api/v1/parking/check-in
   async checkIn(payload: CheckInPayload): Promise<CheckInResponse> {
     const { data } = await api.post<CheckInResponse>('/parking/check-in', payload);

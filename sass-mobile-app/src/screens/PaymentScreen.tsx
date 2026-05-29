@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  SafeAreaView, ScrollView, ActivityIndicator, Alert,
+  SafeAreaView, ScrollView, ActivityIndicator, Alert, Modal, Platform, KeyboardAvoidingView,
 } from 'react-native';
-import { RefreshCcw, CircleUser, Banknote, CreditCard, DoorOpen, ChevronLeft, ScanLine } from 'lucide-react-native';
+import { RefreshCcw, CircleUser, Banknote, CreditCard, DoorOpen, ChevronLeft, ScanLine, Car, Bike, Truck, AlertTriangle, X } from 'lucide-react-native';
 import { colors } from '../theme/colors';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useParkingStore } from '../store/parkingStore';
 import type { PaymentMethod } from '../types/api.types';
-import RNPrint from 'react-native-print';
+import { ReceiptPreview } from '../components/Receipt/ReceiptPreview';
+import { ErrorBanner } from '../components/ErrorBanner';
 
 // Helper to format minutes → "2h 30m"
 const fmtDuration = (mins: number) => {
@@ -20,23 +21,39 @@ const fmtDuration = (mins: number) => {
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
+import { useAuthStore } from '../store/authStore';
+
 const PaymentScreen = () => {
   const navigation = useNavigation();
   const route      = useRoute();
+  const { user }   = useAuthStore();
+
+  useEffect(() => {
+    if (user?.role === 'GATE_STAFF' && user?.gate_assignment === 'ENTRY') {
+      Alert.alert('Access Denied', 'You are only authorized to process entries.');
+      navigation.goBack();
+    }
+  }, [user, navigation]);
 
   // ticket_id can be passed from ScannerScreen; fallback to scannedTicket in store
   const passedTicketId: string | undefined = (route.params as any)?.ticket_id;
 
   const {
     scannedTicket, checkoutSummary, paymentReceipt,
-    isLoading, scanTicket, checkOut, processPayment,
-    clearScanned, clearCheckout, clearPayment, clearError,
+    isLoading, scanTicket, checkOut, processPayment, lostTicket,
+    clearScanned, clearCheckout, clearPayment, error, clearError,
   } = useParkingStore();
 
   const [scanCode, setScanCode]             = useState(passedTicketId ?? '');
   const [payMethod, setPayMethod]           = useState<PaymentMethod>('CASH');
   const [amountReceived, setAmountReceived] = useState('');
   const [step, setStep]                     = useState<'scan' | 'payment' | 'done'>('scan');
+
+  // Lost ticket override modal state
+  const [showLostModal, setShowLostModal]   = useState(false);
+  const [lostPlate, setLostPlate]           = useState('');
+  const [lostVehicleType, setLostVehicleType] = useState<'CAR' | 'BIKE' | 'TRUCK' | 'SUV' | 'BUS'>('CAR');
+  const [lostDuration, setLostDuration]     = useState('24');
 
   // If ticket was passed directly, jump to payment
   useEffect(() => {
@@ -75,6 +92,28 @@ const PaymentScreen = () => {
     }
   };
 
+  const handleLostTicketOverride = async () => {
+    if (!lostPlate.trim()) {
+      Alert.alert('Validation Error', 'Please enter license plate');
+      return;
+    }
+    const hours = parseFloat(lostDuration);
+    if (isNaN(hours) || hours <= 0) {
+      Alert.alert('Validation Error', 'Please enter a valid assumed duration in hours');
+      return;
+    }
+
+    try {
+      await lostTicket(lostVehicleType, lostPlate.trim().toUpperCase(), hours);
+      setShowLostModal(false);
+      setLostPlate('');
+      setLostDuration('24');
+      setStep('payment');
+    } catch (err: any) {
+      Alert.alert('Override Failed', err.message);
+    }
+  };
+
   const doPayment = async () => {
     const summary = checkoutSummary ?? (scannedTicket?.status === 'PENDING_PAYMENT' ? scannedTicket : null);
     if (!summary) return;
@@ -82,17 +121,24 @@ const PaymentScreen = () => {
     const ticketId = (checkoutSummary?.ticket_id ?? scannedTicket?.ticket_id)!;
     const totalDue = checkoutSummary?.total_amount ?? (scannedTicket as any)?.fare_amount ?? 0;
 
+    let received: number | undefined = undefined;
+    let reference: string | undefined = undefined;
+
     if (payMethod === 'CASH') {
-      const received = parseFloat(amountReceived);
-      if (isNaN(received) || received < totalDue) {
+      const val = amountReceived ? parseFloat(amountReceived) : 0;
+      if (isNaN(val) || val < totalDue) {
         Alert.alert('Insufficient Amount', `Minimum Rs. ${totalDue} required`);
         return;
       }
+      received = val;
+    } else {
+      // Auto-generate reference for UPI / Card — required by backend validation
+      reference = `REF-${payMethod}-${Date.now()}`;
     }
 
     try {
       clearError();
-      await processPayment(ticketId, payMethod, payMethod === 'CASH' ? parseFloat(amountReceived) : undefined);
+      await processPayment(ticketId, payMethod, received, reference);
       setStep('done');
     } catch (err: any) {
       Alert.alert('Payment Failed', err.message);
@@ -111,8 +157,17 @@ const PaymentScreen = () => {
 
   // ── DONE ─────────────────────────────────────────────────────────────────
   if (step === 'done' && paymentReceipt) {
+    const sum = checkoutSummary ?? scannedTicket;
+    const ticketNo = sum?.ticket_number?.slice(0, 8).toUpperCase() ?? 'N/A';
+    const plate = sum?.license_plate ?? 'N/A';
+    const vehType = sum?.vehicle_type ?? 'N/A';
+    const checkIn = sum?.check_in_time ? new Date(sum.check_in_time).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }) : 'N/A';
+    const checkOutTime = sum?.check_out_time ? new Date(sum.check_out_time).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }) : new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' });
+    const duration = checkoutSummary ? fmtDuration(checkoutSummary.duration_minutes) : 'N/A';
+
     return (
       <SafeAreaView style={styles.container}>
+        <ErrorBanner error={error} clearError={clearError} />
         <View style={styles.header}>
           <TouchableOpacity onPress={resetAll}>
             <ChevronLeft color={colors.textSecondary} size={24} />
@@ -123,45 +178,21 @@ const PaymentScreen = () => {
           </View>
           <CircleUser color={colors.textSecondary} size={24} />
         </View>
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={[styles.card, { alignItems: 'center', gap: 12 }]}>
-            <View style={{ backgroundColor: colors.success + '30', borderRadius: 50, padding: 16 }}>
-              <DoorOpen color={colors.success} size={40} />
-            </View>
-            <Text style={{ color: colors.success, fontSize: 22, fontWeight: 'bold' }}>Gate Open!</Text>
-            <Text style={{ color: colors.text, fontSize: 18 }}>Payment Confirmed</Text>
-            <View style={styles.plateDisplay}>
-              <Text style={styles.plateText}>{checkoutSummary?.license_plate ?? scannedTicket?.license_plate}</Text>
-            </View>
-            <Text style={{ color: colors.textSecondary }}>Total Paid: <Text style={{ color: colors.success, fontWeight: 'bold' }}>Rs. {paymentReceipt.total_due}</Text></Text>
-            {paymentReceipt.change_given != null && paymentReceipt.change_given > 0 && (
-              <Text style={{ color: '#FDBA74' }}>Change: Rs. {paymentReceipt.change_given.toFixed(2)}</Text>
-            )}
-            
-            <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
-              <TouchableOpacity 
-                style={[styles.confirmButton, { flex: 1, backgroundColor: colors.inputBg, borderWidth: 1, borderColor: colors.border }]} 
-                onPress={async () => {
-                  try {
-                    const html = `
-                      <html>
-                        <head><style>body { font-family: monospace; font-size: 16px; margin: 20px; white-space: pre-wrap; }</style></head>
-                        <body>${paymentReceipt.printable_text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</body>
-                      </html>
-                    `;
-                    await RNPrint.print({ html });
-                  } catch (err: any) {
-                    Alert.alert('Print Error', err.message);
-                  }
-                }}
-              >
-                <Text style={[styles.confirmButtonText, { color: colors.text }]}>PRINT RECEIPT</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.confirmButton, { flex: 1 }]} onPress={resetAll}>
-                <Text style={styles.confirmButtonText}>NEXT VEHICLE</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 100 }]}>
+          <ReceiptPreview 
+            data={{
+              ticketNo,
+              plate,
+              vehType,
+              checkIn,
+              checkOut: checkOutTime,
+              duration,
+              totalDue: paymentReceipt.total_due,
+              paymentMethod: paymentReceipt.payment_method,
+              changeGiven: paymentReceipt.change_given
+            }}
+            onNextVehicle={resetAll}
+          />
         </ScrollView>
       </SafeAreaView>
     );
@@ -171,6 +202,7 @@ const PaymentScreen = () => {
   if (step === 'scan') {
     return (
       <SafeAreaView style={styles.container}>
+        <ErrorBanner error={error} clearError={clearError} />
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <ChevronLeft color={colors.textSecondary} size={24} />
@@ -209,6 +241,13 @@ const PaymentScreen = () => {
                 : <Text style={styles.confirmButtonText}>SCAN & CALCULATE FARE</Text>
               }
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.penaltyLinkContainer, { marginTop: 16 }]}
+              onPress={() => setShowLostModal(true)}
+            >
+              <Text style={styles.penaltyLinkText}>Lost Ticket? Apply Penalty</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -218,6 +257,7 @@ const PaymentScreen = () => {
   // ── PAYMENT ───────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container}>
+      <ErrorBanner error={error} clearError={clearError} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => setStep('scan')}>
           <ChevronLeft color={colors.textSecondary} size={24} />
@@ -316,11 +356,91 @@ const PaymentScreen = () => {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.penaltyLinkContainer}>
+          <TouchableOpacity style={styles.penaltyLinkContainer} onPress={() => setShowLostModal(true)}>
             <Text style={styles.penaltyLinkText}>Lost Ticket? Apply Penalty</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={showLostModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLostModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <AlertTriangle color="#EF4444" size={22} />
+                <Text style={styles.modalTitle}>Lost Ticket Override</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowLostModal(false)}>
+                <X color={colors.textSecondary} size={22} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.modalBody}>
+              <Text style={styles.modalLabel}>VEHICLE TYPE</Text>
+              <View style={styles.modalVehicleTypes}>
+                {(['CAR', 'BIKE', 'TRUCK', 'SUV', 'BUS'] as const).map(type => {
+                  const active = lostVehicleType === type;
+                  const Icon = type === 'CAR' ? Car : type === 'BIKE' ? Bike : Truck;
+                  return (
+                    <TouchableOpacity
+                      key={type}
+                      style={[styles.modalVehicleBtn, active && styles.modalVehicleBtnActive]}
+                      onPress={() => setLostVehicleType(type)}
+                    >
+                      <Icon color={active ? '#FFF' : colors.textSecondary} size={18} />
+                      <Text style={[styles.modalVehicleText, active && styles.modalVehicleTextActive]}>{type}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.modalLabel}>LICENSE PLATE</Text>
+              <View style={styles.modalInputContainer}>
+                <TextInput
+                  style={styles.modalInput}
+                  value={lostPlate}
+                  onChangeText={t => setLostPlate(t.toUpperCase())}
+                  placeholder="e.g. BA-12-PA-3456"
+                  placeholderTextColor={colors.textSecondary}
+                  autoCapitalize="characters"
+                />
+              </View>
+
+              <Text style={styles.modalLabel}>ASSUMED DURATION (HOURS)</Text>
+              <View style={styles.modalInputContainer}>
+                <TextInput
+                  style={styles.modalInput}
+                  value={lostDuration}
+                  onChangeText={setLostDuration}
+                  placeholder="24"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.modalSubmitBtn, isLoading && { opacity: 0.6 }]}
+                onPress={handleLostTicketOverride}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <Text style={styles.modalSubmitText}>GENERATE PENALTY & PROCESS EXIT</Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -356,6 +476,104 @@ const styles = StyleSheet.create({
   confirmButtonText:  { color: '#FFF', fontSize: 14, fontWeight: 'bold' },
   penaltyLinkContainer: { alignItems: 'center' },
   penaltyLinkText:    { color: '#FCA5A5', fontSize: 12, textDecorationLine: 'underline' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalContent: {
+    backgroundColor: colors.card,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    width: '100%',
+    maxHeight: '90%',
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  modalBody: {
+    padding: 16,
+  },
+  modalLabel: {
+    color: colors.textSecondary,
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  modalVehicleTypes: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 8,
+  },
+  modalVehicleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 4,
+    backgroundColor: colors.inputBg,
+  },
+  modalVehicleBtnActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  modalVehicleText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  modalVehicleTextActive: {
+    color: '#FFF',
+  },
+  modalInputContainer: {
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 4,
+    paddingHorizontal: 12,
+    height: 44,
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  modalInput: {
+    color: colors.text,
+    fontSize: 14,
+    width: '100%',
+  },
+  modalSubmitBtn: {
+    backgroundColor: colors.success,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 48,
+    borderRadius: 4,
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  modalSubmitText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
 });
 
 export default PaymentScreen;

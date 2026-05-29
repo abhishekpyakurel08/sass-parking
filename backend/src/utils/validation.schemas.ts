@@ -39,10 +39,6 @@ export const checkInSchema = z.object({
   vehicle_type: z.enum(['CAR', 'BIKE', 'TRUCK', 'SUV', 'BUS']),
   customer_code: z.string().min(1, 'Customer code is required').max(50, 'Customer code too long').optional(),
   notes: z.string().max(255).optional(),
-})
-.refine(data => data.license_plate || data.customer_code, {
-  message: 'Either license plate or customer code must be provided for check-in',
-  path: ['license_plate', 'customer_code'],
 });
 
 export const checkOutSchema = z.object({
@@ -58,7 +54,7 @@ export const lostTicketSchema = z.object({
 export const processPaymentSchema = z.object({
   ticket_id: z.string().min(1, 'Ticket ID is required'),
   payment_method: z.nativeEnum(PaymentMethod),
-  amount_received: z.number().positive('Amount received must be positive').optional(),
+  amount_received: z.number().nonnegative('Amount received must be non-negative').optional(),
   transaction_reference: z.string().min(1, 'Transaction reference is required').optional(),
 }).superRefine((data, ctx) => {
   if (data.payment_method === PaymentMethod.CASH && data.amount_received === undefined) {
@@ -96,6 +92,8 @@ export const createStaffSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(8),
+  gate_assignment: z.enum(['ENTRY', 'EXIT', 'BOTH']).optional(),
+  ticket_prefix: z.string().optional(),
 });
 
 // ── Scan ──────────────────────────────────────────────────────────────────────

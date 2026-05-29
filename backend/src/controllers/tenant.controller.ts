@@ -95,24 +95,37 @@ export const updateMyTenant = async (req: Request, res: Response, next: NextFunc
 
 export const createStaff = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, gate_assignment, ticket_prefix } = req.body;
     const tenantId = req.tenant!.tenantId;
 
     const existing = await User.findOne({ email });
     if (existing) return next(new ConflictError('User with this email already exists'));
 
     const password_hash = await bcrypt.hash(password, env.BCRYPT_ROUNDS);
+    
+    let finalPrefix = ticket_prefix;
+    if (!finalPrefix || finalPrefix.trim() === '') {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let code = '';
+      for (let i = 0; i < 4; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      finalPrefix = `P-T-R-${code}`;
+    }
+
     const staff = await User.create({
       tenant_id: tenantId,
       name,
       email,
       password_hash,
       role: UserRole.GATE_STAFF,
+      gate_assignment,
+      ticket_prefix: finalPrefix,
     });
 
     res.status(201).json({
       success: true,
-      data: { id: staff._id, name: staff.name, email: staff.email, role: staff.role },
+      data: { id: staff._id, name: staff.name, email: staff.email, role: staff.role, gate_assignment: staff.gate_assignment, ticket_prefix: staff.ticket_prefix },
     });
   } catch (err) { next(err); }
 };
@@ -131,7 +144,7 @@ export const getStaff = async (req: Request, res: Response, next: NextFunction):
 export const updateStaff = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
-    const { name, email, password } = req.body;
+    const { name, email, password, gate_assignment, ticket_prefix } = req.body;
 
     const staff = await User.findOne({ _id: id, tenant_id: req.tenant!.tenantId, role: UserRole.GATE_STAFF });
     if (!staff) return next(new NotFoundError('Staff member not found'));
@@ -145,12 +158,25 @@ export const updateStaff = async (req: Request, res: Response, next: NextFunctio
     if (password) {
       staff.password_hash = await bcrypt.hash(password, env.BCRYPT_ROUNDS);
     }
+    if (gate_assignment) staff.gate_assignment = gate_assignment;
+    if (ticket_prefix !== undefined) {
+      if (!ticket_prefix || ticket_prefix.trim() === '') {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 4; i++) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        staff.ticket_prefix = `P-T-R-${code}`;
+      } else {
+        staff.ticket_prefix = ticket_prefix;
+      }
+    }
 
     await staff.save();
 
     res.status(200).json({
       success: true,
-      data: { id: staff._id, name: staff.name, email: staff.email, role: staff.role },
+      data: { id: staff._id, name: staff.name, email: staff.email, role: staff.role, gate_assignment: staff.gate_assignment, ticket_prefix: staff.ticket_prefix },
     });
   } catch (err) { next(err); }
 };

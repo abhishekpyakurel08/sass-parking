@@ -4,6 +4,12 @@ export enum UserRole {
   GATE_STAFF = 'GATE_STAFF',
 }
 
+export enum GateAssignment {
+  ENTRY = 'ENTRY',
+  EXIT = 'EXIT',
+  BOTH = 'BOTH',
+}
+
 export enum TenantStatus {
   ACTIVE = 'ACTIVE',
   SUSPENDED = 'SUSPENDED',

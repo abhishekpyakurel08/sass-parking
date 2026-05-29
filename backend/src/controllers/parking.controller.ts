@@ -3,13 +3,15 @@ import crypto from 'crypto';
 import { Ticket } from '../models/ticket.model.js';
 import { HourlyRate } from '../models/hourlyRate.model.js';
 import { Customer } from '../models/customer.model.js';
+import { User } from '../models/user.model.js';
 import mongoose from 'mongoose';
 import {
   NotFoundError,
   ConflictError,
   ValidationError,
+  ForbiddenError,
 } from '../errors/ApiError.js';
-import { TicketStatus, PaymentMethod } from '../types/enums.js';
+import { TicketStatus, PaymentMethod, UserRole, GateAssignment } from '../types/enums.js';
 import { logTransaction } from '../utils/logger.js';
 import { generateQrCodeDataUri } from '../utils/qr.js';
 
@@ -47,9 +49,7 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction): 
         resolvedLicensePlate = `CUSTOMER-${customer_code}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
       }
     } else if (!license_plate) {
-      // If neither license_plate nor customer_code is provided
-      await session.abortTransaction();
-      return next(new ValidationError('Either license plate or customer code must be provided for check-in'));
+      resolvedLicensePlate = `GUEST-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
     }
 
     // Check no active ticket exists for this plate
@@ -64,7 +64,23 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction): 
       return next(new ConflictError('This vehicle already has an active parking ticket.'));
     }
 
-    const ticketUUID = crypto.randomUUID();
+    const staffUser = await User.findById(req.user!.userId).session(session);
+    if (staffUser?.role === UserRole.GATE_STAFF && staffUser.gate_assignment === GateAssignment.EXIT) {
+      await session.abortTransaction();
+      return next(new ForbiddenError('Access denied: You are only authorized to process exits.'));
+    }
+    let prefix = staffUser?.ticket_prefix ? `${staffUser.ticket_prefix}-` : '';
+    if (!prefix) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let code = '';
+      for (let i = 0; i < 4; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      prefix = `P-T-R-${code}-`;
+    }
+
+    const baseUUID = crypto.randomUUID();
+    const ticketUUID = `${prefix}${baseUUID}`;
     const entryTime = new Date();
 
     const ticket = await Ticket.create(
@@ -157,6 +173,12 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
     const tenantId = req.tenant!.tenantId;
     const { ticket_id } = req.body;
 
+    const staffUser = await User.findById(req.user!.userId).session(session);
+    if (staffUser?.role === UserRole.GATE_STAFF && staffUser.gate_assignment === GateAssignment.ENTRY) {
+      await session.abortTransaction();
+      return next(new ForbiddenError('Access denied: You are only authorized to process entries.'));
+    }
+
     const query = mongoose.isValidObjectId(ticket_id)
       ? { _id: ticket_id, tenant_id: tenantId, status: TicketStatus.ACTIVE }
       : {
@@ -164,6 +186,7 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
           status: TicketStatus.ACTIVE,
           $or: [
             { ticket_number: ticket_id },
+            { ticket_number: ticket_id.toLowerCase() },
             { license_plate: ticket_id.toUpperCase() }
           ]
         };
@@ -268,6 +291,12 @@ export const handleLostTicket = async (req: Request, res: Response, next: NextFu
     const tenantId = req.tenant!.tenantId;
     const { vehicle_type, license_plate, assumed_duration_hours } = req.body;
 
+    const staffUser = await User.findById(req.user!.userId).session(session);
+    if (staffUser?.role === UserRole.GATE_STAFF && staffUser.gate_assignment === GateAssignment.ENTRY) {
+      await session.abortTransaction();
+      return next(new ForbiddenError('Access denied: You are only authorized to process entries.'));
+    }
+
     // Find the hourly rate and lost ticket penalty for the vehicle type
     const rateDoc = await HourlyRate.findOne({
       tenant_id: tenantId,
@@ -292,8 +321,19 @@ export const handleLostTicket = async (req: Request, res: Response, next: NextFu
       return next(new ConflictError('An active ticket already exists for this vehicle. Cannot process as lost.'));
     }
 
+    let prefix = staffUser?.ticket_prefix ? `${staffUser.ticket_prefix}-` : '';
+    if (!prefix) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let code = '';
+      for (let i = 0; i < 4; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      prefix = `P-T-R-${code}-`;
+    }
+
     // Create a new ticket with PENDING_PAYMENT status
-    const ticketUUID = crypto.randomUUID();
+    const baseUUID = crypto.randomUUID();
+    const ticketUUID = `${prefix}${baseUUID}`;
     const entryTime = new Date(); // Approximate entry time for lost ticket
     const checkOutTime = new Date(); // Now
 
@@ -359,6 +399,12 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
   try {
     const tenantId = req.tenant!.tenantId;
     const { ticket_id, payment_method, amount_received, transaction_reference } = req.body;
+
+    const staffUser = await User.findById(req.user!.userId).session(session);
+    if (staffUser?.role === UserRole.GATE_STAFF && staffUser.gate_assignment === GateAssignment.ENTRY) {
+      await session.abortTransaction();
+      return next(new ForbiddenError('Access denied: You are only authorized to process entries.'));
+    }
 
     const ticket = await Ticket.findOne({
       _id: ticket_id,
@@ -490,6 +536,7 @@ export const scanTicket = async (req: Request, res: Response, next: NextFunction
       tenant_id: tenantId,
       $or: [
         { ticket_number: code },
+        { ticket_number: code.toLowerCase() },
         { license_plate: code.toUpperCase() }
       ]
     }).populate('customer_id'); // Populate customer info if available

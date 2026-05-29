@@ -15,17 +15,19 @@ export interface LoginResponse {
       email: string;
       role: string;
       tenant_id: string;
+      gate_assignment?: 'ENTRY' | 'EXIT' | 'BOTH';
+      ticket_prefix?: string;
     };
   };
 }
 
 // ── Parking ───────────────────────────────────────────────────────────────────
-export type VehicleType = 'CAR' | 'BIKE' | 'VAN';
+export type VehicleType = 'CAR' | 'BIKE' | 'TRUCK' | 'SUV' | 'BUS' | 'VAN';
 export type TicketStatus = 'ACTIVE' | 'PENDING_PAYMENT' | 'PAID' | 'EXPIRED' | 'LOST';
 export type PaymentMethod = 'CASH' | 'UPI' | 'CARD';
 
 export interface CheckInPayload {
-  license_plate: string;
+  license_plate?: string;
   vehicle_type: VehicleType;
   customer_code?: string;
 }
@@ -101,6 +103,26 @@ export interface CheckOutResponse {
     discount: number;
     total_amount: number;
     status: TicketStatus;
+  };
+}
+
+export interface LostTicketPayload {
+  vehicle_type: VehicleType;
+  license_plate: string;
+  assumed_duration_hours: number;
+}
+
+export interface LostTicketResponse {
+  success: boolean;
+  summary: {
+    ticket_id: string;
+    ticket_number: string;
+    license_plate: string;
+    vehicle_type: VehicleType;
+    assumed_duration_hours: number;
+    base_amount: number;
+    lost_ticket_penalty: number;
+    total_amount: number;
   };
 }
 

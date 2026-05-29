@@ -10,6 +10,7 @@ import { useParkingStore } from '../store/parkingStore';
 import { useAuthStore } from '../store/authStore';
 import type { Ticket } from '../types/api.types';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { ErrorBanner } from '../components/ErrorBanner';
 
 const statusColor: Record<string, string> = {
   ACTIVE: colors.success,
@@ -36,7 +37,7 @@ const TicketRow = ({ ticket, index }: { ticket: Ticket, index: number }) => (
 
 const DashboardScreen = () => {
   const navigation = useNavigation();
-  const { stats, recentTickets, isLoadingStats, fetchDashboard, offlineQueueCount, isSyncing, syncOfflineQueue } = useParkingStore();
+  const { stats, recentTickets, isLoadingStats, fetchDashboard, offlineQueueCount, isSyncing, syncOfflineQueue, error, clearError } = useParkingStore();
   const { user, logout } = useAuthStore();
 
   useEffect(() => { 
@@ -66,6 +67,7 @@ const DashboardScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <ErrorBanner error={error} clearError={clearError} />
       <View style={styles.header}>
         <View style={styles.logoContainer}>
           <RefreshCcw color={colors.primary} size={20} />
@@ -80,10 +82,41 @@ const DashboardScreen = () => {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={isLoadingStats} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
+        {/* Terminal Header */}
+        <Animated.View entering={FadeInDown.duration(400)} style={[
+          styles.terminalCard,
+          user?.gate_assignment === 'ENTRY' && styles.terminalEntry,
+          user?.gate_assignment === 'EXIT' && styles.terminalExit,
+          user?.gate_assignment === 'BOTH' && styles.terminalBoth,
+        ]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={[
+              styles.terminalIndicator,
+              user?.gate_assignment === 'ENTRY' && { backgroundColor: colors.success },
+              user?.gate_assignment === 'EXIT' && { backgroundColor: '#EF4444' },
+              user?.gate_assignment === 'BOTH' && { backgroundColor: colors.primary },
+            ]} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.terminalTitle}>
+                {user?.gate_assignment === 'ENTRY' && '🟢 ENTRY GATE TERMINAL'}
+                {user?.gate_assignment === 'EXIT' && '🔴 EXIT GATE TERMINAL'}
+                {user?.gate_assignment === 'BOTH' && '🔵 DUAL GATE TERMINAL'}
+                {!user?.gate_assignment && '⚫ GENERAL OPERATOR CONSOLE'}
+              </Text>
+              <Text style={styles.terminalSub}>
+                {user?.gate_assignment === 'ENTRY' && 'Authorized for vehicle entry registrations & ticket creation.'}
+                {user?.gate_assignment === 'EXIT' && 'Authorized for vehicle checkouts & payment processing.'}
+                {user?.gate_assignment === 'BOTH' && 'Full dual access for entry and checkout operations.'}
+                {!user?.gate_assignment && 'General access operator console.'}
+              </Text>
+            </View>
+          </View>
+        </Animated.View>
+
         {/* Operator Status */}
-        <Animated.View entering={FadeInDown.duration(400)} style={styles.operatorCard}>
+        <Animated.View entering={FadeInDown.delay(50).duration(400)} style={styles.operatorCard}>
           <View>
-            <Text style={styles.label}>OPERATOR STATUS</Text>
+            <Text style={styles.label}>ACTIVE OPERATOR</Text>
             <Text style={styles.operatorName}>{user?.name ?? 'Operator'}</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
@@ -108,19 +141,23 @@ const DashboardScreen = () => {
         </Animated.View>
 
         {/* Action Buttons */}
-        <Animated.View entering={FadeInDown.delay(100).duration(400)}>
-          <TouchableOpacity style={styles.checkInButton} onPress={() => navigation.navigate('CheckIn' as never)}>
-            <ParkingCircle color="#FFF" size={32} style={{ marginBottom: 8 }} />
-            <Text style={styles.actionButtonText}>CHECK IN VEHICLE</Text>
-          </TouchableOpacity>
-        </Animated.View>
+        {user?.gate_assignment !== 'EXIT' && (
+          <Animated.View entering={FadeInDown.delay(100).duration(400)}>
+            <TouchableOpacity style={styles.checkInButton} onPress={() => navigation.navigate('Entry' as never)}>
+              <ParkingCircle color="#FFF" size={32} style={{ marginBottom: 8 }} />
+              <Text style={styles.actionButtonText}>CHECK IN VEHICLE</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
 
-        <Animated.View entering={FadeInDown.delay(200).duration(400)}>
-          <TouchableOpacity style={styles.scanButton} onPress={() => navigation.navigate('Scanner' as never)}>
-            <Scan color="#FFF" size={32} style={{ marginBottom: 8 }} />
-            <Text style={[styles.actionButtonText, { color: '#FFF' }]}>SCAN TO CHECK OUT</Text>
-          </TouchableOpacity>
-        </Animated.View>
+        {user?.gate_assignment !== 'ENTRY' && (
+          <Animated.View entering={FadeInDown.delay(150).duration(400)}>
+            <TouchableOpacity style={styles.scanButton} onPress={() => navigation.navigate('Exit' as never)}>
+              <Scan color="#FFF" size={32} style={{ marginBottom: 8 }} />
+              <Text style={[styles.actionButtonText, { color: '#FFF' }]}>SCAN TO CHECK OUT</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
 
         {/* Shift Overview */}
         <Text style={styles.sectionTitle}>SHIFT OVERVIEW</Text>
@@ -128,36 +165,86 @@ const DashboardScreen = () => {
         {isLoadingStats && !stats ? (
           <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
         ) : (
-          <Animated.View entering={FadeInDown.delay(300).duration(400)}>
-            <View style={styles.overviewCard}>
-              <View style={styles.overviewHeader}>
-                <Text style={styles.label}>VEHICLES TODAY</Text>
-                <CarFront color={colors.success} size={20} />
+          <Animated.View entering={FadeInDown.delay(200).duration(400)}>
+            {user?.gate_assignment === 'ENTRY' && (
+              <View style={styles.statsRow}>
+                <View style={[styles.overviewCard, { flex: 1, marginBottom: 0 }]}>
+                  <View style={styles.overviewHeader}>
+                    <Text style={styles.label}>CHECK-INS TODAY</Text>
+                    <CarFront color={colors.success} size={20} />
+                  </View>
+                  <Text style={[styles.overviewValue, { color: colors.success }]}>
+                    {stats?.totalVehicles ?? 0}
+                  </Text>
+                </View>
+                <View style={[styles.overviewCard, { flex: 1, marginLeft: 12, marginBottom: 0 }]}>
+                  <View style={styles.overviewHeader}>
+                    <Text style={styles.label}>ACTIVE VEHICLES</Text>
+                    <ParkingCircle color={colors.primary} size={20} />
+                  </View>
+                  <Text style={[styles.overviewValue, { color: colors.primary }]}>
+                    {Math.max(0, (stats?.totalVehicles ?? 0) - (stats?.completedSessions ?? 0))}
+                  </Text>
+                </View>
               </View>
-              <Text style={[styles.overviewValue, { color: colors.success }]}>
-                {stats?.totalVehicles ?? 0}
-              </Text>
-            </View>
+            )}
 
-            <View style={styles.overviewCard}>
-              <View style={styles.overviewHeader}>
-                <Text style={styles.label}>SESSIONS DONE</Text>
-                <CheckCircle2 color="#FDBA74" size={20} />
+            {user?.gate_assignment === 'EXIT' && (
+              <View style={styles.statsRow}>
+                <View style={[styles.overviewCard, { flex: 1, marginBottom: 0 }]}>
+                  <View style={styles.overviewHeader}>
+                    <Text style={styles.label}>CHECK-OUTS TODAY</Text>
+                    <CheckCircle2 color="#FDBA74" size={20} />
+                  </View>
+                  <Text style={[styles.overviewValue, { color: '#FDBA74' }]}>
+                    {stats?.completedSessions ?? 0}
+                  </Text>
+                </View>
+                <View style={[styles.overviewCard, { flex: 1, marginLeft: 12, marginBottom: 0 }]}>
+                  <View style={styles.overviewHeader}>
+                    <Text style={styles.label}>TOTAL REVENUE</Text>
+                    <Banknote color={colors.success} size={20} />
+                  </View>
+                  <Text style={[styles.overviewValue, { color: colors.success }]}>
+                    {fmtRevenue(stats?.totalRevenue ?? 0)}
+                  </Text>
+                </View>
               </View>
-              <Text style={[styles.overviewValue, { color: '#FDBA74' }]}>
-                {stats?.completedSessions ?? 0}
-              </Text>
-            </View>
+            )}
 
-            <View style={styles.overviewCard}>
-              <View style={styles.overviewHeader}>
-                <Text style={styles.label}>TOTAL REVENUE</Text>
-                <Banknote color={colors.primary} size={20} />
-              </View>
-              <Text style={[styles.overviewValue, { color: colors.primary }]}>
-                {fmtRevenue(stats?.totalRevenue ?? 0)}
-              </Text>
-            </View>
+            {(user?.gate_assignment === 'BOTH' || !user?.gate_assignment) && (
+              <>
+                <View style={styles.statsRow}>
+                  <View style={[styles.overviewCard, { flex: 1 }]}>
+                    <View style={styles.overviewHeader}>
+                      <Text style={styles.label}>VEHICLES TODAY</Text>
+                      <CarFront color={colors.success} size={20} />
+                    </View>
+                    <Text style={[styles.overviewValue, { color: colors.success }]}>
+                      {stats?.totalVehicles ?? 0}
+                    </Text>
+                  </View>
+                  <View style={[styles.overviewCard, { flex: 1, marginLeft: 12 }]}>
+                    <View style={styles.overviewHeader}>
+                      <Text style={styles.label}>SESSIONS DONE</Text>
+                      <CheckCircle2 color="#FDBA74" size={20} />
+                    </View>
+                    <Text style={[styles.overviewValue, { color: '#FDBA74' }]}>
+                      {stats?.completedSessions ?? 0}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.overviewCard}>
+                  <View style={styles.overviewHeader}>
+                    <Text style={styles.label}>TOTAL REVENUE</Text>
+                    <Banknote color={colors.primary} size={20} />
+                  </View>
+                  <Text style={[styles.overviewValue, { color: colors.primary }]}>
+                    {fmtRevenue(stats?.totalRevenue ?? 0)}
+                  </Text>
+                </View>
+              </>
+            )}
           </Animated.View>
         )}
 
@@ -204,6 +291,7 @@ const styles = StyleSheet.create({
   offlineBadge:    { backgroundColor: '#F59E0B', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, marginBottom: 4, flexDirection: 'row', alignItems: 'center' },
   offlineText:     { color: '#FFF', fontSize: 10, fontWeight: 'bold' },
   roleText:        { color: colors.textSecondary, fontSize: 10 },
+  gateText:        { color: colors.primary, fontSize: 9, fontWeight: 'bold', marginTop: 2, letterSpacing: 0.5 },
   checkInButton:   { backgroundColor: colors.primary, borderRadius: 4, padding: 24, alignItems: 'center', marginBottom: 12 },
   scanButton:      { backgroundColor: colors.secondary, borderRadius: 4, padding: 24, alignItems: 'center', marginBottom: 32 },
   actionButtonText:{ color: '#FFF', fontSize: 16, fontWeight: 'bold' },
@@ -211,6 +299,7 @@ const styles = StyleSheet.create({
   overviewCard:    { backgroundColor: colors.card, borderRadius: 4, padding: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 12 },
   overviewHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   overviewValue:   { fontSize: 36, fontWeight: 'bold' },
+  statsRow:        { flexDirection: 'row', marginBottom: 12 },
   activityHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, marginBottom: 12 },
   viewAllText:     { color: colors.primary, fontSize: 12, fontWeight: 'bold' },
   activityCard:    { backgroundColor: colors.card, borderRadius: 4, borderWidth: 1, borderColor: colors.border },
@@ -222,6 +311,14 @@ const styles = StyleSheet.create({
   activityTime:    { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
   statusBadge:     { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
   statusBadgeText: { fontSize: 9, fontWeight: 'bold' },
+  // Terminal banner styles
+  terminalCard:    { borderRadius: 6, padding: 14, borderWidth: 1, marginBottom: 14, borderColor: colors.border, backgroundColor: colors.card },
+  terminalEntry:   { borderColor: colors.success, borderLeftWidth: 3 },
+  terminalExit:    { borderColor: '#EF4444', borderLeftWidth: 3 },
+  terminalBoth:    { borderColor: colors.primary, borderLeftWidth: 3 },
+  terminalIndicator: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.textSecondary, marginTop: 2 },
+  terminalTitle:   { color: colors.text, fontSize: 13, fontWeight: 'bold', letterSpacing: 0.5, marginBottom: 2 },
+  terminalSub:     { color: colors.textSecondary, fontSize: 11 },
 });
 
 export default DashboardScreen;
