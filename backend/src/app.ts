@@ -41,8 +41,18 @@ const app: Application = express();
 app.use(helmet());
 
 // ─── CORS ────
+const allowedOrigins = env.CORS_ORIGIN.split(',').map(o => o.trim());
+
 app.use(cors({
-  origin: env.CORS_ORIGIN.split(',').map(o => o.trim()),
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+    // Allow any explicitly configured origin
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Allow any subdomain of tecobit.cloud (covers current + future deployments)
+    if (/^https?:\/\/[a-z0-9-]+\.tecobit\.cloud$/.test(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin '${origin}' not allowed`));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID'],
