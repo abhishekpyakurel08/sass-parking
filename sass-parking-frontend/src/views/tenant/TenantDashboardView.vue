@@ -93,13 +93,6 @@ const navigate = async (tab: string) => {
 
           <!-- Right actions -->
           <div class="ml-auto flex items-center gap-3">
-            <button class="relative text-slate-500 hover:text-slate-900 p-2 rounded-lg hover:bg-slate-100 transition-colors">
-              <Bell class="w-5 h-5" />
-              <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full"></span>
-            </button>
-            <button class="hidden sm:flex text-slate-500 hover:text-slate-900 p-2 rounded-lg hover:bg-slate-100 transition-colors">
-              <HelpCircle class="w-5 h-5" />
-            </button>
             <div class="flex items-center gap-2.5 border-l pl-3">
               <img src="https://i.pravatar.cc/150?img=11" class="w-8 h-8 rounded-full object-cover border-2 border-white shadow" />
               <div class="hidden md:block text-right">
