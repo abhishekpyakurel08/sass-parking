@@ -107,9 +107,9 @@ onMounted(() => {
 
           <!-- Search -->
           <div class="flex-1 max-w-sm relative hidden sm:block">
-            <Search class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input type="text" placeholder="Search vehicles, tickets…"
-              class="w-full bg-slate-100 rounded-full pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" />
+              class="w-full bg-slate-100 dark:bg-slate-800 rounded-full pl-9 pr-4 py-2 text-sm text-slate-900 dark:text-slate-100 border border-transparent dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-all" />
           </div>
 
           <!-- Right actions -->
@@ -128,7 +128,7 @@ onMounted(() => {
             <!-- Global loading -->
             <div v-if="store.isLoading && !store.revenueAnalytics" class="flex items-center justify-center py-24">
               <RefreshCcw class="w-6 h-6 text-blue-500 animate-spin mr-3" />
-              <span class="text-slate-500 font-medium">Loading dashboard…</span>
+              <span class="text-slate-500 dark:text-slate-400 font-medium">Loading dashboard…</span>
             </div>
 
             <!-- Tab Router -->
