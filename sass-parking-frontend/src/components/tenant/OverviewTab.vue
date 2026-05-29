@@ -50,7 +50,10 @@ const linePoints = computed(() => {
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const buckets = new Array(7).fill(0) as number[];
   tickets.forEach((t: any) => {
-    if (t.check_in_time) buckets[new Date(t.check_in_time).getDay()]++;
+    if (t.check_in_time) {
+      const dayIndex = new Date(t.check_in_time).getDay();
+      buckets[dayIndex] = (buckets[dayIndex] || 0) + 1;
+    }
   });
   // Reorder to start from Monday
   const ordered = [...buckets.slice(1), buckets[0]] as number[];

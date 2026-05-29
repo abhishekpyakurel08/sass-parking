@@ -61,7 +61,7 @@ const handleLostTicket = async () => {
   });
   if (summary) {
     pendingCheckout.value = summary;
-    paymentForm.value.ticket_id = summary.ticket_id || summary._id;
+    paymentForm.value.ticket_id = summary.ticket_id || (summary as any)._id;
     paymentForm.value.amount_received = summary.total_amount ?? 0;
     showLostModal.value = false;
   }
