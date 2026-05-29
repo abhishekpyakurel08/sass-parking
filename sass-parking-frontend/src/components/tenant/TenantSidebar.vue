@@ -41,12 +41,18 @@ const navItems = [
 
     <!-- Logo -->
     <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800" :class="isCollapsed ? 'justify-center px-4' : ''">
-      <div v-if="!isCollapsed">
-        <h1 class="font-black text-xl text-slate-900 dark:text-slate-100 tracking-tight">ParkSaaS</h1>
-        <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-0.5 uppercase tracking-widest">Tenant Console</p>
+      <div v-if="!isCollapsed" class="truncate min-w-0 pr-4">
+        <h1 class="font-black text-xl text-slate-900 dark:text-slate-100 tracking-tight truncate" :title="store.profile.companyName || 'ParkSaaS'">
+          {{ store.profile.companyName || 'ParkSaaS' }}
+        </h1>
+        <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-0.5 uppercase tracking-widest truncate">
+          {{ authStore.user?.name || 'Tenant Console' }}
+        </p>
       </div>
       <div v-else>
-        <span class="font-black text-2xl text-blue-600 tracking-wider">P.</span>
+        <span class="font-black text-2xl text-blue-600 tracking-wider">
+          {{ (store.profile.companyName || 'P').charAt(0).toUpperCase() }}.
+        </span>
       </div>
       <button @click="emit('close')" class="lg:hidden text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
