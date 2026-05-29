@@ -271,13 +271,6 @@ const exportPDF = () => {
         <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
           {{ store.profile.companyName || 'Dark Alaric Parking Lot' }}
         </h2>
-        <div class="flex flex-wrap items-center gap-2 mt-2 text-slate-500 text-sm">
-          <MapPin class="w-4 h-4 flex-shrink-0" />
-          <span class="truncate max-w-xs">{{ store.profile.address || '452 Industrial Way, Sector 7' }}</span>
-          <span class="flex items-center gap-1.5 text-blue-600 font-bold text-xs uppercase tracking-wider">
-            <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span> ACTIVE
-          </span>
-        </div>
       </div>
       <div class="flex gap-2 flex-wrap">
         <button @click="exportPDF" class="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
