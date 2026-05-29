@@ -53,18 +53,7 @@ const navItems = [
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
-    </div>
-
-    <!-- Profile mini -->
-    <div class="mx-3 mt-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 transition-all duration-300" :class="isCollapsed ? 'p-1.5 mx-2' : 'px-4 py-3'">
-      <div class="flex items-center gap-3" :class="isCollapsed ? 'justify-center' : ''">
-        <img src="https://i.pravatar.cc/150?img=11" class="w-8 h-8 rounded-full object-cover shadow-sm flex-shrink-0" />
-        <div v-if="!isCollapsed" class="min-w-0">
-          <p class="text-sm font-bold text-slate-900 dark:text-slate-100 truncate leading-tight">{{ authStore.user?.name || 'Tenant Owner' }}</p>
-          <p class="text-[10px] text-slate-400 dark:text-slate-500 font-medium truncate mt-0.5">{{ store.profile.companyName || 'Administrator' }}</p>
-        </div>
-      </div>
-    </div>
+    <!-- Profile mini removed -->
 
     <!-- Main Nav -->
     <nav class="flex-1 px-3 space-y-1.5 overflow-y-auto py-4" :class="isCollapsed ? 'px-2' : ''">
