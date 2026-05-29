@@ -197,15 +197,7 @@ const sections = [
         </div>
 
         <div class="p-6 space-y-4">
-          <!-- Logged-in user -->
-          <div class="flex items-center gap-4 p-4 bg-slate-50 border border-slate-200 rounded-xl">
-            <img src="https://i.pravatar.cc/150?img=11" class="w-12 h-12 rounded-full object-cover border-2 border-white shadow" />
-            <div>
-              <p class="font-bold text-slate-900">{{ authStore.user?.name || 'Tenant Owner' }}</p>
-              <p class="text-xs text-slate-500">{{ store.profile.email }}</p>
-              <span class="mt-1 inline-flex px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded text-[10px] font-black uppercase tracking-wider">TENANT_OWNER</span>
-            </div>
-          </div>
+          <!-- Logged-in user removed -->
 
           <!-- Locked fields explanation -->
           <div>
