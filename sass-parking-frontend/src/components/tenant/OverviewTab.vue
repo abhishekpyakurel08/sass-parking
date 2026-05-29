@@ -3,8 +3,8 @@ import { computed } from 'vue';
 import { useTenantStore } from '../../stores/tenant';
 import { useRouter } from 'vue-router';
 import {
-  MapPin, TrendingUp, TrendingDown, Car, MoreHorizontal,
-  PenLine, RefreshCcw, Download, ScanLine, BarChart3, LineChart, PieChart
+  MapPin, TrendingUp,  Car, MoreHorizontal,
+  PenLine, RefreshCcw, Download, BarChart3, LineChart, PieChart
 } from 'lucide-vue-next';
 
 const store = useTenantStore();
