@@ -129,7 +129,7 @@ const DashboardScreen = () => {
 
         {/* ── Stats Row ───────────────────────────────────────────────── */}
         {isLoadingStats && !stats ? (
-          <ActivityIndicator color={colors.primary} style={{ marginVertical: 32 }} />
+          <ActivityIndicator color={colors.primary} style={styles.loadingSpinner} />
         ) : (
           <View style={styles.statsRow}>
             {user?.gate_assignment !== 'EXIT' && (
@@ -165,7 +165,7 @@ const DashboardScreen = () => {
 
         <View style={styles.actionsRow}>
           {user?.gate_assignment !== 'EXIT' && (
-            <Animated.View entering={FadeInDown.delay(200).springify()} style={{ flex: 1, marginRight: 8 }}>
+            <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.actionItemLeft}>
               <TouchableOpacity
                 style={[styles.actionCard, { backgroundColor: colors.primary }]}
                 onPress={() => navigation.navigate('Entry' as never)}
@@ -179,7 +179,7 @@ const DashboardScreen = () => {
             </Animated.View>
           )}
           {user?.gate_assignment !== 'ENTRY' && (
-            <Animated.View entering={FadeInDown.delay(250).springify()} style={{ flex: 1, marginLeft: user?.gate_assignment !== 'EXIT' ? 0 : 0 }}>
+            <Animated.View entering={FadeInDown.delay(250).springify()} style={styles.actionItemRight}>
               <TouchableOpacity
                 style={[styles.actionCard, { backgroundColor: colors.secondary }]}
                 onPress={() => navigation.navigate('Exit' as never)}
@@ -277,6 +277,9 @@ const styles = StyleSheet.create({
   statusBadgeText:  { fontSize: sf(10), fontWeight: '700', letterSpacing: 0.3 },
   emptyState:       { padding: sw(32), alignItems: 'center' },
   emptyText:        { color: colors.textSecondary, fontSize: sf(14) },
+  loadingSpinner:   { marginVertical: sw(32) },
+  actionItemLeft:   { flex: 1, marginRight: sw(8) },
+  actionItemRight:  { flex: 1, marginLeft: sw(8) },
 });
 
 export default DashboardScreen;
