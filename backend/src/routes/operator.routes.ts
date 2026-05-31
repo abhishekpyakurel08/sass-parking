@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, requireRole } from '../middleware/auth.middleware.js';
+import { authenticateAny, requireRole } from '../middleware/auth.middleware.js';
 import { getDailyStats } from '../controllers/operator.controller.js';
 import { checkIn, checkOut, processPayment, scanTicket } from '../controllers/parking.controller.js';
 import { validate } from '../middleware/validate.middleware.js';
@@ -9,7 +9,7 @@ import { UserRole } from '../types/enums.js';
 import { auditAction } from '../middleware/auditLogger.js';
 
 const router: Router = Router();
-router.use(authenticate, tenantMiddleware);
+router.use(authenticateAny, tenantMiddleware);
 
 router.post(
   '/operator/check-in',
@@ -19,7 +19,6 @@ router.post(
   checkIn
 );
 
-// EXIT GATE — Calculate fare, release slot
 router.post(
   '/operator/check-out',
   requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER),

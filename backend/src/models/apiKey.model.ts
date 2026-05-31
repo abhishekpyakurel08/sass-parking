@@ -3,6 +3,7 @@ import crypto from 'crypto';
 
 export interface IApiKey extends Document {
   tenantId: Types.ObjectId;
+  userId?: Types.ObjectId;
   name: string;
   keyHash: string;
   prefix: string;
@@ -14,6 +15,7 @@ export interface IApiKey extends Document {
 
 const apiKeySchema = new Schema<IApiKey>({
   tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true },
+  userId:   { type: Schema.Types.ObjectId, ref: 'User', index: true, sparse: true },
   name: { type: String, required: true },
   keyHash: { type: String, required: true },
   prefix: { type: String, required: true },
@@ -23,9 +25,6 @@ const apiKeySchema = new Schema<IApiKey>({
 
 export const ApiKey = model<IApiKey>('ApiKey', apiKeySchema);
 
-/**
- * Generates a raw API key and returns its secure hashed version
- */
 export const generateApiKeyValues = () => {
   const token = crypto.randomBytes(32).toString('hex');
   const prefix = token.substring(0, 8);

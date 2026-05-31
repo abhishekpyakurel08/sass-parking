@@ -7,10 +7,7 @@ import { UserRole } from '../types/enums.js';
 const router: Router = Router();
 router.use(authenticate);
 
-// Global — SUPER_ADMIN only (no tenant middleware — intentionally unrestricted)
 router.get('/global', requireRole(UserRole.SUPER_ADMIN), getGlobalAnalytics);
-
-// Tenant-scoped
-router.get('/tenant', requireRole(UserRole.TENANT_OWNER), tenantMiddleware, getTenantAnalytics);
+router.get('/tenant', requireRole(UserRole.TENANT_OWNER, UserRole.GATE_STAFF), tenantMiddleware, getTenantAnalytics);
 
 export default router;

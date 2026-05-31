@@ -36,20 +36,14 @@ const __dirname  = path.dirname(__filename);
 
 const app: Application = express();
 
-// ─── Security Headers ─
-
 app.use(helmet());
 
-// ─── CORS ────
 const allowedOrigins = env.CORS_ORIGIN.split(',').map(o => o.trim());
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, server-to-server)
     if (!origin) return callback(null, true);
-    // Allow any explicitly configured origin
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    // Allow any subdomain of tecobit.cloud (covers current + future deployments)
     if (/^https?:\/\/[a-z0-9-]+\.tecobit\.cloud$/.test(origin)) return callback(null, true);
     callback(new Error(`CORS: origin '${origin}' not allowed`));
   },
@@ -58,45 +52,54 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID'],
 }));
 
-// ─── Rate Limiting ───────────────────────────────────────────────────────────
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, message: 'Too many requests — please try again later' },
-});
-
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
-  message: { success: false, message: 'Too many auth attempts — please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many auth attempts — try again in 15 minutes' },
+  skipSuccessfulRequests: true,
 });
 
-app.use(limiter);
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many requests — please slow down' },
+});
 
-// ─── Body Parsing ─────────────────────────────────────────────────────────────
+const posLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const auth = req.headers.authorization ?? '';
+    if (auth.startsWith('Bearer pk_')) {
+      return `apikey:${auth.substring(10, 26)}`;
+    }
+    return req.ip ?? 'unknown';
+  },
+  message: { success: false, message: 'POS rate limit exceeded — please slow down' },
+});
+
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
 
-// ─── Security Middleware ──────────────────────────────────────────────────────
 app.use(mongoSanitize);     
 app.use(hpp());               
 app.use(compression());       
 
-// ─── Request Logging ─────────────────────────────────────────────────────────
 app.use(morgan('combined', {
   stream: { write: (msg: string) => logger.info(msg.trim()) },
   skip: (_req, res) => res.statusCode < 400 && env.isProd,
 }));
 
-// ─── Swagger UI (public — relaxed CSP so inline scripts/styles render) ────────
 const swaggerDocument = YAML.load(path.join(__dirname, 'config/swagger.yaml'));
 app.use(
   '/api-docs',
-  // Helmet's default CSP blocks Swagger UI's inline scripts/styles → 403.
-  // We override CSP only for this route to allow them.
   helmet({
     contentSecurityPolicy: {
       directives: {
@@ -116,7 +119,6 @@ app.use(
   })
 );
 
-// ─── Root Route ──────
 app.get('/', (_req: Request, res: Response) => {
   res.status(200).json({
     success: true,
@@ -127,7 +129,6 @@ app.get('/', (_req: Request, res: Response) => {
   });
 });
 
-// ─── Health Check ──────
 app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({
     success: true,
@@ -139,24 +140,21 @@ app.get('/health', (_req: Request, res: Response) => {
   });
 });
 
-// ─── API Routes ───────────────────────────────────────────────────────────────
 app.use('/api/v1/auth',      authLimiter, authRoutes);
 app.use('/api/v1/user',      authLimiter, userRoutes);
-app.use('/api/v1/tenants',   tenantRoutes);
-app.use('/api/v1/parking',   parkingRoutes);
-app.use('/api/v1/rates',     ratesRoutes);
-app.use('/api/v1/customers', customerRoutes);
-app.use('/api/v1/analytics', analyticsRoutes);
-app.use('/api/v1/audit-logs', auditLogRoutes);
-app.use('/api/v1/sync',      syncRoutes);
-app.use('/api/v1/api-keys',  apiKeyRoutes);
-app.use('/api/v1',           operatorRoutes);
+app.use('/api/v1/tenants',   apiLimiter,  tenantRoutes);
+app.use('/api/v1/parking',   posLimiter,  parkingRoutes);
+app.use('/api/v1/rates',     apiLimiter,  ratesRoutes);
+app.use('/api/v1/customers', apiLimiter,  customerRoutes);
+app.use('/api/v1/analytics', apiLimiter,  analyticsRoutes);
+app.use('/api/v1/audit-logs', apiLimiter, auditLogRoutes);
+app.use('/api/v1/sync',      posLimiter,  syncRoutes);
+app.use('/api/v1/api-keys',  apiLimiter,  apiKeyRoutes);
+app.use('/api/v1',           posLimiter,  operatorRoutes);
 
-// ─── Error Handling ───────────────────────────────────────────────────────────
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-// ─── Graceful Shutdown ────────────────────────────────────────────────────────
 const startServer = async (): Promise<void> => {
   await connectDB();
 
@@ -170,7 +168,6 @@ const startServer = async (): Promise<void> => {
       logger.info('HTTP server closed');
       process.exit(0);
     });
-    // Force exit after 10s
     setTimeout(() => process.exit(1), 10_000);
   };
 

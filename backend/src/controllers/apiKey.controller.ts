@@ -23,7 +23,7 @@ export const createApiKey = async (req: Request, res: Response, next: NextFuncti
         id: apiKey._id,
         name: apiKey.name,
         prefix: apiKey.prefix,
-        rawKey, // This is the ONLY time the raw key is shown to the user!
+        rawKey,
         isActive: apiKey.isActive,
         createdAt: apiKey.createdAt
       }

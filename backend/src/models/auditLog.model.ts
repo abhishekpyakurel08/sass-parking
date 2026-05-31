@@ -20,7 +20,6 @@ const auditLogSchema = new Schema<IAuditLog>({
   ipAddress: { type: String, default: '0.0.0.0' }
 }, { timestamps: true });
 
-// Logs automatically expire after 90 days to save database space
 auditLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
 
 export const AuditLog = model<IAuditLog>('AuditLog', auditLogSchema);

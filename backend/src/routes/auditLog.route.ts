@@ -6,7 +6,6 @@ import { UserRole } from '../types/enums.js';
 
 const router: Router = Router();
 
-// Only TENANT_OWNER and SUPER_ADMIN can view logs
 router.use(authenticate);
 router.use(requireRole(UserRole.TENANT_OWNER, UserRole.SUPER_ADMIN));
 router.use(tenantMiddleware);

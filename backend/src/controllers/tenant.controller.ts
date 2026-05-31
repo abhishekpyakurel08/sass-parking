@@ -1,10 +1,12 @@
 import type { Request, Response, NextFunction } from 'express';
 import { Tenant } from '../models/tenant.model.js';
 import { User } from '../models/user.model.js';
-import { ConflictError, NotFoundError } from '../errors/ApiError.js';
+import { ApiKey, generateApiKeyValues } from '../models/apiKey.model.js';
+import { ConflictError, NotFoundError, ValidationError } from '../errors/ApiError.js';
 import { UserRole } from '../types/enums.js';
 import bcrypt from 'bcryptjs';
 import { env } from '../config/env.js';
+import { invalidateTenant, invalidateApiKeysForUser } from '../utils/cache.js';
 
 
 export const getAllTenants = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -40,11 +42,13 @@ export const createTenant = async (req: Request, res: Response, next: NextFuncti
 
 export const updateTenant = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const updates = req.body;
 
     const tenant = await Tenant.findByIdAndUpdate(id, { $set: updates }, { new: true, runValidators: true });
     if (!tenant) return next(new NotFoundError('Tenant not found'));
+
+    invalidateTenant(id);
 
     res.status(200).json({ success: true, data: tenant });
   } catch (err) { next(err); }
@@ -57,7 +61,6 @@ export const deleteTenant = async (req: Request, res: Response, next: NextFuncti
     const tenant = await Tenant.findByIdAndDelete(id);
     if (!tenant) return next(new NotFoundError('Tenant not found'));
 
-    // Cascade: deactivate all tenant users
     await User.updateMany({ tenant_id: id }, { $set: { refresh_token: null } });
 
     res.status(200).json({ success: true, message: 'Tenant deleted successfully' });
@@ -76,7 +79,6 @@ export const getMyTenant = async (req: Request, res: Response, next: NextFunctio
 export const updateMyTenant = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const updates = req.body;
-    // Prevent updating sensitive fields
     delete updates.status;
     delete updates.corporate_email;
     delete updates.total_capacity;
@@ -98,20 +100,15 @@ export const createStaff = async (req: Request, res: Response, next: NextFunctio
     const { name, email, password, gate_assignment, ticket_prefix } = req.body;
     const tenantId = req.tenant!.tenantId;
 
+    const staffCount = await User.countDocuments({ tenant_id: tenantId, role: UserRole.GATE_STAFF });
+    if (staffCount >= 2) {
+      return next(new ValidationError('Staff limit reached. Tenants can only create up to 2 staff members.'));
+    }
+
     const existing = await User.findOne({ email });
     if (existing) return next(new ConflictError('User with this email already exists'));
 
     const password_hash = await bcrypt.hash(password, env.BCRYPT_ROUNDS);
-    
-    let finalPrefix = ticket_prefix;
-    if (!finalPrefix || finalPrefix.trim() === '') {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let code = '';
-      for (let i = 0; i < 4; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      finalPrefix = `P-T-R-${code}`;
-    }
 
     const staff = await User.create({
       tenant_id: tenantId,
@@ -120,12 +117,36 @@ export const createStaff = async (req: Request, res: Response, next: NextFunctio
       password_hash,
       role: UserRole.GATE_STAFF,
       gate_assignment,
-      ticket_prefix: finalPrefix,
+      ticket_prefix: ticket_prefix?.trim() || '',
+    });
+
+    const { rawKey, prefix, keyHash } = generateApiKeyValues();
+    const apiKey = await ApiKey.create({
+      tenantId,
+      userId: staff._id,
+      name: `Auto: ${name}`,
+      prefix,
+      keyHash,
+      isActive: true,
     });
 
     res.status(201).json({
       success: true,
-      data: { id: staff._id, name: staff.name, email: staff.email, role: staff.role, gate_assignment: staff.gate_assignment, ticket_prefix: staff.ticket_prefix },
+      data: {
+        id:             staff._id,
+        name:           staff.name,
+        email:          staff.email,
+        role:           staff.role,
+        gate_assignment: staff.gate_assignment,
+        ticket_prefix:  staff.ticket_prefix,
+      },
+      api_key: {
+        id:      apiKey._id,
+        name:    apiKey.name,
+        prefix:  apiKey.prefix,
+        raw_key: rawKey,
+        note:    'Store this key securely — it will not be shown again.',
+      },
     });
   } catch (err) { next(err); }
 };
@@ -163,7 +184,7 @@ export const updateStaff = async (req: Request, res: Response, next: NextFunctio
       if (!ticket_prefix || ticket_prefix.trim() === '') {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         let code = '';
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 6; i++) {
           code += chars.charAt(Math.floor(Math.random() * chars.length));
         }
         staff.ticket_prefix = `P-T-R-${code}`;
@@ -184,10 +205,49 @@ export const updateStaff = async (req: Request, res: Response, next: NextFunctio
 
 export const deleteStaff = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const staff = await User.findOneAndDelete({ _id: id, tenant_id: req.tenant!.tenantId, role: UserRole.GATE_STAFF });
     if (!staff) return next(new NotFoundError('Staff member not found'));
 
-    res.status(200).json({ success: true, message: 'Staff member deleted successfully' });
+    await ApiKey.deleteMany({ userId: id });
+    invalidateApiKeysForUser(id);
+
+    res.status(200).json({ success: true, message: 'Staff member and their API keys deleted successfully' });
+  } catch (err) { next(err); }
+};
+
+
+export const regenerateStaffApiKey = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const tenantId = req.tenant!.tenantId;
+
+    const staff = await User.findOne({ _id: id, tenant_id: tenantId, role: UserRole.GATE_STAFF });
+    if (!staff) return next(new NotFoundError('Staff member not found'));
+
+    await ApiKey.deleteMany({ userId: id, tenantId });
+    invalidateApiKeysForUser(id);
+
+    const { rawKey, prefix, keyHash } = generateApiKeyValues();
+    const apiKey = await ApiKey.create({
+      tenantId,
+      userId: staff._id,
+      name: `Auto: ${staff.name}`,
+      prefix,
+      keyHash,
+      isActive: true,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'API key regenerated. Previous keys have been revoked.',
+      api_key: {
+        id:      apiKey._id,
+        name:    apiKey.name,
+        prefix:  apiKey.prefix,
+        raw_key: rawKey,
+        note:    'Store this key securely — it will not be shown again.',
+      },
+    });
   } catch (err) { next(err); }
 };

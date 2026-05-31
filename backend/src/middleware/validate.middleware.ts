@@ -12,7 +12,7 @@ export const validate = (schema: ZodSchema) => {
       }));
       return next(new ValidationError('Request validation failed', formatted));
     }
-    req.body = result.data; // Replace with coerced/defaulted data
+    req.body = result.data;
     next();
   };
 };

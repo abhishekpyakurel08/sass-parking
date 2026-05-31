@@ -14,7 +14,7 @@ import { createCustomerSchema, updateCustomerSchema, regenerateCustomerQrSchema 
 import { UserRole } from '../types/enums.js';
 
 const router: Router = Router();
-router.use(authenticate, tenantMiddleware, requireRole(UserRole.TENANT_OWNER)); // Only TENANT_OWNER can manage customers
+router.use(authenticate, tenantMiddleware, requireRole(UserRole.TENANT_OWNER));
 
 router.route('/')
   .post(validate(createCustomerSchema), createCustomer)
@@ -25,6 +25,6 @@ router.route('/:id')
   .patch(validate(updateCustomerSchema), updateCustomer)
   .delete(deleteCustomer);
 
-router.post('/:id/regenerate-qr', validate(regenerateCustomerQrSchema), regenerateCustomerQr); // Specific endpoint for QR
+router.post('/:id/regenerate-qr', validate(regenerateCustomerQrSchema), regenerateCustomerQr);
 
 export default router;

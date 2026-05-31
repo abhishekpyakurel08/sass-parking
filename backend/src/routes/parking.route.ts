@@ -9,22 +9,22 @@ import {
   exportReport,
   getReceipt,
 } from '../controllers/parking.controller.js';
-import { authenticate, requireRole } from '../middleware/auth.middleware.js';
+import { authenticateAny, requireRole } from '../middleware/auth.middleware.js';
 import { tenantMiddleware } from '../middleware/tenant.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import {
   checkInSchema,
   checkOutSchema,
   scanSchema,
-  lostTicketSchema,   // New
-  processPaymentSchema, // New
+  lostTicketSchema,
+  processPaymentSchema,
 } from '../utils/validation.schemas.js';
 import { UserRole } from '../types/enums.js';
 
 import { auditAction } from '../middleware/auditLogger.js';
 
 const router: Router = Router();
-router.use(authenticate, tenantMiddleware);
+router.use(authenticateAny, tenantMiddleware);
 
 router.post('/check-in',  requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER), validate(checkInSchema), auditAction('Parking:CheckIn'), checkIn);
 router.post('/check-out', requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER), validate(checkOutSchema), auditAction('Parking:CheckOut'), checkOut);

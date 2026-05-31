@@ -1,13 +1,13 @@
 import type { Request, Response } from 'express';
+import { randomBytes } from 'node:crypto';
 import mongoose from 'mongoose';
 import { Ticket } from '../models/ticket.model.js';
 import { TicketStatus } from '../types/enums.js';
 import { HourlyRate } from '../models/hourlyRate.model.js';
 import { Customer } from '../models/customer.model.js';
-import crypto from 'crypto';
+import { generateTicketNumber } from '../utils/ticketNumber.js';
 import QRCode from 'qrcode';
 
-// 🟩 VEHICLE CHECK-IN (legacy endpoint — kept for backward compat)
 export const vehicleCheckIn = async (req: Request, res: Response): Promise<void> => {
   try {
     const { license_plate, vehicle_type, customer_code } = req.body;
@@ -33,14 +33,13 @@ export const vehicleCheckIn = async (req: Request, res: Response): Promise<void>
       }
       customerId = customer._id;
       if (!resolvedLicensePlate) {
-        resolvedLicensePlate = `CUSTOMER-${customer_code}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+        resolvedLicensePlate = `CUSTOMER-${customer_code}-${randomBytes(4).toString('hex').toUpperCase()}`;
       }
     } else if (!license_plate) {
       res.status(400).json({ success: false, message: 'Either license plate or customer code must be provided for check-in' });
       return;
     }
 
-    // Check if an active ticket already exists for this plate
     const existingActiveTicket = await Ticket.findOne({
       tenant_id: tenantId,
       license_plate: resolvedLicensePlate.toUpperCase(),
@@ -62,13 +61,13 @@ export const vehicleCheckIn = async (req: Request, res: Response): Promise<void>
       fare_amount: 0,
       penalty_amount: 0,
       discount_amount: 0,
-      ticket_number: crypto.randomUUID(),
+      ticket_number: generateTicketNumber(vehicle_type),
     });
 
     let qrCode = '';
     try {
       qrCode = await QRCode.toDataURL(JSON.stringify({ ticket_id: ticket._id, license_plate: ticket.license_plate }));
-    } catch { /* QR code generation failed, proceed without it */ }
+    } catch {}
 
     res.status(201).json({
       success: true,
@@ -88,7 +87,6 @@ export const vehicleCheckIn = async (req: Request, res: Response): Promise<void>
   }
 };
 
-// 🟥 VEHICLE CHECK-OUT (legacy endpoint)
 export const vehicleCheckOut = async (req: Request, res: Response): Promise<void> => {
   try {
     const { ticket_id, license_plate } = req.body;
@@ -110,8 +108,8 @@ export const vehicleCheckOut = async (req: Request, res: Response): Promise<void
     const cleanIdentifier = (identifier as string).trim();
     if (mongoose.isValidObjectId(cleanIdentifier)) {
       query._id = cleanIdentifier;
-    } else if (/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(cleanIdentifier)) {
-      query.ticket_number = cleanIdentifier;
+    } else if (/^PKT-[A-Z]{2}-\d{4}$/i.test(cleanIdentifier)) {
+      query.ticket_number = cleanIdentifier.toUpperCase();
     } else {
       query.license_plate = cleanIdentifier.toUpperCase();
     }
@@ -132,7 +130,7 @@ export const vehicleCheckOut = async (req: Request, res: Response): Promise<void
       vehicle_type: ticket.vehicle_type,
     });
 
-    const rate_per_hour = rateDoc?.rate_per_hour ?? 50; // Fallback default
+    const rate_per_hour = rateDoc?.rate_per_hour ?? 50;
     const grace_period_minutes = rateDoc?.grace_period_minutes ?? 0;
 
     let base_fare = 0;
@@ -149,7 +147,6 @@ export const vehicleCheckOut = async (req: Request, res: Response): Promise<void
       total_charge_before_discount_or_grace = 0;
     }
 
-    // Apply customer discount if available
     if (ticket.customer_id && typeof (ticket.customer_id as any).discount_percentage === 'number' && base_fare > 0) {
       const customerDiscountPct = (ticket.customer_id as any).discount_percentage;
       discount_amount = base_fare * (customerDiscountPct / 100);
@@ -171,7 +168,7 @@ export const vehicleCheckOut = async (req: Request, res: Response): Promise<void
         vehicle_type: ticket.vehicle_type,
         check_in_time: ticket.check_in_time,
         check_out_time: checkOutTime,
-        duration_hours: (durationMs / (1000 * 60 * 60)), // duration in hours (float)
+        duration_hours: (durationMs / (1000 * 60 * 60)),
         duration_minutes: durationMs / (1000 * 60),
         rate_per_hour,
         subtotal: total_charge_before_discount_or_grace,
@@ -185,7 +182,6 @@ export const vehicleCheckOut = async (req: Request, res: Response): Promise<void
   }
 };
 
-// 📊 DAILY STATS
 export const getDailyStats = async (req: Request, res: Response): Promise<void> => {
   try {
     const tenantId = req.tenant?.tenantId;

@@ -52,7 +52,6 @@ export const register = async (req: Request, res: Response, next: NextFunction):
   }
 };
 
-
 export const login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { email, password } = req.body;
@@ -66,7 +65,6 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
       return next(new AuthError('Invalid email or password'));
     }
 
-    // Tenant users: check tenant status
     if (user.tenant_id) {
       const tenant = await Tenant.findById(user.tenant_id);
       if (tenant?.status === TenantStatus.SUSPENDED) {
@@ -83,7 +81,6 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     const accessToken  = signAccessToken(payload);
     const refreshToken = signRefreshToken(payload);
 
-    // Store hashed refresh token for rotation validation
     user.refresh_token = refreshToken;
     await user.save();
 
@@ -91,7 +88,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
       httpOnly: true,
       secure: env.isProd,
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.status(200).json({
@@ -115,7 +112,6 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     next(err);
   }
 };
-
 
 export const refresh = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -147,7 +143,6 @@ export const refresh = async (req: Request, res: Response, next: NextFunction): 
     const newAccessToken  = signAccessToken(payload);
     const newRefreshToken = signRefreshToken(payload);
 
-    // Rotate: store new refresh token
     user.refresh_token = newRefreshToken;
     await user.save();
 
@@ -169,7 +164,6 @@ export const refresh = async (req: Request, res: Response, next: NextFunction): 
     next(err);
   }
 };
-
 
 export const logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {

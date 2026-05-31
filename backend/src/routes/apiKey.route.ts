@@ -7,7 +7,6 @@ import { UserRole } from '../types/enums.js';
 
 const router: Router = Router();
 
-// Only TENANT_OWNER and GATE_STAFF (Operator) can manage API keys
 router.use(authenticate);
 router.use(requireRole(UserRole.TENANT_OWNER, UserRole.GATE_STAFF));
 router.use(tenantMiddleware);

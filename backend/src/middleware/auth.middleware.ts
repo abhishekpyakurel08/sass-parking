@@ -2,11 +2,8 @@ import type { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../utils/jwt.js';
 import { AuthError, ForbiddenError } from '../errors/ApiError.js';
 import { UserRole } from '../types/enums.js';
+import { apiKeyAuth } from './apiKeyAuth.middleware.js';
 
-/**
- * Verifies the Bearer access token and injects req.user.
- * Must run before tenantMiddleware and requireRole.
- */
 export const authenticate = (req: Request, _res: Response, next: NextFunction): void => {
   try {
     const authHeader = req.headers.authorization;
@@ -36,17 +33,11 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction): 
   }
 };
 
-/**
- * Role-based access control guard.
- * Call AFTER authenticate().
- * SUPER_ADMIN always passes regardless of roles list.
- */
 export const requireRole = (...roles: UserRole[]) => {
   return (req: Request, _res: Response, next: NextFunction): void => {
     const user = req.user;
     if (!user) return next(new AuthError('Not authenticated'));
 
-    // SUPER_ADMIN bypasses all role restrictions
     if (user.role === UserRole.SUPER_ADMIN) return next();
 
     if (!roles.includes(user.role as UserRole)) {
@@ -58,4 +49,18 @@ export const requireRole = (...roles: UserRole[]) => {
     }
     next();
   };
+};
+
+export const authenticateAny = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  const authHeader = req.headers.authorization ?? '';
+
+  if (authHeader.startsWith('Bearer pk_')) {
+    apiKeyAuth(req, res, next);
+  } else {
+    authenticate(req, res, next);
+  }
 };

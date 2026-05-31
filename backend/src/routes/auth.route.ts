@@ -6,16 +6,9 @@ import { registerSchema, loginSchema, refreshTokenSchema } from '../utils/valida
 
 const router: Router = Router();
 
-// POST /api/v1/auth/register
 router.post('/register', validate(registerSchema), register);
-
-// POST /api/v1/auth/login
 router.post('/login', validate(loginSchema), login);
-
-// POST /api/v1/auth/refresh
 router.post('/refresh', refresh);
-
-// POST /api/v1/auth/logout
 router.post('/logout', authenticate, logout);
 
 export default router;

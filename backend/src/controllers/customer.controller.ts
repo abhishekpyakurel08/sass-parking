@@ -3,9 +3,7 @@ import { Customer } from '../models/customer.model.js';
 import { ConflictError, NotFoundError, ValidationError } from '../errors/ApiError.js';
 import { CustomerStatus } from '../types/enums.js';
 import { generateQrCodeDataUri } from '../utils/qr.js';
-import crypto from 'crypto';
 
-// POST /api/v1/customers
 export const createCustomer = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const tenantId = req.tenant!.tenantId;
@@ -18,7 +16,6 @@ export const createCustomer = async (req: Request, res: Response, next: NextFunc
       if (phone_number && existing.phone_number === phone_number) return next(new ConflictError('Customer with this phone number already exists.'));
     }
 
-    const qr_data = customer_code; // Use customer_code as QR data
     const customer = await Customer.create({
       tenant_id: tenantId,
       name,
@@ -27,14 +24,13 @@ export const createCustomer = async (req: Request, res: Response, next: NextFunc
       phone_number,
       discount_percentage,
       status: CustomerStatus.ACTIVE,
-      qr_data,
+      qr_data: customer_code,
     });
 
     res.status(201).json({ success: true, data: customer });
   } catch (err) { next(err); }
 };
 
-// GET /api/v1/customers
 export const getCustomers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const tenantId = req.tenant!.tenantId;
@@ -56,7 +52,6 @@ export const getCustomers = async (req: Request, res: Response, next: NextFuncti
   } catch (err) { next(err); }
 };
 
-// GET /api/v1/customers/:id
 export const getCustomerById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const tenantId = req.tenant!.tenantId;
@@ -69,7 +64,6 @@ export const getCustomerById = async (req: Request, res: Response, next: NextFun
   } catch (err) { next(err); }
 };
 
-// PATCH /api/v1/customers/:id
 export const updateCustomer = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const tenantId = req.tenant!.tenantId;
@@ -87,7 +81,6 @@ export const updateCustomer = async (req: Request, res: Response, next: NextFunc
   } catch (err) { next(err); }
 };
 
-// DELETE /api/v1/customers/:id
 export const deleteCustomer = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const tenantId = req.tenant!.tenantId;
@@ -100,7 +93,6 @@ export const deleteCustomer = async (req: Request, res: Response, next: NextFunc
   } catch (err) { next(err); }
 };
 
-// POST /api/v1/customers/:id/regenerate-qr
 export const regenerateCustomerQr = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const tenantId = req.tenant!.tenantId;
@@ -111,7 +103,6 @@ export const regenerateCustomerQr = async (req: Request, res: Response, next: Ne
 
     if (!customer.customer_code) return next(new ValidationError('Customer does not have a customer code to generate QR from.'));
 
-    // Re-generate QR code data URL using the existing customer_code
     const newQrCodeDataUrl = await generateQrCodeDataUri(customer.customer_code);
 
     res.status(200).json({

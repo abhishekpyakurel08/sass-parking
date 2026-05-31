@@ -23,6 +23,7 @@ export const useTenantStore = defineStore('tenant', () => {
   const ticketHistory = ref<any[]>([]);
   const ticketPagination = ref({ page: 1, totalPages: 1, total: 0 });
   const ticketFilter = ref<'ALL' | 'ACTIVE' | 'PENDING_PAYMENT' | 'PAID' | 'EXPIRED'>('ALL');
+  const analyticsFilter = ref<'today' | 'weekly' | 'monthly'>('today');
 
   const staffList = ref<any[]>([]);
   const rates = ref<any[]>([]);
@@ -81,10 +82,11 @@ export const useTenantStore = defineStore('tenant', () => {
   };
 
   // ── Analytics ─────────────────────────────────────────────────────────────────
-  const fetchRevenueAnalytics = async () => {
+  const fetchRevenueAnalytics = async (filter?: string) => {
     isLoading.value = true;
     try {
-      const res = await fetch(`${BASE_URL}/api/v1/analytics/tenant`, { headers: authHeaders() });
+      const activeFilter = filter || analyticsFilter.value;
+      const res = await fetch(`${BASE_URL}/api/v1/analytics/tenant?filter=${activeFilter}`, { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
         revenueAnalytics.value = data.data;
@@ -270,10 +272,11 @@ export const useTenantStore = defineStore('tenant', () => {
     finally { isLoading.value = false; }
   };
 
-  const exportReport = async () => {
+  const exportReport = async (filter?: string) => {
     isLoading.value = true;
     try {
-      const res = await fetch(`${BASE_URL}/api/v1/parking/export`, {
+      const activeFilter = filter || analyticsFilter.value;
+      const res = await fetch(`${BASE_URL}/api/v1/parking/export?filter=${activeFilter}`, {
         method: 'GET',
         headers: authHeaders()
       });
@@ -330,7 +333,7 @@ export const useTenantStore = defineStore('tenant', () => {
   return {
     activeTab, isLoading,
     profile, fetchProfile, updateProfile,
-    revenueAnalytics, fetchRevenueAnalytics,
+    revenueAnalytics, analyticsFilter, fetchRevenueAnalytics,
     ticketHistory, ticketPagination, ticketFilter, fetchTicketHistory,
     staffList, fetchStaff, createStaff, updateStaff, deleteStaff,
     rates, fetchRates, upsertRate,

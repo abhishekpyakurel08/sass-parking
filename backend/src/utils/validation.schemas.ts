@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { PaymentMethod } from '../types/enums.js';
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
 export const registerSchema = z.object({
   name: z.string().min(2, 'Business name must be at least 2 characters'),
   corporate_email: z.string().email('Invalid corporate email'),
@@ -20,7 +19,6 @@ export const refreshTokenSchema = z.object({
   refresh_token: z.string().min(1, 'Refresh token is required'),
 });
 
-// ── Tenants ───────────────────────────────────────────────────────────────────
 export const createTenantSchema = z.object({
   name: z.string().min(2),
   corporate_email: z.string().email(),
@@ -33,7 +31,6 @@ export const updateTenantSchema = z.object({
   status: z.enum(['ACTIVE', 'SUSPENDED']).optional(),
 });
 
-// ── Check-in / Check-out ──────────────────────────────────────────────────────
 export const checkInSchema = z.object({
   license_plate: z.string().min(2).max(20, 'License plate too long').optional(),
   vehicle_type: z.enum(['CAR', 'BIKE', 'TRUCK', 'SUV', 'BUS']),
@@ -73,21 +70,19 @@ export const processPaymentSchema = z.object({
   }
 });
 
-// ── Rates ─────────────────────────────────────────────────────────────────────
 export const createRateSchema = z.object({
   vehicle_type: z.enum(['CAR', 'BIKE', 'TRUCK', 'SUV', 'BUS']),
   rate_per_hour: z.number().positive('Rate must be a positive number'),
   lost_ticket_penalty: z.number().min(0).default(0).optional(),
-  grace_period_minutes: z.number().int().min(0).default(0).optional(), // Added grace_period_minutes
+  grace_period_minutes: z.number().int().min(0).default(0).optional(),
 });
 
 export const updateRateSchema = z.object({
   rate_per_hour: z.number().positive('Rate must be a positive number').optional(),
   lost_ticket_penalty: z.number().min(0).optional(),
-  grace_period_minutes: z.number().int().min(0).optional(), // Added grace_period_minutes
+  grace_period_minutes: z.number().int().min(0).optional(),
 });
 
-// ── Staff creation ────────────────────────────────────────────────────────────
 export const createStaffSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
@@ -96,12 +91,10 @@ export const createStaffSchema = z.object({
   ticket_prefix: z.string().optional(),
 });
 
-// ── Scan ──────────────────────────────────────────────────────────────────────
 export const scanSchema = z.object({
   code: z.string().min(1, 'Scan code (barcode UUID or license plate) is required'),
 });
 
-// ── Customer Management ───────────────────────────────────────────────────────
 export const createCustomerSchema = z.object({
   name: z.string().min(2, 'Customer name is required'),
   customer_code: z.string().min(1, 'Customer code is required').max(50, 'Customer code too long'),
@@ -121,4 +114,3 @@ export const updateCustomerSchema = z.object({
 export const regenerateCustomerQrSchema = z.object({
   customer_id: z.string().min(1, 'Customer ID is required'),
 });
-

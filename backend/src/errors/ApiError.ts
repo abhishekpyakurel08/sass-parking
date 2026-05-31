@@ -1,8 +1,3 @@
-// ────────────────────────────────────────────────────────────────────────────
-// Custom Error Hierarchy
-// All errors extend ApiError so the global handler can process them uniformly
-// ────────────────────────────────────────────────────────────────────────────
-
 export class ApiError extends Error {
   public readonly statusCode: number;
   public readonly errors: unknown[];

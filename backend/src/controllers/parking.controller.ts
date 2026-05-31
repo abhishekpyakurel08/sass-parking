@@ -15,13 +15,8 @@ import { TicketStatus, PaymentMethod, UserRole, GateAssignment } from '../types/
 import { logTransaction } from '../utils/logger.js';
 import { generateQrCodeDataUri } from '../utils/qr.js';
 import { calculateFare } from '../utils/billing.js';
+import { generateTicketNumber } from '../utils/ticketNumber.js';
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// POST /api/v1/parking/check-in
-// Creates a new parking ticket for a vehicle entering the facility.
-// Supports standard entry or regular customer (NFC/QR) entry.
-// ─────────────────────────────────────────────────────────────────────────────
 export const checkIn = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -33,7 +28,6 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction): 
     let customer = null;
     let customerId = undefined;
 
-    // Handle customer entry if customer_code is provided
     if (customer_code) {
       customer = await Customer.findOne({ tenant_id: tenantId, customer_code }).session(session);
       if (!customer) {
@@ -45,7 +39,6 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction): 
         return next(new ValidationError(`Customer account is ${customer.status}.`));
       }
       customerId = customer._id;
-      // If no license plate is provided for customer, use a placeholder or require it
       if (!resolvedLicensePlate) {
         resolvedLicensePlate = `CUSTOMER-${customer_code}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
       }
@@ -53,7 +46,6 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction): 
       resolvedLicensePlate = `GUEST-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
     }
 
-    // Check no active ticket exists for this plate
     const activeTicket = await Ticket.findOne({
       tenant_id: tenantId,
       license_plate: resolvedLicensePlate.toUpperCase(),
@@ -70,18 +62,7 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction): 
       await session.abortTransaction();
       return next(new ForbiddenError('Access denied: You are only authorized to process exits.'));
     }
-    let prefix = staffUser?.ticket_prefix ? `${staffUser.ticket_prefix}-` : '';
-    if (!prefix) {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let code = '';
-      for (let i = 0; i < 4; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      prefix = `P-T-R-${code}-`;
-    }
-
-    const baseUUID = crypto.randomUUID();
-    const ticketUUID = `${prefix}${baseUUID}`;
+    const ticketUUID = generateTicketNumber(vehicle_type);
     const entryTime = new Date();
 
     const ticket = await Ticket.create(
@@ -94,8 +75,8 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction): 
         check_in_time: entryTime,
         status: TicketStatus.ACTIVE,
         fare_amount: 0,
-        penalty_amount: 0, // Default to 0
-        discount_amount: customer ? customer.discount_percentage : 0, // Store discount %
+        penalty_amount: 0,
+        discount_amount: customer ? customer.discount_percentage : 0,
         notes: notes || '',
       }],
       { session }
@@ -118,7 +99,6 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction): 
     const pad = (n: number) => n.toString().padStart(2, '0');
     const formattedDate = `${entryTime.getFullYear()}-${pad(entryTime.getMonth() + 1)}-${pad(entryTime.getDate())} ${pad(entryTime.getHours())}:${pad(entryTime.getMinutes())}:${pad(entryTime.getSeconds())}`;
 
-    // Generate ASCII printable receipt format (simplified as no space info)
     const printableReceipt = [
       '========================================',
       `          ${businessName.toUpperCase().padEnd(28).substring(0, 28)}`,
@@ -131,7 +111,7 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction): 
       '----------------------------------------',
       '      PLEASE SCAN QR CODE TO EXIT',
       '========================================',
-    ].filter(Boolean).join('\n'); // Filter out empty strings if no customer
+    ].filter(Boolean).join('\n');
 
     res.status(201).json({
       success: true,
@@ -142,7 +122,7 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction): 
         vehicle_type: ticket[0].vehicle_type,
         check_in_time: ticket[0].check_in_time,
         qr_code_url: qrCodeDataUrl,
-        customer_name: customer?.name, // Pass customer name for frontend display
+        customer_name: customer?.name,
       },
       receipt: {
         business_name: businessName,
@@ -162,11 +142,6 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction): 
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// POST /api/v1/parking/checkout
-// Calculates fare for an active ticket and marks it PENDING_PAYMENT.
-// Applies customer discounts if applicable.
-// ─────────────────────────────────────────────────────────────────────────────
 export const checkOut = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -208,15 +183,12 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
       vehicle_type: ticket.vehicle_type,
     }).session(session);
 
-    // Default rates per business rule: 2W=40, 4W=80. Fallback to 50 if unconfigured.
     const rate_per_hour = rateDoc?.rate_per_hour ?? 50;
 
-    // ── Apply Billing Rule v1 ─────────────────────────────────────────────────
     const billing = calculateFare(durationMins, rate_per_hour);
     let base_fare = billing.base_fare;
     let discount_amount = 0;
 
-    // Apply customer discount on top of calculated fare
     if (ticket.customer_id && typeof (ticket.customer_id as any).discount_percentage === 'number' && base_fare > 0) {
       const customerDiscountPct = (ticket.customer_id as any).discount_percentage;
       discount_amount = Math.round(base_fare * (customerDiscountPct / 100));
@@ -227,7 +199,6 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
     ticket.fare_amount = base_fare;
     ticket.discount_amount = discount_amount;
     ticket.status = TicketStatus.PENDING_PAYMENT;
-    // Store audit alert flag in notes if overstay detected
     if (billing.audit_alert) {
       ticket.notes = (ticket.notes ? ticket.notes + ' | ' : '') + 'AUDIT_ALERT: Overstay > 48h — supervisor review required';
     }
@@ -260,11 +231,11 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
         duration_minutes: durationMins,
         duration_display: billing.duration_display,
         rate_per_hour,
-        breakdown: billing.breakdown,          // itemised line items for receipt
-        subtotal: billing.base_fare,           // gross fare before discount
+        breakdown: billing.breakdown,
+        subtotal: billing.base_fare,
         discount: discount_amount,
-        total_amount: base_fare,               // net payable
-        audit_alert: billing.audit_alert,      // true if overstay > 48h
+        total_amount: base_fare,
+        audit_alert: billing.audit_alert,
         status: ticket.status,
       },
     });
@@ -276,11 +247,6 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
   }
 };
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// POST /api/v1/parking/lost-ticket
-// Handles lost tickets by calculating a penalty and marking for payment.
-// ─────────────────────────────────────────────────────────────────────────────
 export const handleLostTicket = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -294,19 +260,17 @@ export const handleLostTicket = async (req: Request, res: Response, next: NextFu
       return next(new ForbiddenError('Access denied: You are only authorized to process entries.'));
     }
 
-    // Find the hourly rate and lost ticket penalty for the vehicle type
     const rateDoc = await HourlyRate.findOne({
       tenant_id: tenantId,
       vehicle_type: vehicle_type,
     }).session(session);
 
-    const rate_per_hour = rateDoc?.rate_per_hour ?? 50; // Fallback default
-    const lost_ticket_penalty = rateDoc?.lost_ticket_penalty ?? 100; // Fallback default penalty
+    const rate_per_hour = rateDoc?.rate_per_hour ?? 50;
+    const lost_ticket_penalty = rateDoc?.lost_ticket_penalty ?? 100;
 
     const base_fare = assumed_duration_hours * rate_per_hour;
     const total_charge = base_fare + lost_ticket_penalty;
 
-    // Check if an active ticket already exists for this license plate to prevent duplicates
     const existingActiveTicket = await Ticket.findOne({
       tenant_id: tenantId,
       license_plate: license_plate.toUpperCase(),
@@ -318,21 +282,9 @@ export const handleLostTicket = async (req: Request, res: Response, next: NextFu
       return next(new ConflictError('An active ticket already exists for this vehicle. Cannot process as lost.'));
     }
 
-    let prefix = staffUser?.ticket_prefix ? `${staffUser.ticket_prefix}-` : '';
-    if (!prefix) {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let code = '';
-      for (let i = 0; i < 4; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      prefix = `P-T-R-${code}-`;
-    }
-
-    // Create a new ticket with PENDING_PAYMENT status
-    const baseUUID = crypto.randomUUID();
-    const ticketUUID = `${prefix}${baseUUID}`;
-    const entryTime = new Date(); // Approximate entry time for lost ticket
-    const checkOutTime = new Date(); // Now
+    const ticketUUID = generateTicketNumber(vehicle_type);
+    const entryTime = new Date();
+    const checkOutTime = new Date();
 
     const ticket = await Ticket.create(
       [{
@@ -340,12 +292,12 @@ export const handleLostTicket = async (req: Request, res: Response, next: NextFu
         ticket_number: ticketUUID,
         license_plate: license_plate.toUpperCase(),
         vehicle_type,
-        check_in_time: entryTime, // Can be set to a reasonable default or start of day
+        check_in_time: entryTime,
         check_out_time: checkOutTime,
         fare_amount: base_fare,
         penalty_amount: lost_ticket_penalty,
         discount_amount: 0,
-        status: TicketStatus.PENDING_PAYMENT, // Immediately pending payment
+        status: TicketStatus.PENDING_PAYMENT,
         notes: `LOST TICKET - Assumed duration: ${assumed_duration_hours}h`,
       }],
       { session }
@@ -385,11 +337,6 @@ export const handleLostTicket = async (req: Request, res: Response, next: NextFu
   }
 };
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// POST /api/v1/parking/process-payment
-// Completes the payment for a PENDING_PAYMENT ticket.
-// ─────────────────────────────────────────────────────────────────────────────
 export const processPayment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -403,11 +350,19 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
       return next(new ForbiddenError('Access denied: You are only authorized to process entries.'));
     }
 
-    const ticket = await Ticket.findOne({
-      _id: ticket_id,
-      tenant_id: tenantId,
-      status: TicketStatus.PENDING_PAYMENT,
-    }).session(session);
+    const query = mongoose.isValidObjectId(ticket_id)
+      ? { _id: ticket_id, tenant_id: tenantId, status: TicketStatus.PENDING_PAYMENT }
+      : {
+          tenant_id: tenantId,
+          status: TicketStatus.PENDING_PAYMENT,
+          $or: [
+            { ticket_number: ticket_id },
+            { ticket_number: ticket_id.toLowerCase() },
+            { license_plate: ticket_id.toUpperCase() }
+          ]
+        };
+
+    const ticket = await Ticket.findOne(query).session(session);
 
     if (!ticket) {
       await session.abortTransaction();
@@ -432,7 +387,6 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
     ticket.transaction_reference = transaction_reference;
     await ticket.save({ session });
 
-    // Update customer total savings if applicable
     if (ticket.customer_id && ticket.discount_amount > 0) {
       await Customer.findByIdAndUpdate(
         ticket.customer_id,
@@ -448,46 +402,41 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
       ticketId: ticket._id,
       ticket_number: ticket.ticket_number,
       payment_method,
-      total_due,
       amount_received,
       change_given,
+      total_due,
     });
 
-    const businessName = req.tenant?.tenantName || 'Parking System';
+    const entryTime = new Date(ticket.check_in_time);
+    const exitTime = ticket.check_out_time ? new Date(ticket.check_out_time) : new Date();
     const pad = (n: number) => n.toString().padStart(2, '0');
-    const entryTime = ticket.check_in_time;
-    const exitTime = ticket.check_out_time || new Date(); // Use actual exit time or now
+    const fmtDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    const formattedEntryTime = fmtDate(entryTime);
+    const formattedExitTime = fmtDate(exitTime);
     const durationMs = exitTime.getTime() - entryTime.getTime();
-    const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
-    const durationMinutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-    const formattedDuration = `${durationHours}h ${durationMinutes}m`;
-
-    const formattedEntryTime = `${pad(entryTime.getHours())}:${pad(entryTime.getMinutes())}`;
-    const formattedExitTime = `${pad(exitTime.getHours())}:${pad(exitTime.getMinutes())}`;
-
+    const h = Math.floor(durationMs / 3_600_000);
+    const m = Math.floor((durationMs % 3_600_000) / 60_000);
+    const formattedDuration = h > 0 ? `${h}h ${m}m` : `${m}m`;
 
     const printableReceipt = [
       '┌─────────────────────┐',
-      `│ ${businessName.padEnd(19).substring(0, 19)} │`,
-      '│      Center         │',
-      '├─────────────────────┤',
       '│   PARKING RECEIPT   │',
       '│                     │',
-      `│ Ticket: #${ticket.ticket_number.substring(0,8).toUpperCase()}      │`, // Shorten ticket number for receipt
-      `│ Vehicle: ${ticket.vehicle_type.padEnd(10).substring(0,10)}  │`,
+      `│ Ticket: #${ticket.ticket_number.substring(0, 8).toUpperCase()}      │`,
+      `│ Vehicle: ${ticket.vehicle_type.padEnd(10).substring(0, 10)}  │`,
       '│                     │',
       `│ Entry: ${formattedEntryTime}        │`,
       `│ Exit:  ${formattedExitTime}        │`,
-      `│ Duration: ${formattedDuration.padEnd(10).substring(0,10)} │`,
+      `│ Duration: ${formattedDuration.padEnd(10).substring(0, 10)} │`,
       '├─────────────────────┤',
-      `│ Subtotal:   Rs. ${ticket.fare_amount.toFixed(2).padStart(5)} │`,
+      `│ Subtotal:   Rs. ${(ticket.fare_amount || 0).toFixed(2).padStart(5)} │`,
       ticket.discount_amount > 0 ? `│ Discount:   - Rs. ${ticket.discount_amount.toFixed(2).padStart(5)} │` : '',
       ticket.penalty_amount > 0 ? `│ Penalty:    + Rs. ${ticket.penalty_amount.toFixed(2).padStart(5)} │` : '',
       `│ TOTAL:      Rs. ${total_due.toFixed(2).padStart(5)} │`,
       '│                     │',
-      `│ Paid: ${payment_method.padEnd(15).substring(0,15)} │`,
-      payment_method === PaymentMethod.CASH ? `│ Received: Rs. ${amount_received!.toFixed(2).padStart(5)}    │` : '',
-      payment_method === PaymentMethod.CASH ? `│ Change:   Rs. ${change_given.toFixed(2).padStart(5)}     │` : '',
+      `│ Paid: ${(ticket.payment_method || 'N/A').padEnd(15).substring(0, 15)} │`,
+      ticket.payment_method === 'CASH' ? `│ Received: Rs. ${(ticket.amount_received || 0).toFixed(2).padStart(5)}    │` : '',
+      ticket.payment_method === 'CASH' ? `│ Change:   Rs. ${(ticket.change_given || 0).toFixed(2).padStart(5)}     │` : '',
       '│                     │',
       '│   Thank You!   │',
       '└─────────────────────┘',
@@ -514,11 +463,6 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
   }
 };
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// GET /api/v1/parking/scan
-// Scans/Validates a ticket (by barcode barcode/UUID or license plate)
-// ─────────────────────────────────────────────────────────────────────────────
 export const scanTicket = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const tenantId = req.tenant!.tenantId;
@@ -528,15 +472,18 @@ export const scanTicket = async (req: Request, res: Response, next: NextFunction
       return next(new ValidationError('Scan code is required'));
     }
 
-    // Attempt lookup by UUID (ticket_number) first, fallback to license_plate
-    const ticket = await Ticket.findOne({
-      tenant_id: tenantId,
-      $or: [
-        { ticket_number: code },
-        { ticket_number: code.toLowerCase() },
-        { license_plate: code.toUpperCase() }
-      ]
-    }).populate('customer_id'); // Populate customer info if available
+    const query = mongoose.isValidObjectId(code)
+      ? { _id: code, tenant_id: tenantId }
+      : {
+          tenant_id: tenantId,
+          $or: [
+            { ticket_number: code },
+            { ticket_number: code.toLowerCase() },
+            { license_plate: code.toUpperCase() }
+          ]
+        };
+
+    const ticket = await Ticket.findOne(query).populate('customer_id');
 
     if (!ticket) {
       return next(new NotFoundError('No ticket matches the scanned QR code/license plate'));
@@ -575,9 +522,6 @@ export const scanTicket = async (req: Request, res: Response, next: NextFunction
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GET /api/v1/parking/tickets  — paginated active + historical tickets
-// ─────────────────────────────────────────────────────────────────────────────
 export const getTickets = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const tenantId = req.tenant!.tenantId;
@@ -587,11 +531,11 @@ export const getTickets = async (req: Request, res: Response, next: NextFunction
 
     const filter: Record<string, unknown> = { tenant_id: tenantId };
     if (req.query.status) filter.status = req.query.status;
-    if (req.query.customer_id) filter.customer_id = req.query.customer_id; // Allow filtering by customer
+    if (req.query.customer_id) filter.customer_id = req.query.customer_id;
 
     const [tickets, total] = await Promise.all([
       Ticket.find(filter)
-        .populate('customer_id', 'name customer_code discount_percentage') // Populate customer info
+        .populate('customer_id', 'name customer_code discount_percentage')
         .sort({ check_in_time: -1 })
         .skip(skip)
         .limit(limit)
@@ -607,13 +551,29 @@ export const getTickets = async (req: Request, res: Response, next: NextFunction
   } catch (err) { next(err); }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GET /api/v1/parking/export  — Export entire ticket history as CSV
-// ─────────────────────────────────────────────────────────────────────────────
 export const exportReport = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const tenantId = req.tenant!.tenantId;
-    const tickets = await Ticket.find({ tenant_id: tenantId })
+    const { filter = 'all' } = req.query;
+
+    const query: any = { tenant_id: tenantId };
+    
+    const now = new Date();
+    let startDate: Date | null = null;
+
+    if (filter === 'today') {
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    } else if (filter === 'weekly') {
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    } else if (filter === 'monthly') {
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    }
+
+    if (startDate) {
+      query.check_in_time = { $gte: startDate };
+    }
+
+    const tickets = await Ticket.find(query)
       .populate('customer_id', 'name')
       .sort({ check_in_time: -1 })
       .lean();
@@ -636,43 +596,58 @@ export const exportReport = async (req: Request, res: Response, next: NextFuncti
     const csvRows = [headers.join(',')];
 
     for (const t of tickets) {
-      const checkIn = t.check_in_time ? new Date(t.check_in_time).toISOString() : '';
-      const checkOut = t.check_out_time ? new Date(t.check_out_time).toISOString() : '';
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const fmtDate = (d: Date | string | undefined | null) => {
+        if (!d) return 'N/A';
+        const date = new Date(d);
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+      };
+
+      const checkIn = fmtDate(t.check_in_time);
+      const checkOut = fmtDate(t.check_out_time);
       const payable = (t.fare_amount || 0) + (t.penalty_amount || 0) - (t.discount_amount || 0);
       const customerName = t.customer_id ? (t.customer_id as any).name : 'Standard';
 
       const row = [
         t.ticket_number,
-        t.license_plate,
+        `"${t.license_plate || 'N/A'}"`,
         t.vehicle_type,
         t.status,
-        checkIn,
-        checkOut,
-        t.fare_amount,
-        t.penalty_amount,
-        t.discount_amount,
+        `"${checkIn}"`,
+        `"${checkOut}"`,
+        t.fare_amount || 0,
+        t.penalty_amount || 0,
+        t.discount_amount || 0,
         payable,
         t.payment_method || 'N/A',
-        customerName
+        `"${customerName}"`
       ].join(',');
       csvRows.push(row);
     }
 
     res.header('Content-Type', 'text/csv');
-    res.attachment(`parking_export_${new Date().getTime()}.csv`);
+    res.attachment(`parking_export_${filter}_${new Date().getTime()}.csv`);
     res.send(csvRows.join('\n'));
   } catch (err) { next(err); }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GET /api/v1/parking/ticket/:id/receipt  — Generate printable receipt text for past ticket
-// ─────────────────────────────────────────────────────────────────────────────
 export const getReceipt = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const tenantId = req.tenant!.tenantId;
-    const ticketId = req.params.id;
+    const ticketId = req.params.id as string;
 
-    const ticket = await Ticket.findOne({ _id: ticketId, tenant_id: tenantId })
+    const query = mongoose.isValidObjectId(ticketId)
+      ? { _id: ticketId, tenant_id: tenantId }
+      : {
+          tenant_id: tenantId,
+          $or: [
+            { ticket_number: ticketId },
+            { ticket_number: ticketId.toLowerCase() },
+            { license_plate: ticketId.toUpperCase() }
+          ]
+        };
+
+    const ticket = await Ticket.findOne(query)
       .populate('customer_id', 'name discount_percentage')
       .lean();
 
@@ -685,7 +660,6 @@ export const getReceipt = async (req: Request, res: Response, next: NextFunction
     let printableText = '';
     
     if (ticket.status === 'ACTIVE' || ticket.status === 'PENDING_PAYMENT') {
-      // Check-in receipt style
       const entryTime = new Date(ticket.check_in_time);
       const pad = (n: number) => n.toString().padStart(2, '0');
       const formattedDate = `${entryTime.getFullYear()}-${pad(entryTime.getMonth() + 1)}-${pad(entryTime.getDate())} ${pad(entryTime.getHours())}:${pad(entryTime.getMinutes())}:${pad(entryTime.getSeconds())}`;
@@ -705,7 +679,6 @@ export const getReceipt = async (req: Request, res: Response, next: NextFunction
         '========================================',
       ].filter(Boolean).join('\n');
     } else {
-      // Payment receipt style
       const entryTime = new Date(ticket.check_in_time);
       const exitTime = ticket.check_out_time ? new Date(ticket.check_out_time) : new Date();
       const pad = (n: number) => n.toString().padStart(2, '0');

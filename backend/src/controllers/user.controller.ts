@@ -8,7 +8,6 @@ import { TenantStatus, UserRole } from '../types/enums.js';
 
 const COOKIE_NAME = 'park_session';
 
-// 1. TENANT + OWNER INITIAL ONBOARDING (legacy endpoint)
 export const registerTenantOwner = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, owner_name, owner_email, password, corporate_email, total_capacity } = req.body;
@@ -54,7 +53,6 @@ export const registerTenantOwner = async (req: Request, res: Response): Promise<
   }
 };
 
-// 2. LOGIN
 export const loginUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password, rememberMe } = req.body;
@@ -79,7 +77,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
       }
     }
 
-    const expiresIn   = rememberMe ? '30d' : '8h';
+    const expiresIn    = rememberMe ? '30d' : '8h';
     const cookieMaxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 8 * 60 * 60 * 1000;
 
     const token = jwt.sign(
@@ -106,13 +104,11 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-// 3. LOGOUT
 export const logoutUser = async (_req: Request, res: Response): Promise<void> => {
   res.clearCookie(COOKIE_NAME, { httpOnly: true, sameSite: 'lax' });
   res.status(200).json({ success: true, message: 'Logged out successfully.' });
 };
 
-// 4. POS DEVICE LOGIN (API KEY — kept for backward compat)
 export const posLogin = async (req: Request, res: Response): Promise<void> => {
   try {
     const { apiKey } = req.body;
@@ -120,7 +116,6 @@ export const posLogin = async (req: Request, res: Response): Promise<void> => {
       res.status(400).json({ success: false, message: 'API Key is required.' });
       return;
     }
-    // apiKey field no longer in schema — return not found
     res.status(401).json({ success: false, message: 'POS API Key login is deprecated. Use /api/v1/auth/login.' });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });

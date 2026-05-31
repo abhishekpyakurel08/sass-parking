@@ -3,11 +3,10 @@ import { HourlyRate } from '../models/hourlyRate.model.js';
 import { ConflictError, NotFoundError } from '../errors/ApiError.js';
 import { VehicleType } from '../types/enums.js';
 
-// POST /api/v1/rates
 export const createRate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const tenantId = req.tenant!.tenantId;
-    const { vehicle_type, rate_per_hour, lost_ticket_penalty, grace_period_minutes } = req.body; 
+    const { vehicle_type, rate_per_hour, lost_ticket_penalty, grace_period_minutes } = req.body;
 
     const existingRate = await HourlyRate.findOne({ tenant_id: tenantId, vehicle_type });
     if (existingRate) {
@@ -19,14 +18,13 @@ export const createRate = async (req: Request, res: Response, next: NextFunction
       vehicle_type,
       rate_per_hour,
       lost_ticket_penalty: lost_ticket_penalty ?? 0,
-      grace_period_minutes: grace_period_minutes ?? 0, // Save grace_period_minutes
+      grace_period_minutes: grace_period_minutes ?? 0,
     });
 
     res.status(201).json({ success: true, data: newRate });
   } catch (err) { next(err); }
 };
 
-// GET /api/v1/rates
 export const getRates = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const tenantId = req.tenant!.tenantId;
@@ -35,7 +33,6 @@ export const getRates = async (req: Request, res: Response, next: NextFunction):
   } catch (err) { next(err); }
 };
 
-// GET /api/v1/rates/:vehicle_type
 export const getRateByVehicleType = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const tenantId = req.tenant!.tenantId;
@@ -54,12 +51,11 @@ export const getRateByVehicleType = async (req: Request, res: Response, next: Ne
   } catch (err) { next(err); }
 };
 
-// PATCH /api/v1/rates/:vehicle_type
 export const updateRate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const tenantId = req.tenant!.tenantId;
     const { vehicle_type } = req.params;
-    const { rate_per_hour, lost_ticket_penalty, grace_period_minutes } = req.body; // Include grace_period_minutes
+    const { rate_per_hour, lost_ticket_penalty, grace_period_minutes } = req.body;
 
     if (!Object.values(VehicleType).includes(vehicle_type as VehicleType)) {
       return next(new NotFoundError('Invalid vehicle type specified.'));
@@ -67,7 +63,7 @@ export const updateRate = async (req: Request, res: Response, next: NextFunction
 
     const updatedRate = await HourlyRate.findOneAndUpdate(
       { tenant_id: tenantId, vehicle_type: vehicle_type as VehicleType },
-      { $set: { rate_per_hour, lost_ticket_penalty, grace_period_minutes } }, // Update grace_period_minutes
+      { $set: { rate_per_hour, lost_ticket_penalty, grace_period_minutes } },
       { new: true, runValidators: true }
     ).lean();
 
@@ -79,7 +75,6 @@ export const updateRate = async (req: Request, res: Response, next: NextFunction
   } catch (err) { next(err); }
 };
 
-// DELETE /api/v1/rates/:vehicle_type
 export const deleteRate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const tenantId = req.tenant!.tenantId;

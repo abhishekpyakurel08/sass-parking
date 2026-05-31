@@ -2,9 +2,6 @@ import type { Request, Response } from 'express';
 import { AuditLog } from '../models/auditLog.model.js';
 import { logger } from '../utils/logger.js';
 
-/**
- * Get audit logs for the current tenant
- */
 export const getAuditLogs = async (req: Request, res: Response): Promise<void> => {
   try {
     const tenantId = req.user?.tenantId;

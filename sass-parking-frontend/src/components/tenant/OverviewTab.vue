@@ -273,10 +273,20 @@ const exportPDF = () => {
         </h2>
       </div>
       <div class="flex gap-2 flex-wrap">
-        <button @click="exportPDF" class="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+        <div class="relative">
+          <select v-model="store.analyticsFilter" @change="store.fetchRevenueAnalytics()" class="appearance-none pl-4 pr-10 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-750 shadow-sm">
+            <option value="today">Today</option>
+            <option value="weekly">This Week</option>
+            <option value="monthly">This Month</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 dark:text-slate-500">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </div>
+        </div>
+        <button @click="exportPDF" class="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 transition-all shadow-sm">
           <Download class="w-4 h-4 text-red-500" /> Export PDF
         </button>
-        <button @click="store.exportReport" :disabled="store.isLoading" class="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors">
+        <button @click="store.exportReport()" :disabled="store.isLoading" class="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 disabled:opacity-50 transition-all shadow-sm">
           <Download class="w-4 h-4 text-emerald-500" /> Export CSV
         </button>
       </div>

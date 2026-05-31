@@ -7,12 +7,10 @@ import { UserRole } from '../types/enums.js';
 
 const router: Router = Router();
 
-// Only gate staff and tenant owners can sync offline data
 router.use(authenticate);
 router.use(requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER));
 router.use(tenantMiddleware);
 
-// Endpoint for offline mobile app to sync cached scans/operations
 router.post('/batch', auditAction('MobileApp:OfflineSync'), syncBatch);
 
 export default router;

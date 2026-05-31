@@ -2,20 +2,14 @@ import type { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import { Ticket } from '../models/ticket.model.js';
 import { TicketStatus, PaymentMethod } from '../types/enums.js';
-import { logger } from '../utils/logger.js';
 
-/**
- * POST /api/v1/sync/batch
- * Handles batch sync of offline operations from the mobile app.
- * Resolves timestamp conflicts by relying on the client-provided timestamps.
- */
 export const syncBatch = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const session = await mongoose.startSession();
   session.startTransaction();
   
   try {
     const tenantId = req.tenant!.tenantId;
-    const { operations } = req.body; 
+    const { operations } = req.body;
 
     if (!Array.isArray(operations)) {
       res.status(400).json({ success: false, message: 'Invalid payload: operations must be an array' });
@@ -29,7 +23,6 @@ export const syncBatch = async (req: Request, res: Response, next: NextFunction)
         if (op.type === 'CHECK_IN') {
           const { ticket_number, license_plate, vehicle_type, check_in_time, customer_id, notes } = op.data;
           
-          // Use upsert to gracefully handle duplicates if the mobile app accidentally sends it twice
           await Ticket.updateOne(
             { ticket_number, tenant_id: tenantId },
             {

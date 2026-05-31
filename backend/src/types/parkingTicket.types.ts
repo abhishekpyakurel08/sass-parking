@@ -11,6 +11,6 @@ export interface IParkingTicket {
   gateStaffOut?: any;
   createdAt: Date;
   updatedAt: Date;
-  slot_number?: string; // Added as it's now embedded in the ticket
-  floor_level?: string; // Added as it's now embedded in the ticket
+  slot_number?: string;
+  floor_level?: string;
 }
