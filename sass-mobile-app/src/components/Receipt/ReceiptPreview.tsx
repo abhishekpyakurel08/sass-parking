@@ -39,15 +39,7 @@ export const ReceiptPreview = ({ data, onNextVehicle }: ReceiptPreviewProps) => 
 
   return (
     <View style={styles.container}>
-      {/* Printer Status Bar (Mock) */}
-      <View style={styles.statusBar}>
-        <View style={styles.statusIndicator} />
-        <Text style={styles.statusText}>Printer Connected</Text>
-        <TouchableOpacity style={styles.retryBtn}>
-          <RotateCcw size={14} color={colors.primary} />
-          <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
+
 
       {/* The Visual Receipt */}
       <View style={styles.receiptWrapper}>

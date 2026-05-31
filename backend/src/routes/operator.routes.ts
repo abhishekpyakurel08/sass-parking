@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { authenticateAny, requireRole } from '../middleware/auth.middleware.js';
 import { getDailyStats } from '../controllers/operator.controller.js';
-import { checkIn, checkOut, processPayment, scanTicket } from '../controllers/parking.controller.js';
+import { checkIn, checkOut, processPayment, scanTicket, handleLostTicket } from '../controllers/parking.controller.js';
 import { validate } from '../middleware/validate.middleware.js';
-import { checkInSchema, checkOutSchema, processPaymentSchema, scanSchema } from '../utils/validation.schemas.js';
+import { checkInSchema, checkOutSchema, processPaymentSchema, scanSchema, lostTicketSchema } from '../utils/validation.schemas.js';
 import { tenantMiddleware } from '../middleware/tenant.middleware.js';
 import { UserRole } from '../types/enums.js';
 import { auditAction } from '../middleware/auditLogger.js';
@@ -41,6 +41,14 @@ router.post(
   validate(scanSchema),
   auditAction('OperatorApp:Scan'),
   scanTicket
+);
+
+router.post(
+  '/operator/lost-ticket',
+  requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER),
+  validate(lostTicketSchema),
+  auditAction('OperatorApp:LostTicket'),
+  handleLostTicket
 );
 
 router.get(

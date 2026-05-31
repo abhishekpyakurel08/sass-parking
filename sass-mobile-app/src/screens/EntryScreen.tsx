@@ -323,16 +323,17 @@ const styles = StyleSheet.create({
 
   // Form
   formCard:          {
-    backgroundColor: colors.card, borderRadius: 8,
-    borderWidth: 1, borderColor: colors.border, padding: 20, marginBottom: 16,
+    backgroundColor: colors.card, borderRadius: 16,
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)', padding: 24, marginBottom: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2
   },
-  formTitle:         { color: colors.text, fontSize: 22, fontWeight: 'bold', marginBottom: 2 },
-  formSub:           { color: colors.textSecondary, fontSize: 12, marginBottom: 20 },
-  fieldLabel:        { color: colors.textSecondary, fontSize: 10, fontWeight: 'bold', letterSpacing: 1, marginBottom: 8 },
-  vehicleGrid:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
+  formTitle:         { color: colors.text, fontSize: 24, fontWeight: '900', marginBottom: 2, letterSpacing: -0.5 },
+  formSub:           { color: colors.textSecondary, fontSize: 13, marginBottom: 24 },
+  fieldLabel:        { color: colors.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, marginBottom: 8 },
+  vehicleGrid:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
   vehicleCard:       {
     flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-    width: 72, paddingVertical: 12, borderRadius: 6,
+    width: 76, paddingVertical: 14, borderRadius: 12,
     backgroundColor: colors.inputBg, borderWidth: 1, borderColor: colors.border,
   },
   vehicleCardActive: { backgroundColor: colors.primary, borderColor: colors.primary },
@@ -341,28 +342,30 @@ const styles = StyleSheet.create({
   plateInput:        {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.inputBg, borderWidth: 1, borderColor: colors.border,
-    borderRadius: 4, paddingHorizontal: 14, height: 50, marginBottom: 16,
+    borderRadius: 12, paddingHorizontal: 16, height: 52, marginBottom: 16,
   },
   plateTextInput:    { flex: 1, color: colors.text, fontSize: 18, fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: 3 },
   customerToggle:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   customerToggleText:{ color: colors.textSecondary, fontSize: 13 },
   submitButton:      {
     backgroundColor: colors.success, flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', height: 52, borderRadius: 6, marginTop: 12,
+    justifyContent: 'center', height: 56, borderRadius: 12, marginTop: 16,
+    shadowColor: colors.success, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4
   },
-  submitText:        { color: '#FFF', fontSize: 13, fontWeight: 'bold' },
+  submitText:        { color: '#FFF', fontSize: 14, fontWeight: '900', letterSpacing: 1 },
 
   // Stats strip
   statsStrip:        {
-    backgroundColor: colors.card, borderRadius: 6, borderWidth: 1, borderColor: colors.border,
-    flexDirection: 'row', alignItems: 'center', padding: 14,
+    backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)',
+    flexDirection: 'row', alignItems: 'center', padding: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 4, elevation: 1
   },
   statItem:          { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
   statDivider:       { width: 1, height: 20, backgroundColor: colors.border },
-  statLabel:         { color: colors.textSecondary, fontSize: 11, fontWeight: 'bold' },
+  statLabel:         { color: colors.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
 
   // Success card
-  successCard:       { backgroundColor: colors.card, borderRadius: 8, borderWidth: 1, borderColor: colors.border, marginBottom: 20, overflow: 'hidden' },
+  successCard:       { backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)', marginBottom: 24, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 5 },
   successBanner:     { backgroundColor: colors.success, padding: 20, alignItems: 'center', gap: 8 },
   successTitle:      { color: '#FFF', fontSize: 18, fontWeight: 'bold', letterSpacing: 1, marginTop: 4 },
   offlinePill:       { backgroundColor: '#FBBF24', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
@@ -383,15 +386,16 @@ const styles = StyleSheet.create({
   qrLabel:           { color: colors.textSecondary, fontSize: 10, fontWeight: 'bold', marginTop: 10, letterSpacing: 1 },
   newEntryButton:    {
     backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', height: 52, borderRadius: 6,
+    justifyContent: 'center', height: 56, borderRadius: 12,
+    shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4
   },
-  newEntryText:      { color: '#FFF', fontSize: 15, fontWeight: 'bold' },
+  newEntryText:      { color: '#FFF', fontSize: 15, fontWeight: '900', letterSpacing: 1 },
   printBtn:          {
     backgroundColor: colors.inputBg, borderWidth: 1, borderColor: colors.border,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    height: 52, borderRadius: 6, marginBottom: 12,
+    height: 56, borderRadius: 12, marginBottom: 16,
   },
-  printBtnText:      { color: colors.text, fontSize: 15, fontWeight: 'bold' },
+  printBtnText:      { color: colors.text, fontSize: 15, fontWeight: '800' },
 });
 
 export default EntryScreen;

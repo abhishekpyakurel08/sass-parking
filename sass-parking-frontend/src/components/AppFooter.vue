@@ -12,7 +12,7 @@
               <div class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">Parking Management</div>
             </div>
           </div>
-          <p class="mt-3 text-sm text-slate-600">Smart parking management demo. Dummy data shown.</p>
+          <p class="mt-3 text-sm text-slate-600">Enterprise parking management system.</p>
         </div>
 
         <div>
@@ -31,7 +31,7 @@
         </div>
       </div>
     </div>
-    <div class="border-t border-slate-300 text-center py-4 text-sm text-slate-600">© 2026 ParkSaaSPro — Sample Data</div>
+    <div class="border-t border-slate-300 text-center py-4 text-sm text-slate-600">© 2026 ParkSaaSPro</div>
   </footer>
 </template>
 
