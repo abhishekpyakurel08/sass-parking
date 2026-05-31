@@ -220,7 +220,45 @@ const exportPDF = () => {
   const todayRevenue = store.revenueAnalytics?.today?.toFixed(2) ?? '0.00';
   const monthlyRevenue = store.revenueAnalytics?.oneMonth?.toFixed(2) ?? '0.00';
   const activeTicketsCount = store.revenueAnalytics?.active_tickets ?? 0;
-  
+
+  // Get real chart data
+  const bars = chartBars.value;
+  const lineData = linePoints.value;
+  const vehicleDist = vehicleDistribution.value;
+
+  // Generate hourly distribution table
+  const hourlyHTML = bars.filter(b => b.label).map(b => `
+    <tr>
+      <td>${b.label}</td>
+      <td><strong>${b.count}</strong></td>
+      <td>
+        <div style="width: 100px; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
+          <div style="width: ${b.height}; height: 100%; background: ${b.dark ? '#2563eb' : '#93c5fd'}; border-radius: 4px;"></div>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+
+  // Generate weekly occupancy table
+  const weeklyHTML = lineData.days.map((day, i) => `
+    <tr>
+      <td>${day}</td>
+      <td><strong>${lineData.points[i]?.value || 0}</strong></td>
+    </tr>
+  `).join('');
+
+  // Generate vehicle distribution table
+  const vehicleHTML = vehicleDist.map(v => `
+    <tr>
+      <td>
+        <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: ${v.stroke}; margin-right: 8px;"></span>
+        ${v.type?.toLowerCase()}
+      </td>
+      <td><strong>${v.count}</strong></td>
+      <td><strong>${v.percentage}%</strong></td>
+    </tr>
+  `).join('');
+
   const ticketsHTML = store.ticketHistory.slice(0, 15).map(t => `
     <tr>
       <td><strong>${t.license_plate || '—'}</strong></td>
@@ -295,6 +333,47 @@ const exportPDF = () => {
           <div class="kpi-value">Rs. ${monthlyRevenue}</div>
         </div>
       </div>
+
+      <div class="section-title">Hourly Vehicle Distribution</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Time Slot</th>
+            <th>Vehicle Count</th>
+            <th>Occupancy Level</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${hourlyHTML || '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">No hourly data available.</td></tr>'}
+        </tbody>
+      </table>
+
+      <div class="section-title">Weekly Peak Occupancy</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Day</th>
+            <th>Vehicle Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${weeklyHTML || '<tr><td colspan="2" style="text-align: center; color: #94a3b8;">No weekly data available.</td></tr>'}
+        </tbody>
+      </table>
+
+      <div class="section-title">Vehicle Type Distribution</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Vehicle Type</th>
+            <th>Count</th>
+            <th>Percentage</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${vehicleHTML || '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">No vehicle distribution data available.</td></tr>'}
+        </tbody>
+      </table>
 
       <div class="section-title">Recent Vehicles Activity Log</div>
       <table>
