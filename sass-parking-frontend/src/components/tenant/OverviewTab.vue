@@ -437,53 +437,53 @@ const exportPDF = () => {
     </div>
 
     <!-- Occupancy + Revenue Bar Chart Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
       <!-- Occupancy -->
-      <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 lg:col-span-1">
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-700 lg:col-span-1">
         <div class="flex justify-between items-start">
           <div>
-            <p class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">REAL-TIME OCCUPANCY</p>
-            <h3 class="text-4xl font-black text-slate-900 dark:text-slate-100">
+            <p class="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">REAL-TIME OCCUPANCY</p>
+            <h3 class="text-3xl sm:text-4xl font-black text-slate-900 dark:text-slate-100">
               {{ store.revenueAnalytics?.active_tickets ?? '—' }}
-              <span class="text-lg font-semibold text-slate-400 dark:text-slate-500 ml-1">active</span>
+              <span class="text-sm sm:text-lg font-semibold text-slate-400 dark:text-slate-500 ml-1">active</span>
             </h3>
           </div>
-          <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 border border-blue-100">
-            <BarChart3 class="w-5 h-5" />
+          <div class="w-8 h-8 sm:w-10 sm:h-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 border border-blue-100">
+            <BarChart3 class="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
         </div>
-        <div class="mt-6 h-3 w-full bg-blue-100 rounded-full overflow-hidden">
+        <div class="mt-4 sm:mt-6 h-3 w-full bg-blue-100 rounded-full overflow-hidden">
           <div class="h-full bg-blue-600 rounded-full transition-all duration-700"
             :style="{ width: store.revenueAnalytics?.active_tickets ? Math.min(Math.round((store.revenueAnalytics.active_tickets / Math.max(store.ticketHistory.length, 1)) * 100), 100) + '%' : '0%' }"
           ></div>
         </div>
-        <div class="grid grid-cols-2 gap-4 mt-6">
-          <div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-lg p-4">
-            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">TODAY'S REVENUE</p>
-            <p class="text-lg font-bold text-slate-900 dark:text-slate-100">Rs. {{ store.revenueAnalytics?.today?.toFixed(2) ?? '0.00' }}</p>
+        <div class="grid grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-6">
+          <div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-lg p-3 sm:p-4">
+            <p class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">TODAY'S REVENUE</p>
+            <p class="text-sm sm:text-lg font-bold text-slate-900 dark:text-slate-100">Rs. {{ store.revenueAnalytics?.today?.toFixed(2) ?? '0.00' }}</p>
           </div>
-          <div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-lg p-4">
-            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">MONTHLY REVENUE</p>
-            <p class="text-lg font-bold text-slate-900 dark:text-slate-100">Rs. {{ store.revenueAnalytics?.oneMonth?.toFixed(2) ?? '0.00' }}</p>
+          <div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-lg p-3 sm:p-4">
+            <p class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">MONTHLY REVENUE</p>
+            <p class="text-sm sm:text-lg font-bold text-slate-900 dark:text-slate-100">Rs. {{ store.revenueAnalytics?.oneMonth?.toFixed(2) ?? '0.00' }}</p>
           </div>
         </div>
-        
+
       </div>
 
       <!-- Revenue Line Chart -->
-      <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 lg:col-span-2 flex flex-col justify-between">
-        <div class="flex justify-between items-center mb-6">
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-700 lg:col-span-2 flex flex-col justify-between">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 gap-3">
           <div class="flex items-center gap-2">
             <LineChart class="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <h3 class="font-bold text-lg text-slate-900 dark:text-slate-100">Daily Revenue Flow</h3>
+            <h3 class="font-bold text-base sm:text-lg text-slate-900 dark:text-slate-100">Daily Revenue Flow</h3>
           </div>
           <div class="flex bg-slate-50 dark:bg-slate-900 p-1 rounded-lg border border-slate-100 dark:border-slate-700">
-            <span class="px-3 py-1 bg-white dark:bg-slate-800 shadow-sm rounded-md text-xs font-bold text-slate-900 dark:text-slate-100">Live Trend</span>
+            <span class="px-2 sm:px-3 py-1 bg-white dark:bg-slate-800 shadow-sm rounded-md text-[10px] sm:text-xs font-bold text-slate-900 dark:text-slate-100">Live Trend</span>
           </div>
         </div>
-        
+
         <!-- Smooth Curve SVG for Revenue Trend -->
-        <div class="flex-1 min-h-[160px] relative mt-2">
+        <div class="flex-1 min-h-[120px] sm:min-h-[160px] relative mt-2">
           <svg viewBox="0 0 500 180" class="w-full h-full overflow-visible">
             <defs>
               <linearGradient id="revenueAreaGradient" x1="0" y1="0" x2="0" y2="1">
@@ -514,7 +514,7 @@ const exportPDF = () => {
               @mouseleave="handleRevenueLineLeave" />
           </svg>
         </div>
-        <div class="flex justify-between px-2 text-[9px] font-bold text-slate-400 mt-2">
+        <div class="flex justify-between px-2 text-[8px] sm:text-[9px] font-bold text-slate-400 mt-2">
           <span v-for="(p, i) in revenueLinePoints.points" :key="i">
             <span v-if="p.label">{{ p.label }}</span>
           </span>
@@ -523,19 +523,19 @@ const exportPDF = () => {
     </div>
 
     <!-- Line & Pie Chart Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
       <!-- Peak Occupancy Line Graph -->
-      <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 lg:col-span-2 flex flex-col">
-        <div class="flex justify-between items-center mb-5">
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-700 lg:col-span-2 flex flex-col">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-5 gap-2">
           <div class="flex items-center gap-2">
             <LineChart class="w-4 h-4 text-emerald-500" />
-            <h3 class="font-bold text-lg text-slate-900">Weekly Peak Occupancy</h3>
+            <h3 class="font-bold text-base sm:text-lg text-slate-900">Weekly Peak Occupancy</h3>
           </div>
-          <span class="text-xs font-bold text-slate-400">Peak times per day</span>
+          <span class="text-[10px] sm:text-xs font-bold text-slate-400">Peak times per day</span>
         </div>
-        
+
         <!-- Smooth Premium SVG Line Graph -->
-        <div class="flex-1 min-h-[140px] relative mt-2">
+        <div class="flex-1 min-h-[100px] sm:min-h-[140px] relative mt-2">
           <svg viewBox="0 0 360 120" class="w-full h-full overflow-visible">
             <defs>
               <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
@@ -566,23 +566,23 @@ const exportPDF = () => {
               @mouseleave="handleOccupancyLineLeave" />
           </svg>
         </div>
-        <div class="flex justify-between px-3 text-[10px] font-bold text-slate-400 mt-2">
+        <div class="flex justify-between px-2 sm:px-3 text-[9px] sm:text-[10px] font-bold text-slate-400 mt-2">
           <span v-for="d in linePoints.days" :key="d">{{ d }}</span>
         </div>
       </div>
 
       <!-- Vehicle Type Pie/Donut Chart -->
-      <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 lg:col-span-1 flex flex-col justify-between">
-        <div class="flex justify-between items-center mb-4">
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-700 lg:col-span-1 flex flex-col justify-between">
+        <div class="flex justify-between items-center mb-3 sm:mb-4">
           <div class="flex items-center gap-2">
             <PieChart class="w-4 h-4 text-amber-500" />
-            <h3 class="font-bold text-lg text-slate-900">Vehicle Breakdown</h3>
+            <h3 class="font-bold text-base sm:text-lg text-slate-900">Vehicle Breakdown</h3>
           </div>
         </div>
 
-        <div class="flex items-center justify-around gap-4 flex-1 py-2">
+        <div class="flex items-center justify-around gap-3 sm:gap-4 flex-1 py-2">
           <!-- Premium SVG Segmented Donut -->
-          <div class="relative w-28 h-28 shrink-0">
+          <div class="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0">
             <svg viewBox="0 0 36 36" class="w-full h-full transform -rotate-90">
               <!-- Background Circle -->
               <circle cx="18" cy="18" r="15.915" fill="none" stroke="#f1f5f9" stroke-width="4" />
@@ -599,18 +599,18 @@ const exportPDF = () => {
                 @mouseleave="handlePieLeave" />
             </svg>
             <div class="absolute inset-0 flex flex-col items-center justify-center">
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">TOTAL</span>
-              <span class="text-xl font-black text-slate-800 mt-0.5">{{ store.ticketHistory.length }}</span>
+              <span class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">TOTAL</span>
+              <span class="text-lg sm:text-xl font-black text-slate-800 mt-0.5">{{ store.ticketHistory.length }}</span>
             </div>
           </div>
 
           <!-- Color Legends -->
-          <div class="space-y-2.5 text-xs">
+          <div class="space-y-2 sm:space-y-2.5 text-[10px] sm:text-xs">
             <div v-for="seg in vehicleDistribution" :key="seg.type" class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full shrink-0" :class="seg.bg"></span>
+              <span class="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shrink-0" :class="seg.bg"></span>
               <div class="min-w-0">
                 <p class="font-bold text-slate-800 capitalize leading-none mb-0.5">{{ seg.type?.toLowerCase() }}s</p>
-                <p class="text-[10px] font-bold text-slate-400">{{ seg.count }} parked ({{ seg.percentage }}%)</p>
+                <p class="text-[9px] sm:text-[10px] font-bold text-slate-400">{{ seg.count }} parked ({{ seg.percentage }}%)</p>
               </div>
             </div>
           </div>
@@ -619,82 +619,82 @@ const exportPDF = () => {
     </div>
 
     <!-- KPI Row -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 border-l-4 border-l-blue-600">
-        <p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">TODAY'S REVENUE</p>
-        <div class="flex items-baseline gap-3">
-          <h3 class="text-2xl font-black text-slate-900 dark:text-slate-100">Rs. {{ store.revenueAnalytics?.today?.toFixed(2) ?? '0.00' }}</h3>
-          <span class="text-xs font-bold text-green-600 dark:text-green-500 flex items-center gap-0.5"><TrendingUp class="w-3 h-3" /> Live</span>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-700 border-l-4 border-l-blue-600">
+        <p class="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">TODAY'S REVENUE</p>
+        <div class="flex items-baseline gap-2 sm:gap-3">
+          <h3 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100">Rs. {{ store.revenueAnalytics?.today?.toFixed(2) ?? '0.00' }}</h3>
+          <span class="text-[10px] sm:text-xs font-bold text-green-600 dark:text-green-500 flex items-center gap-0.5"><TrendingUp class="w-3 h-3" /> Live</span>
         </div>
       </div>
-      <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 border-l-4 border-l-blue-600">
-        <p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">3-MONTH REVENUE</p>
-        <div class="flex items-baseline gap-3">
-          <h3 class="text-2xl font-black text-slate-900 dark:text-slate-100">Rs. {{ store.revenueAnalytics?.threeMonths?.toFixed(0) ?? '0' }}</h3>
-          <span class="text-xs font-medium text-slate-500 dark:text-slate-400">last 90 days</span>
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-700 border-l-4 border-l-blue-600">
+        <p class="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">3-MONTH REVENUE</p>
+        <div class="flex items-baseline gap-2 sm:gap-3">
+          <h3 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100">Rs. {{ store.revenueAnalytics?.threeMonths?.toFixed(0) ?? '0' }}</h3>
+          <span class="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400">last 90 days</span>
         </div>
       </div>
-      <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 border-l-4 border-l-blue-600">
-        <p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">ACTIVE TICKETS</p>
-        <div class="flex items-baseline gap-3">
-          <h3 class="text-2xl font-black text-slate-900 dark:text-slate-100">{{ store.revenueAnalytics?.active_tickets ?? 0 }}</h3>
-          <span class="text-xs font-medium text-slate-500 dark:text-slate-400">vehicles parked</span>
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-700 border-l-4 border-l-blue-600">
+        <p class="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">ACTIVE TICKETS</p>
+        <div class="flex items-baseline gap-2 sm:gap-3">
+          <h3 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100">{{ store.revenueAnalytics?.active_tickets ?? 0 }}</h3>
+          <span class="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400">vehicles parked</span>
         </div>
       </div>
     </div>
 
     <!-- Active Vehicles Table + Rate Config -->
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
       <!-- Active Vehicles -->
       <div class="xl:col-span-2 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-        <div class="p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
-          <h3 class="font-bold text-lg text-slate-900 dark:text-slate-100">Active Vehicles</h3>
-          <span class="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold rounded-md border border-blue-100 dark:border-blue-800 uppercase tracking-wider">LIVE FEED</span>
+        <div class="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+          <h3 class="font-bold text-base sm:text-lg text-slate-900 dark:text-slate-100">Active Vehicles</h3>
+          <span class="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold rounded-md border border-blue-100 dark:border-blue-800 uppercase tracking-wider w-max">LIVE FEED</span>
         </div>
-        <div v-if="store.isLoading" class="py-10 text-center text-slate-400 dark:text-slate-500">
+        <div v-if="store.isLoading" class="py-8 sm:py-10 text-center text-slate-400 dark:text-slate-500">
           <RefreshCcw class="w-5 h-5 animate-spin inline-block mr-2" /> Loading…
         </div>
-        <div v-else-if="store.ticketHistory.length === 0" class="py-10 text-center text-slate-400 dark:text-slate-500 font-medium">
+        <div v-else-if="store.ticketHistory.length === 0" class="py-8 sm:py-10 text-center text-slate-400 dark:text-slate-500 font-medium">
           No active vehicles found.
         </div>
         <div v-else class="overflow-x-auto">
-          <div class="min-w-[600px]">
+          <div class="min-w-[500px] sm:min-w-[600px]">
             <table class="w-full">
               <thead class="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700">
                 <tr>
-                  <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">VEHICLE / LICENSE</th>
-                  <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">TYPE</th>
-                  <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">CHECK-IN</th>
-                  <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">STATUS</th>
-                  <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">ACTION</th>
+                  <th class="text-left px-3 sm:px-5 py-3 text-[9px] sm:text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">VEHICLE / LICENSE</th>
+                  <th class="text-left px-3 sm:px-5 py-3 text-[9px] sm:text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">TYPE</th>
+                  <th class="text-left px-3 sm:px-5 py-3 text-[9px] sm:text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">CHECK-IN</th>
+                  <th class="text-left px-3 sm:px-5 py-3 text-[9px] sm:text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">STATUS</th>
+                  <th class="text-left px-3 sm:px-5 py-3 text-[9px] sm:text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">ACTION</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-50 dark:divide-slate-700/50">
                 <tr v-for="ticket in store.ticketHistory.slice(0, 8)" :key="ticket._id" class="hover:bg-slate-50/50 dark:hover:bg-slate-700/50">
-                  <td class="px-5 py-4">
-                    <div class="flex items-center gap-3">
-                      <div class="w-8 h-8 rounded bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400">
-                        <Car class="w-4 h-4" />
+                  <td class="px-3 sm:px-5 py-3 sm:py-4">
+                    <div class="flex items-center gap-2 sm:gap-3">
+                      <div class="w-7 h-7 sm:w-8 sm:h-8 rounded bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 shrink-0">
+                        <Car class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </div>
-                      <div>
-                        <p class="font-bold text-sm text-slate-900 dark:text-slate-100">{{ ticket.license_plate || '—' }}</p>
-                        <p class="text-[10px] text-slate-500 dark:text-slate-400">{{ ticket.ticket_number?.slice(0, 12) || ticket._id?.slice(-8) }}</p>
+                      <div class="min-w-0">
+                        <p class="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate">{{ ticket.license_plate || '—' }}</p>
+                        <p class="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 truncate">{{ ticket.ticket_number?.slice(0, 12) || ticket._id?.slice(-8) }}</p>
                       </div>
                     </div>
                   </td>
-                  <td class="px-5 py-4 text-sm text-slate-600 dark:text-slate-400">{{ ticket.vehicle_type || '—' }}</td>
-                  <td class="px-5 py-4 text-sm text-slate-600 dark:text-slate-400">
+                  <td class="px-3 sm:px-5 py-3 sm:py-4 text-xs sm:text-sm text-slate-600 dark:text-slate-400">{{ ticket.vehicle_type || '—' }}</td>
+                  <td class="px-3 sm:px-5 py-3 sm:py-4 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
                     {{ ticket.check_in_time ? new Date(ticket.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—' }}
                   </td>
-                  <td class="px-5 py-4">
-                    <span class="px-2 py-1 border rounded-md text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 w-max"
+                  <td class="px-3 sm:px-5 py-3 sm:py-4">
+                    <span class="px-2 py-1 border rounded-md text-[8px] sm:text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 w-max"
                       :class="ticket.status === 'PAID' ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800' : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800'">
                       <span class="w-1.5 h-1.5 rounded-full" :class="ticket.status === 'PAID' ? 'bg-green-500' : 'bg-blue-600 dark:bg-blue-500'"></span>
                       {{ ticket.status }}
                     </span>
                   </td>
-                  <td class="px-5 py-4">
-                    <button class="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"><MoreHorizontal class="w-5 h-5" /></button>
+                  <td class="px-3 sm:px-5 py-3 sm:py-4">
+                    <button class="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"><MoreHorizontal class="w-4 h-4 sm:w-5 sm:h-5" /></button>
                   </td>
                 </tr>
               </tbody>
@@ -704,36 +704,36 @@ const exportPDF = () => {
       </div>
 
       <!-- Rate Config Widget -->
-      <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
-        <div class="flex justify-between items-center mb-6">
-          <h3 class="font-bold text-lg text-slate-900 dark:text-slate-100">Rate Config</h3>
-          <button class="text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-1.5 rounded-md"><PenLine class="w-5 h-5" /></button>
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+        <div class="flex justify-between items-center mb-4 sm:mb-6">
+          <h3 class="font-bold text-base sm:text-lg text-slate-900 dark:text-slate-100">Rate Config</h3>
+          <button class="text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-1.5 rounded-md"><PenLine class="w-4 h-4 sm:w-5 sm:h-5" /></button>
         </div>
-        <div v-if="store.isLoading" class="text-center py-6 text-slate-400 dark:text-slate-500">
-          <RefreshCcw class="w-5 h-5 animate-spin inline-block" />
+        <div v-if="store.isLoading" class="text-center py-4 sm:py-6 text-slate-400 dark:text-slate-500">
+          <RefreshCcw class="w-4 h-4 sm:w-5 sm:h-5 animate-spin inline-block" />
         </div>
-        <div v-else-if="store.rates.length === 0" class="text-center py-6">
-          <p class="text-slate-400 dark:text-slate-500 text-sm font-medium mb-3">No rates configured yet.</p>
+        <div v-else-if="store.rates.length === 0" class="text-center py-4 sm:py-6">
+          <p class="text-slate-400 dark:text-slate-500 text-xs sm:text-sm font-medium mb-3">No rates configured yet.</p>
         </div>
-        <div v-else class="space-y-3">
+        <div v-else class="space-y-2 sm:space-y-3">
           <div v-for="rate in store.rates.slice(0, 3)" :key="rate._id || rate.vehicle_type"
-            class="border border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-3 flex justify-between items-center">
+            class="border border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-2.5 sm:p-3 flex justify-between items-center">
             <div>
-              <p class="text-sm font-bold text-slate-900 dark:text-slate-100 capitalize">{{ rate.vehicle_type?.toLowerCase() || 'Rate' }}</p>
-              <p class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">PER {{ rate.billing_unit || 'HOUR' }}</p>
+              <p class="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 capitalize">{{ rate.vehicle_type?.toLowerCase() || 'Rate' }}</p>
+              <p class="text-[9px] sm:text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">PER {{ rate.billing_unit || 'HOUR' }}</p>
             </div>
-            <span class="text-lg font-black text-slate-900 dark:text-slate-100">Rs. {{ rate.rate_per_hour ?? rate.amount ?? '—' }}</span>
+            <span class="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">Rs. {{ rate.rate_per_hour ?? rate.amount ?? '—' }}</span>
           </div>
         </div>
-        <hr class="my-5 border-slate-100 dark:border-slate-700" />
+        <hr class="my-4 sm:my-5 border-slate-100 dark:border-slate-700" />
         <div>
-          <div class="flex justify-between items-center mb-3">
-            <p class="text-sm font-bold text-slate-900 dark:text-slate-100">Dynamic Pricing</p>
-            <div class="w-10 h-6 bg-blue-600 rounded-full relative cursor-pointer">
-              <div class="w-4 h-4 bg-white rounded-full absolute right-1 top-1 shadow-sm"></div>
+          <div class="flex justify-between items-center mb-2 sm:mb-3">
+            <p class="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">Dynamic Pricing</p>
+            <div class="w-9 h-5 sm:w-10 sm:h-6 bg-blue-600 rounded-full relative cursor-pointer">
+              <div class="w-3.5 h-3.5 sm:w-4 sm:h-4 bg-white rounded-full absolute right-0.5 sm:right-1 top-0.5 sm:top-1 shadow-sm"></div>
             </div>
           </div>
-          <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">Rates increase by 15% when occupancy exceeds 90% capacity.</p>
+          <p class="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 leading-relaxed">Rates increase by 15% when occupancy exceeds 90% capacity.</p>
         </div>
       </div>
     </div>
