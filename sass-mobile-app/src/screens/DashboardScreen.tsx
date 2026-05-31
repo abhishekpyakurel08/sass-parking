@@ -89,18 +89,7 @@ const DashboardScreen = () => {
     return `Rs. ${n.toFixed(0)}`;
   };
 
-  const assignmentLabel = () => {
-    if (user?.gate_assignment === 'ENTRY') return 'Entry Gate';
-    if (user?.gate_assignment === 'EXIT') return 'Exit Gate';
-    if (user?.gate_assignment === 'BOTH') return 'Dual Gate';
-    return 'General';
-  };
 
-  const assignmentColor = () => {
-    if (user?.gate_assignment === 'ENTRY') return colors.success;
-    if (user?.gate_assignment === 'EXIT') return colors.danger;
-    return colors.primary;
-  };
 
   return (
     <SafeAreaView style={styles.container}>
