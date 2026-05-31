@@ -5,6 +5,9 @@ import { PenLine, RefreshCcw, Save, ParkingSquare } from 'lucide-vue-next';
 
 const store = useTenantStore();
 
+// Tooltip state
+const rateTooltip = ref<{ x: number; y: number; rate: any } | null>(null);
+
 const editingRate = ref<string | null>(null);
 const rateForm = ref({ rate_per_hour: 0, grace_period_minutes: 5, lost_ticket_penalty: 0 });
 

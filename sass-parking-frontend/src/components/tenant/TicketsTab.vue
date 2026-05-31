@@ -9,6 +9,9 @@ import {
 
 const store = useTenantStore();
 
+// Tooltip state
+const ticketTooltip = ref<{ x: number; y: number; ticket: any } | null>(null);
+
 // Filters
 const search = ref('');
 const statusFilter = ref<'ALL' | 'ACTIVE' | 'PENDING_PAYMENT' | 'PAID'>('ALL');
@@ -82,6 +85,20 @@ const duration = (check_in: string, check_out?: string) => {
 };
 
 const statuses = ['ALL', 'ACTIVE', 'PENDING_PAYMENT', 'PAID'] as const;
+
+// Hover event handlers
+const handleTicketHover = (event: MouseEvent, ticket: any) => {
+  const rect = (event.target as HTMLElement).getBoundingClientRect();
+  ticketTooltip.value = {
+    x: rect.left + rect.width / 2,
+    y: rect.top,
+    ticket
+  };
+};
+
+const handleTicketLeave = () => {
+  ticketTooltip.value = null;
+};
 </script>
 
 <template>
@@ -154,8 +171,10 @@ const statuses = ['ALL', 'ACTIVE', 'PENDING_PAYMENT', 'PAID'] as const;
           </thead>
           <tbody class="divide-y divide-slate-50 dark:divide-slate-700/50">
             <tr v-for="ticket in filteredTickets" :key="ticket._id"
-              class="hover:bg-slate-50/60 dark:hover:bg-slate-700/60 cursor-pointer transition-colors"
-              @click="openDetail(ticket)">
+              class="hover:bg-slate-50/60 dark:hover:bg-slate-700/60 cursor-pointer transition-all duration-200 hover:scale-[1.01] hover:shadow-sm"
+              @click="openDetail(ticket)"
+              @mouseenter="(e) => handleTicketHover(e, ticket)"
+              @mouseleave="handleTicketLeave">
               <td class="px-5 py-4">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0">
@@ -310,6 +329,34 @@ const statuses = ['ALL', 'ACTIVE', 'PENDING_PAYMENT', 'PAID'] as const;
         </aside>
       </Transition>
     </Teleport>
+
+    <!-- Ticket Tooltip -->
+    <teleport to="body">
+      <transition name="tooltip-fade">
+        <div v-if="ticketTooltip"
+          class="fixed z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl text-xs font-bold pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-12px] border border-slate-700 min-w-[200px]"
+          :style="{ left: ticketTooltip.x + 'px', top: ticketTooltip.y + 'px' }">
+          <div class="flex items-center gap-2 mb-2 pb-2 border-b border-slate-700">
+            <div class="w-2 h-2 rounded-full" :class="ticketTooltip.ticket.status === 'PAID' ? 'bg-green-500' : ticketTooltip.ticket.status === 'PENDING_PAYMENT' ? 'bg-amber-500' : 'bg-blue-500'"></div>
+            <div class="text-slate-400 text-[10px] uppercase tracking-wider">{{ ticketTooltip.ticket.status }}</div>
+          </div>
+          <div class="space-y-1">
+            <div class="flex justify-between">
+              <span class="text-slate-400">Plate:</span>
+              <span class="font-bold">{{ ticketTooltip.ticket.license_plate || '—' }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Duration:</span>
+              <span class="font-bold">{{ duration(ticketTooltip.ticket.check_in_time, ticketTooltip.ticket.check_out_time) }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Amount:</span>
+              <span class="font-bold text-emerald-400">{{ ticketTooltip.ticket.fare_amount != null ? `Rs. ${ticketTooltip.ticket.fare_amount}` : '—' }}</span>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </teleport>
   </div>
 </template>
 

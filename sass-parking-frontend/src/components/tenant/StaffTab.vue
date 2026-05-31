@@ -5,6 +5,9 @@ import { Users, UserPlus, Save, RefreshCcw, Pencil, Trash2, X, AlertTriangle } f
 
 const store = useTenantStore();
 
+// Tooltip state
+const staffTooltip = ref<{ x: number; y: number; staff: any } | null>(null);
+
 // ─── Create Form ───────────────────────────────────────────────────────────
 const showCreateForm = ref(false);
 const createForm = ref({ name: '', email: '', password: '', gate_assignment: 'BOTH', ticket_prefix: '' });
@@ -45,6 +48,20 @@ const handleDelete = async () => {
   if (!confirmDeleteStaff.value) return;
   await store.deleteStaff(confirmDeleteStaff.value._id);
   confirmDeleteStaff.value = null;
+};
+
+// Hover event handlers
+const handleStaffHover = (event: MouseEvent, staff: any) => {
+  const rect = (event.target as HTMLElement).getBoundingClientRect();
+  staffTooltip.value = {
+    x: rect.left + rect.width / 2,
+    y: rect.top,
+    staff
+  };
+};
+
+const handleStaffLeave = () => {
+  staffTooltip.value = null;
 };
 </script>
 
@@ -154,7 +171,9 @@ const handleDelete = async () => {
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-50 dark:divide-slate-700/50">
-            <tr v-for="staff in store.staffList" :key="staff._id" class="hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors group">
+            <tr v-for="staff in store.staffList" :key="staff._id" class="hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-all duration-200 hover:scale-[1.01] hover:shadow-sm group"
+              @mouseenter="(e) => handleStaffHover(e, staff)"
+              @mouseleave="handleStaffLeave">
               <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm shadow-blue-300/50">
@@ -300,6 +319,38 @@ const handleDelete = async () => {
       </div>
     </Transition>
   </Teleport>
+
+  <!-- Staff Tooltip -->
+  <teleport to="body">
+    <transition name="tooltip-fade">
+      <div v-if="staffTooltip"
+        class="fixed z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl text-xs font-bold pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-12px] border border-slate-700 min-w-[200px]"
+        :style="{ left: staffTooltip.x + 'px', top: staffTooltip.y + 'px' }">
+        <div class="flex items-center gap-2 mb-2 pb-2 border-b border-slate-700">
+          <div class="w-2 h-2 rounded-full bg-green-500"></div>
+          <div class="text-slate-400 text-[10px] uppercase tracking-wider">Active</div>
+        </div>
+        <div class="space-y-1">
+          <div class="flex justify-between">
+            <span class="text-slate-400">Name:</span>
+            <span class="font-bold">{{ staffTooltip.staff.name }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Role:</span>
+            <span class="font-bold">{{ staffTooltip.staff.role || 'GATE_STAFF' }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Gate:</span>
+            <span class="font-bold text-blue-400">{{ staffTooltip.staff.gate_assignment || 'BOTH' }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Prefix:</span>
+            <span class="font-bold">{{ staffTooltip.staff.ticket_prefix || 'Auto' }}</span>
+          </div>
+        </div>
+      </div>
+    </transition>
+  </teleport>
 </template>
 
 <style scoped>
