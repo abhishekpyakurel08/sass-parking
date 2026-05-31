@@ -123,7 +123,7 @@ const onSubmit = async () => {
             Login
           </button>
           
-          <button @click="toggleView('register')" 
+          <button v-if="selectedRole !== 'Super Admin'" @click="toggleView('register')" 
                   class="relative flex-1 py-2.5 text-sm font-semibold transition-colors duration-300 z-10 rounded-lg outline-none"
                   :class="view === 'register' ? 'text-slate-900 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'">
             New Tenant
@@ -138,16 +138,18 @@ const onSubmit = async () => {
             <!-- LOGIN FORM -->
             <form v-if="view === 'login'" @submit.prevent="onSubmit" class="space-y-6 w-full absolute inset-0">
               <div class="space-y-2">
-                <h2 class="text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">Welcome back.</h2>
-                <p class="text-slate-500 dark:text-slate-400">Authenticate to access the control center.</p>
-                <div v-if="selectedRole" class="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                  {{ selectedRole }} portal selected
+                <h2 class="text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+                  {{ selectedRole ? selectedRole + ' Portal' : 'Welcome back.' }}
+                </h2>
+                <p class="text-slate-500 dark:text-slate-400">Authenticate to access your facility control center.</p>
+                <div v-if="selectedRole" class="inline-flex rounded-full bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                  {{ selectedRole }} Access Only
                 </div>
               </div>
 
               <div class="space-y-5 pt-4">
                 <div class="space-y-1.5">
-                  <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Operator Email</label>
+                  <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">{{ selectedRole ? selectedRole + ' Email' : 'Email Address' }}</label>
                   <div class="relative group">
                     <Mail class="absolute left-3.5 top-3 h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
                     <input v-model="loginData.email" type="email" placeholder="admin@facility.com" required
