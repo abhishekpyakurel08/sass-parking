@@ -241,37 +241,37 @@ const handleStaffLeave = () => {
           </div>
 
           <!-- Fields -->
-          <div class="space-y-4">
-            <div>
-              <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 block">Full Name</label>
+          <div class="space-y-5">
+            <div class="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-sm">
+              <label class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 block">Full Name</label>
               <input v-model="editForm.name" type="text"
-                class="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
+                class="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
             </div>
-            <div>
-              <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 block">Email Address</label>
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/50 border border-blue-200 dark:border-blue-800 rounded-2xl p-5 shadow-sm">
+              <label class="text-[10px] font-bold text-blue-400 dark:text-blue-500 uppercase tracking-wider mb-2 block">Email Address</label>
               <input v-model="editForm.email" type="email"
-                class="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
+                class="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-800 rounded-xl text-sm font-semibold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
             </div>
-            <div>
-              <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 block">New Password <span class="text-slate-300 dark:text-slate-600 font-normal normal-case">(leave blank to keep current)</span></label>
+            <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-900/50 border border-purple-200 dark:border-purple-800 rounded-2xl p-5 shadow-sm">
+              <label class="text-[10px] font-bold text-purple-400 dark:text-purple-500 uppercase tracking-wider mb-2 block">New Password <span class="text-purple-300 dark:text-purple-600 font-normal normal-case">(leave blank to keep current)</span></label>
               <input v-model="editForm.password" type="password" placeholder="••••••••"
-                class="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
+                class="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-purple-200 dark:border-purple-800 rounded-xl text-sm font-semibold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
             </div>
             <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 block">Gate Assignment</label>
+              <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-900/50 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-5 shadow-sm">
+                <label class="text-[10px] font-bold text-emerald-400 dark:text-emerald-500 uppercase tracking-wider mb-2 block">Gate Assignment</label>
                 <select v-model="editForm.gate_assignment"
-                  class="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-shadow">
+                  class="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 rounded-xl text-sm font-semibold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-shadow">
                   <option value="ENTRY">Entry Only</option>
                   <option value="EXIT">Exit Only</option>
                   <option value="BOTH">Both</option>
                 </select>
               </div>
-              <div>
-                <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 block">Ticket Prefix <span class="text-slate-300 dark:text-slate-600 font-normal normal-case">(optional)</span></label>
+              <div class="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-900/50 border border-amber-200 dark:border-amber-800 rounded-2xl p-5 shadow-sm">
+                <label class="text-[10px] font-bold text-amber-400 dark:text-amber-500 uppercase tracking-wider mb-2 block">Ticket Prefix <span class="text-amber-300 dark:text-amber-600 font-normal normal-case">(optional)</span></label>
                 <input v-model="editForm.ticket_prefix" type="text" placeholder="e.g. P-T-R-2APW"
-                  class="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-shadow mb-1" />
-                <p class="text-[10px] text-slate-400 dark:text-slate-500">If blank, a prefix like P-T-R-XXXX is auto-generated.</p>
+                  class="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-800 rounded-xl text-sm font-semibold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-shadow mb-1" />
+                <p class="text-[10px] text-amber-600 dark:text-amber-500">If blank, a prefix like P-T-R-XXXX is auto-generated.</p>
               </div>
             </div>
           </div>

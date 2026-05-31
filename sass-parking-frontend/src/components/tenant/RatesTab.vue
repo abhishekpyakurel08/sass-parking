@@ -38,6 +38,20 @@ const initializeRates = async () => {
   await store.upsertRate('SUV',   { rate_per_hour: 80, grace_period_minutes: 15, lost_ticket_penalty: 200 });
   await store.upsertRate('BUS',   { rate_per_hour: 100, grace_period_minutes: 15, lost_ticket_penalty: 200 });
 };
+
+// Hover event handlers
+const handleRateHover = (event: MouseEvent, rate: any) => {
+  const rect = (event.target as HTMLElement).getBoundingClientRect();
+  rateTooltip.value = {
+    x: rect.left + rect.width / 2,
+    y: rect.top,
+    rate
+  };
+};
+
+const handleRateLeave = () => {
+  rateTooltip.value = null;
+};
 </script>
 
 <template>
@@ -74,7 +88,9 @@ const initializeRates = async () => {
     <!-- Rate Cards -->
     <div v-else class="space-y-4">
       <div v-for="rate in store.rates" :key="rate._id || rate.vehicle_type"
-        class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden hover:shadow-md transition-all duration-200 hover:scale-[1.01]"
+        @mouseenter="(e) => handleRateHover(e, rate)"
+        @mouseleave="handleRateLeave">
 
         <!-- Rate Header -->
         <div class="p-6">
@@ -109,34 +125,62 @@ const initializeRates = async () => {
         <!-- Inline Edit Form -->
         <Transition name="slide-down">
           <div v-if="editingRate === rate.vehicle_type"
-            class="border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-6 py-5 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">Rate / Hour (Rs.)</label>
+            class="border-t border-slate-100 dark:border-slate-700 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800/80 px-6 py-6 grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div class="bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-800 rounded-2xl p-4 shadow-sm">
+              <label class="text-[10px] font-bold text-blue-400 dark:text-blue-500 uppercase tracking-wider mb-2 block">Rate / Hour (Rs.)</label>
               <input v-model.number="rateForm.rate_per_hour" type="number" min="0"
-                class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-800" />
+                class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none" />
             </div>
-            <div>
-              <label class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">Grace Period (min)</label>
+            <div class="bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-4 shadow-sm">
+              <label class="text-[10px] font-bold text-emerald-400 dark:text-emerald-500 uppercase tracking-wider mb-2 block">Grace Period (min)</label>
               <input v-model.number="rateForm.grace_period_minutes" type="number" min="0"
-                class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-800" />
+                class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none" />
             </div>
-            <div>
-              <label class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">Lost Ticket Penalty (Rs.)</label>
+            <div class="bg-white dark:bg-slate-900 border border-red-200 dark:border-red-800 rounded-2xl p-4 shadow-sm">
+              <label class="text-[10px] font-bold text-red-400 dark:text-red-500 uppercase tracking-wider mb-2 block">Lost Ticket Penalty (Rs.)</label>
               <input v-model.number="rateForm.lost_ticket_penalty" type="number" min="0"
-                class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-800" />
+                class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none" />
             </div>
-            <div class="md:col-span-3 flex gap-3 pt-1">
+            <div class="md:col-span-3 flex gap-3 pt-2">
               <button @click="saveRate" :disabled="store.isLoading"
-                class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                class="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-bold rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 shadow-lg shadow-blue-300/50 transition-all">
                 <Save class="w-4 h-4" /> Save Rate
               </button>
               <button @click="editingRate = null"
-                class="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">Cancel</button>
+                class="px-5 py-3 text-sm font-bold text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">Cancel</button>
             </div>
           </div>
         </Transition>
       </div>
     </div>
+
+    <!-- Rate Tooltip -->
+    <teleport to="body">
+      <transition name="tooltip-fade">
+        <div v-if="rateTooltip"
+          class="fixed z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl text-xs font-bold pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-12px] border border-slate-700 min-w-[200px]"
+          :style="{ left: rateTooltip.x + 'px', top: rateTooltip.y + 'px' }">
+          <div class="flex items-center gap-2 mb-2 pb-2 border-b border-slate-700">
+            <span class="text-lg">{{ vehicleEmoji[rateTooltip.rate.vehicle_type] || '🚘' }}</span>
+            <div class="text-slate-400 text-[10px] uppercase tracking-wider">{{ rateTooltip.rate.vehicle_type?.toLowerCase() }}</div>
+          </div>
+          <div class="space-y-1">
+            <div class="flex justify-between">
+              <span class="text-slate-400">Rate:</span>
+              <span class="font-bold text-emerald-400">Rs. {{ rateTooltip.rate.rate_per_hour ?? rateTooltip.rate.amount ?? '—' }}/hr</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Grace:</span>
+              <span class="font-bold">{{ rateTooltip.rate.grace_period_minutes ?? 5 }} min</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Lost Penalty:</span>
+              <span class="font-bold text-red-400">Rs. {{ rateTooltip.rate.lost_ticket_penalty ?? 0 }}</span>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </teleport>
   </div>
 </template>
 

@@ -259,8 +259,8 @@ const handleTicketLeave = () => {
 
           <!-- Status Badge -->
           <div class="px-6 pt-5">
-            <span :class="['px-3 py-1.5 border rounded-lg text-xs font-black uppercase tracking-wider inline-flex items-center gap-2', statusStyles[selectedTicket.status]]">
-              <component :is="statusIcons[selectedTicket.status] || Circle" class="w-3.5 h-3.5" />
+            <span :class="['px-4 py-2 border rounded-xl text-sm font-black uppercase tracking-wider inline-flex items-center gap-2 shadow-sm', statusStyles[selectedTicket.status]]">
+              <component :is="statusIcons[selectedTicket.status] || Circle" class="w-4 h-4" />
               {{ selectedTicket.status }}
             </span>
           </div>
@@ -268,61 +268,61 @@ const handleTicketLeave = () => {
           <!-- Ticket Info -->
           <div class="px-6 py-5 space-y-5 flex-1">
             <!-- Ticket ID -->
-            <div class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
-              <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Ticket Number</p>
-              <p class="font-mono text-sm font-bold text-slate-800 dark:text-slate-200 break-all">{{ selectedTicket.ticket_number || selectedTicket._id }}</p>
+            <div class="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-sm">
+              <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Ticket Number</p>
+              <p class="font-mono text-base font-black text-slate-800 dark:text-slate-200 break-all tracking-wide">{{ selectedTicket.ticket_number || selectedTicket._id }}</p>
             </div>
 
             <!-- Timing block -->
-            <div class="grid grid-cols-2 gap-3">
-              <div class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
-                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Check-In</p>
-                <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ formatTime(selectedTicket.check_in_time) }}</p>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/50 border border-blue-200 dark:border-blue-800 rounded-2xl p-5 shadow-sm">
+                <p class="text-[10px] font-bold text-blue-400 dark:text-blue-500 uppercase tracking-wider mb-2">Check-In</p>
+                <p class="text-sm font-bold text-slate-900 dark:text-slate-100">{{ formatTime(selectedTicket.check_in_time) }}</p>
               </div>
-              <div class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
-                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Check-Out</p>
-                <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ selectedTicket.check_out_time ? formatTime(selectedTicket.check_out_time) : 'Still Active' }}</p>
+              <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-900/50 border border-purple-200 dark:border-purple-800 rounded-2xl p-5 shadow-sm">
+                <p class="text-[10px] font-bold text-purple-400 dark:text-purple-500 uppercase tracking-wider mb-2">Check-Out</p>
+                <p class="text-sm font-bold text-slate-900 dark:text-slate-100">{{ selectedTicket.check_out_time ? formatTime(selectedTicket.check_out_time) : 'Still Active' }}</p>
               </div>
             </div>
 
             <!-- Duration + Vehicle -->
-            <div class="grid grid-cols-2 gap-3">
-              <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-xl p-4">
-                <p class="text-[10px] font-bold text-blue-400 dark:text-blue-500 uppercase tracking-wider mb-1">Duration</p>
-                <p class="text-xl font-black text-blue-700 dark:text-blue-400">{{ duration(selectedTicket.check_in_time, selectedTicket.check_out_time) }}</p>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-900/50 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-5 shadow-sm">
+                <p class="text-[10px] font-bold text-emerald-400 dark:text-emerald-500 uppercase tracking-wider mb-2">Duration</p>
+                <p class="text-2xl font-black text-emerald-700 dark:text-emerald-400">{{ duration(selectedTicket.check_in_time, selectedTicket.check_out_time) }}</p>
               </div>
-              <div class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
-                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Vehicle Type</p>
-                <p class="text-sm font-black text-slate-900 dark:text-slate-100 uppercase">{{ selectedTicket.vehicle_type || '—' }}</p>
+              <div class="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-900/50 border border-amber-200 dark:border-amber-800 rounded-2xl p-5 shadow-sm">
+                <p class="text-[10px] font-bold text-amber-400 dark:text-amber-500 uppercase tracking-wider mb-2">Vehicle Type</p>
+                <p class="text-lg font-black text-slate-900 dark:text-slate-100 uppercase">{{ selectedTicket.vehicle_type || '—' }}</p>
               </div>
             </div>
 
             <!-- Fare -->
-            <div v-if="selectedTicket.fare_amount != null" class="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-xl p-5 flex justify-between items-center">
+            <div v-if="selectedTicket.fare_amount != null" class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/50 border-2 border-green-200 dark:border-green-800 rounded-2xl p-6 flex justify-between items-center shadow-lg">
               <div>
                 <p class="text-[10px] font-bold text-green-500 dark:text-green-600 uppercase tracking-wider mb-1">Total Fare</p>
-                <p class="text-3xl font-black text-green-700 dark:text-green-400">Rs. {{ selectedTicket.fare_amount }}</p>
+                <p class="text-4xl font-black text-green-700 dark:text-green-400">Rs. {{ selectedTicket.fare_amount }}</p>
               </div>
-              <div v-if="selectedTicket.payment_method" class="flex items-center gap-2 text-green-600 dark:text-green-500">
-                <component :is="paymentIcon[selectedTicket.payment_method] || CreditCard" class="w-5 h-5" />
-                <span class="text-xs font-bold uppercase">{{ selectedTicket.payment_method }}</span>
+              <div v-if="selectedTicket.payment_method" class="flex items-center gap-3 bg-white dark:bg-slate-800 px-4 py-2 rounded-xl shadow-sm">
+                <component :is="paymentIcon[selectedTicket.payment_method] || CreditCard" class="w-6 h-6 text-green-600 dark:text-green-500" />
+                <span class="text-sm font-bold uppercase text-slate-900 dark:text-slate-100">{{ selectedTicket.payment_method }}</span>
               </div>
             </div>
 
             <!-- Notes -->
-            <div v-if="selectedTicket.notes" class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
-              <p class="text-[10px] font-bold text-amber-500 dark:text-amber-600 uppercase tracking-wider mb-1">Notes</p>
-              <p class="text-sm text-amber-800 dark:text-amber-400">{{ selectedTicket.notes }}</p>
+            <div v-if="selectedTicket.notes" class="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/50 border border-amber-200 dark:border-amber-800 rounded-2xl p-5 shadow-sm">
+              <p class="text-[10px] font-bold text-amber-500 dark:text-amber-600 uppercase tracking-wider mb-2">Notes</p>
+              <p class="text-sm font-bold text-amber-800 dark:text-amber-400 leading-relaxed">{{ selectedTicket.notes }}</p>
             </div>
 
             <!-- Operator / Staff -->
-            <div v-if="selectedTicket.operator_id" class="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl">
-              <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-700 dark:text-blue-400 font-bold text-sm">
+            <div v-if="selectedTicket.operator_id" class="flex items-center gap-4 p-5 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+              <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-blue-300/50">
                 {{ selectedTicket.operator_id?.toString().slice(-2) }}
               </div>
               <div>
-                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Processed by</p>
-                <p class="text-sm font-bold text-slate-900 dark:text-slate-100">Gate Staff</p>
+                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Processed by</p>
+                <p class="text-base font-black text-slate-900 dark:text-slate-100">Gate Staff</p>
               </div>
             </div>
           </div>
