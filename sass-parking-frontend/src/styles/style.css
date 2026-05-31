@@ -133,3 +133,21 @@ html {
 	scroll-behavior: smooth;
 	scroll-padding-top: 5rem;
 }
+
+/* Tooltip fade transition */
+.tooltip-fade-enter-active,
+.tooltip-fade-leave-active {
+	transition: all 0.2s ease-out;
+}
+
+.tooltip-fade-enter-from,
+.tooltip-fade-leave-to {
+	opacity: 0;
+	transform: translate(-50%, -100%) scale(0.9);
+}
+
+.tooltip-fade-enter-to,
+.tooltip-fade-leave-from {
+	opacity: 1;
+	transform: translate(-50%, -100%) scale(1);
+}

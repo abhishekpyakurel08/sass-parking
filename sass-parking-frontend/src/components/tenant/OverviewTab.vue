@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useTenantStore } from '../../stores/tenant';
 import { useRouter } from 'vue-router';
 import {
@@ -10,22 +10,28 @@ import {
 const store = useTenantStore();
 const router = useRouter();
 
+// Tooltip states
+const barChartTooltip = ref<{ x: number; y: number; value: number; label: string } | null>(null);
+const revenueLineTooltip = ref<{ x: number; y: number; value: number; label: string } | null>(null);
+const occupancyLineTooltip = ref<{ x: number; y: number; value: number; label: string } | null>(null);
+const pieChartTooltip = ref<{ x: number; y: number; type: string; count: number; percentage: number } | null>(null);
+
 const chartBars = computed(() => {
   const tickets = store.ticketHistory;
   if (!tickets.length) {
     return [
-      { label: '06:00', height: '30%', dark: false },
-      { label: '',      height: '25%', dark: false },
-      { label: '09:00', height: '35%', dark: false },
-      { label: '',      height: '28%', dark: false },
-      { label: '12:00', height: '50%', dark: false },
-      { label: '',      height: '70%', dark: true  },
-      { label: '15:00', height: '90%', dark: true  },
-      { label: '',      height: '100%',dark: true  },
-      { label: '18:00', height: '78%', dark: true  },
-      { label: '',      height: '55%', dark: false },
-      { label: '21:00', height: '45%', dark: false },
-      { label: '00:00', height: '32%', dark: false },
+      { label: '06:00', height: '30%', dark: false, count: 3 },
+      { label: '',      height: '25%', dark: false, count: 2 },
+      { label: '09:00', height: '35%', dark: false, count: 4 },
+      { label: '',      height: '28%', dark: false, count: 3 },
+      { label: '12:00', height: '50%', dark: false, count: 5 },
+      { label: '',      height: '70%', dark: true,  count: 7 },
+      { label: '15:00', height: '90%', dark: true,  count: 9 },
+      { label: '',      height: '100%',dark: true,  count: 10 },
+      { label: '18:00', height: '78%', dark: true,  count: 8 },
+      { label: '',      height: '55%', dark: false, count: 5 },
+      { label: '21:00', height: '45%', dark: false, count: 4 },
+      { label: '00:00', height: '32%', dark: false, count: 3 },
     ];
   }
   const buckets = Array(12).fill(0);
@@ -41,6 +47,7 @@ const chartBars = computed(() => {
     label: i % 2 === 0 ? labels[i] : '',
     height: `${Math.max(Math.round((val / maxVal) * 100), 5)}%`,
     dark: val > maxVal * 0.6,
+    count: val,
   }));
 });
 
@@ -68,7 +75,7 @@ const linePoints = computed(() => {
   const points = heights.map((h, i) => {
     const x = padding + (i * (width - padding * 2)) / (heights.length - 1);
     const y = height - padding - (h * (height - padding * 2)) / 100;
-    return { x, y };
+    return { x, y, value: ordered[i] };
   });
 
   if (points.length === 0) return { points: [], path: '', areaPath: '', days: orderedLabels };
@@ -126,12 +133,12 @@ const revenueLinePoints = computed(() => {
   const width = 500;
   const height = 180;
   const padding = 20;
-  
+
   const points = bars.map((bar, i) => {
     const x = padding + (i * (width - padding * 2)) / (bars.length - 1);
     const percent = parseFloat(bar.height) || 0;
     const y = height - padding - (percent * (height - padding * 2)) / 100;
-    return { x, y, label: bar.label };
+    return { x, y, label: bar.label, value: bar.count };
   });
 
   if (points.length === 0) return { points: [], path: '', areaPath: '' };
@@ -146,6 +153,64 @@ const revenueLinePoints = computed(() => {
 
   return { points, path, areaPath };
 });
+
+// Hover event handlers
+const handleBarHover = (event: MouseEvent, bar: any, index: number) => {
+  const rect = (event.target as SVGElement).getBoundingClientRect();
+  barChartTooltip.value = {
+    x: rect.left + rect.width / 2,
+    y: rect.top,
+    value: bar.count,
+    label: bar.label || `${index * 2}:00`
+  };
+};
+
+const handleBarLeave = () => {
+  barChartTooltip.value = null;
+};
+
+const handleRevenueLineHover = (event: MouseEvent, point: any) => {
+  const rect = (event.target as SVGElement).getBoundingClientRect();
+  revenueLineTooltip.value = {
+    x: rect.left + rect.width / 2,
+    y: rect.top,
+    value: point.value,
+    label: point.label || ''
+  };
+};
+
+const handleRevenueLineLeave = () => {
+  revenueLineTooltip.value = null;
+};
+
+const handleOccupancyLineHover = (event: MouseEvent, point: any, day: string) => {
+  const rect = (event.target as SVGElement).getBoundingClientRect();
+  occupancyLineTooltip.value = {
+    x: rect.left + rect.width / 2,
+    y: rect.top,
+    value: point.value,
+    label: day
+  };
+};
+
+const handleOccupancyLineLeave = () => {
+  occupancyLineTooltip.value = null;
+};
+
+const handlePieHover = (event: MouseEvent, seg: any) => {
+  const rect = (event.target as SVGElement).getBoundingClientRect();
+  pieChartTooltip.value = {
+    x: rect.left + rect.width / 2,
+    y: rect.top,
+    type: seg.type,
+    count: seg.count,
+    percentage: seg.percentage
+  };
+};
+
+const handlePieLeave = () => {
+  pieChartTooltip.value = null;
+};
 
 // Navigation logic removed as Terminal Tab is removed
 
@@ -363,7 +428,11 @@ const exportPDF = () => {
             <circle v-for="(p, i) in revenueLinePoints.points" :key="i"
               :cx="p.x" :cy="p.y" r="4"
               fill="#2563eb" stroke="#ffffff" stroke-width="1.5"
-              class="transition-all duration-300 hover:r-6 cursor-pointer" />
+              class="transition-all duration-300 ease-out hover:r-7 hover:stroke-width-2.5 cursor-pointer hover:drop-shadow-lg"
+              style="filter: drop-shadow(0 0 0px rgba(37, 99, 235, 0));"
+              :style="{ filter: revenueLineTooltip && revenueLineTooltip.label === p.label ? 'drop-shadow(0 0 8px rgba(37, 99, 235, 0.6))' : 'drop-shadow(0 0 0px rgba(37, 99, 235, 0))' }"
+              @mouseenter="(e) => handleRevenueLineHover(e, p)"
+              @mouseleave="handleRevenueLineLeave" />
           </svg>
         </div>
         <div class="flex justify-between px-2 text-[9px] font-bold text-slate-400 mt-2">
@@ -411,7 +480,11 @@ const exportPDF = () => {
             <circle v-for="(p, i) in linePoints.points" :key="i"
               :cx="p.x" :cy="p.y" r="4.5"
               fill="#10b981" stroke="#ffffff" stroke-width="1.5"
-              class="transition-all duration-300 hover:r-6 cursor-pointer" />
+              class="transition-all duration-300 ease-out hover:r-7.5 hover:stroke-width-2.5 cursor-pointer"
+              style="filter: drop-shadow(0 0 0px rgba(16, 185, 129, 0));"
+              :style="{ filter: occupancyLineTooltip && occupancyLineTooltip.label === linePoints.days[i] ? 'drop-shadow(0 0 8px rgba(16, 185, 129, 0.6))' : 'drop-shadow(0 0 0px rgba(16, 185, 129, 0))' }"
+              @mouseenter="(e) => handleOccupancyLineHover(e, p, linePoints.days[i] || '')"
+              @mouseleave="handleOccupancyLineLeave" />
           </svg>
         </div>
         <div class="flex justify-between px-3 text-[10px] font-bold text-slate-400 mt-2">
@@ -441,7 +514,10 @@ const exportPDF = () => {
                 stroke-width="4.2"
                 :stroke-dasharray="seg.strokeDasharray"
                 :stroke-dashoffset="seg.strokeDashoffset"
-                class="transition-all duration-500" />
+                class="transition-all duration-300 ease-out cursor-pointer hover:stroke-width-5"
+                :class="{ 'opacity-100': !pieChartTooltip || pieChartTooltip.type !== seg.type, 'opacity-80 scale-105': pieChartTooltip && pieChartTooltip.type === seg.type }"
+                @mouseenter="(e) => handlePieHover(e, seg)"
+                @mouseleave="handlePieLeave" />
             </svg>
             <div class="absolute inset-0 flex flex-col items-center justify-center">
               <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">TOTAL</span>
@@ -582,5 +658,67 @@ const exportPDF = () => {
         </div>
       </div>
     </div>
+
+    <!-- Tooltip Components -->
+    <!-- Bar Chart Tooltip -->
+    <teleport to="body">
+      <transition name="tooltip-fade">
+        <div v-if="barChartTooltip"
+          class="fixed z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl text-xs font-bold pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-12px] border border-slate-700"
+          :style="{ left: barChartTooltip.x + 'px', top: barChartTooltip.y + 'px' }">
+          <div class="flex items-center gap-2 mb-1">
+            <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+            <div class="text-slate-400 text-[10px] uppercase tracking-wider">{{ barChartTooltip.label }}</div>
+          </div>
+          <div class="text-xl font-black">{{ barChartTooltip.value }} <span class="text-sm font-semibold text-slate-400">vehicles</span></div>
+        </div>
+      </transition>
+    </teleport>
+
+    <!-- Revenue Line Tooltip -->
+    <teleport to="body">
+      <transition name="tooltip-fade">
+        <div v-if="revenueLineTooltip"
+          class="fixed z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl text-xs font-bold pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-12px] border border-slate-700"
+          :style="{ left: revenueLineTooltip.x + 'px', top: revenueLineTooltip.y + 'px' }">
+          <div class="flex items-center gap-2 mb-1">
+            <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+            <div class="text-slate-400 text-[10px] uppercase tracking-wider">{{ revenueLineTooltip.label }}</div>
+          </div>
+          <div class="text-xl font-black">{{ revenueLineTooltip.value }} <span class="text-sm font-semibold text-slate-400">vehicles</span></div>
+        </div>
+      </transition>
+    </teleport>
+
+    <!-- Occupancy Line Tooltip -->
+    <teleport to="body">
+      <transition name="tooltip-fade">
+        <div v-if="occupancyLineTooltip"
+          class="fixed z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl text-xs font-bold pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-12px] border border-slate-700"
+          :style="{ left: occupancyLineTooltip.x + 'px', top: occupancyLineTooltip.y + 'px' }">
+          <div class="flex items-center gap-2 mb-1">
+            <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+            <div class="text-slate-400 text-[10px] uppercase tracking-wider">{{ occupancyLineTooltip.label }}</div>
+          </div>
+          <div class="text-xl font-black">{{ occupancyLineTooltip.value }} <span class="text-sm font-semibold text-slate-400">vehicles</span></div>
+        </div>
+      </transition>
+    </teleport>
+
+    <!-- Pie Chart Tooltip -->
+    <teleport to="body">
+      <transition name="tooltip-fade">
+        <div v-if="pieChartTooltip"
+          class="fixed z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl text-xs font-bold pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-12px] border border-slate-700"
+          :style="{ left: pieChartTooltip.x + 'px', top: pieChartTooltip.y + 'px' }">
+          <div class="flex items-center gap-2 mb-1">
+            <div class="w-2 h-2 rounded-full" :class="pieChartTooltip.type === 'CAR' ? 'bg-blue-500' : pieChartTooltip.type === 'BIKE' ? 'bg-emerald-500' : 'bg-amber-500'"></div>
+            <div class="text-slate-400 text-[10px] uppercase tracking-wider">{{ pieChartTooltip.type }}</div>
+          </div>
+          <div class="text-xl font-black">{{ pieChartTooltip.count }} <span class="text-sm font-semibold text-slate-400">vehicles</span></div>
+          <div class="text-emerald-400 text-lg font-black">{{ pieChartTooltip.percentage }}%</div>
+        </div>
+      </transition>
+    </teleport>
   </div>
 </template>
