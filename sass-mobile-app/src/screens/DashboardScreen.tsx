@@ -3,8 +3,9 @@ import {
   View, Text, StyleSheet, SafeAreaView, ScrollView,
   TouchableOpacity, ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
-import { RefreshCcw, CarFront, CheckCircle2, Banknote, Scan, ArrowRight, ParkingCircle, LogOut, CloudUpload } from 'lucide-react-native';
+import { CarFront, CheckCircle2, Banknote, Scan, ArrowRight, ParkingCircle, LogOut, CloudUpload, TrendingUp } from 'lucide-react-native';
 import { colors } from '../theme/colors';
+import { sw, sf } from '../theme/responsive';
 import { useNavigation } from '@react-navigation/native';
 import { useParkingStore } from '../store/parkingStore';
 import { useAuthStore } from '../store/authStore';
@@ -13,25 +14,51 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ErrorBanner } from '../components/ErrorBanner';
 
 const statusColor: Record<string, string> = {
-  ACTIVE: colors.success,
-  PENDING_PAYMENT: '#FDBA74',
-  PAID: colors.textSecondary,
-  EXPIRED: colors.danger,
-  LOST: colors.danger,
+  ACTIVE:          colors.success,
+  PENDING_PAYMENT: colors.warning,
+  PAID:            colors.textSecondary,
+  EXPIRED:         colors.danger,
+  LOST:            colors.danger,
+};
+
+const statusBg: Record<string, string> = {
+  ACTIVE:          colors.successBg,
+  PENDING_PAYMENT: colors.warningBg,
+  PAID:            colors.inputBg,
+  EXPIRED:         colors.dangerBg,
+  LOST:            colors.dangerBg,
 };
 
 const TicketRow = ({ ticket, index }: { ticket: Ticket, index: number }) => (
-  <Animated.View entering={FadeInDown.delay(100 * index).springify()} style={styles.activityItem}>
+  <Animated.View entering={FadeInDown.delay(80 * index).springify()} style={styles.activityItem}>
     <View style={styles.plateBadge}>
       <Text style={styles.plateText} numberOfLines={1}>{ticket.license_plate}</Text>
     </View>
     <View style={styles.activityDetails}>
-      <Text style={styles.activityTitle}>{ticket.status === 'ACTIVE' ? 'Check-in' : ticket.status === 'PAID' ? 'Check-out' : ticket.status}</Text>
-      <Text style={styles.activityTime}>{new Date(ticket.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+      <Text style={styles.activityTitle}>
+        {ticket.status === 'ACTIVE' ? 'Checked In' : ticket.status === 'PAID' ? 'Checked Out' : ticket.status}
+      </Text>
+      <Text style={styles.activityTime}>
+        {new Date(ticket.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      </Text>
     </View>
-    <View style={[styles.statusBadge, { backgroundColor: statusColor[ticket.status] + '30' }]}>
-      <Text style={[styles.statusBadgeText, { color: statusColor[ticket.status] }]}>{ticket.status}</Text>
+    <View style={[styles.statusBadge, { backgroundColor: statusBg[ticket.status] ?? colors.inputBg }]}>
+      <Text style={[styles.statusBadgeText, { color: statusColor[ticket.status] ?? colors.textSecondary }]}>
+        {ticket.status === 'PENDING_PAYMENT' ? 'PENDING' : ticket.status}
+      </Text>
     </View>
+  </Animated.View>
+);
+
+const StatCard = ({ label, value, color, icon: Icon, delay = 0 }: {
+  label: string; value: string | number; color: string; icon: any; delay?: number;
+}) => (
+  <Animated.View entering={FadeInDown.delay(delay).springify()} style={styles.statCard}>
+    <View style={[styles.statIconWrap, { backgroundColor: color + '18' }]}>
+      <Icon color={color} size={20} />
+    </View>
+    <Text style={[styles.statValue, { color }]}>{value}</Text>
+    <Text style={styles.statLabel}>{label}</Text>
   </Animated.View>
 );
 
@@ -48,10 +75,7 @@ const DashboardScreen = () => {
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', style: 'destructive', onPress: async () => {
-          await logout();
-          // Navigation to Login is handled automatically by AppNavigator
-        }},
+      { text: 'Logout', style: 'destructive', onPress: async () => { await logout(); } },
     ]);
   };
 
@@ -65,260 +89,206 @@ const DashboardScreen = () => {
     return `Rs. ${n.toFixed(0)}`;
   };
 
+  const assignmentLabel = () => {
+    if (user?.gate_assignment === 'ENTRY') return 'Entry Gate';
+    if (user?.gate_assignment === 'EXIT') return 'Exit Gate';
+    if (user?.gate_assignment === 'BOTH') return 'Dual Gate';
+    return 'General';
+  };
+
+  const assignmentColor = () => {
+    if (user?.gate_assignment === 'ENTRY') return colors.success;
+    if (user?.gate_assignment === 'EXIT') return colors.danger;
+    return colors.primary;
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ErrorBanner error={error} clearError={clearError} />
+
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <RefreshCcw color={colors.primary} size={20} />
-          <Text style={styles.logoText}>PARKSAAS</Text>
+        <View>
+          <Text style={styles.greeting}>Welcome back 👋</Text>
+          <Text style={styles.userName}>{user?.name ?? 'Operator'}</Text>
         </View>
-        <TouchableOpacity onPress={handleLogout}>
-          <LogOut color={colors.textSecondary} size={22} />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          {offlineQueueCount > 0 ? (
+            <TouchableOpacity style={styles.syncBadge} onPress={syncOfflineQueue} disabled={isSyncing}>
+              {isSyncing
+                ? <ActivityIndicator color="#FFF" size="small" />
+                : <><CloudUpload color="#FFF" size={14} /><Text style={styles.syncText}> {offlineQueueCount}</Text></>
+              }
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.onlinePill}>
+              <View style={styles.onlineDot} />
+              <Text style={styles.onlineText}>Online</Text>
+            </View>
+          )}
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
+            <LogOut color={colors.textSecondary} size={20} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isLoadingStats} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
-        {/* Terminal Header */}
-        <Animated.View entering={FadeInDown.duration(400)} style={[
-          styles.terminalCard,
-          user?.gate_assignment === 'ENTRY' && styles.terminalEntry,
-          user?.gate_assignment === 'EXIT' && styles.terminalExit,
-          user?.gate_assignment === 'BOTH' && styles.terminalBoth,
-        ]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <View style={[
-              styles.terminalIndicator,
-              user?.gate_assignment === 'ENTRY' && { backgroundColor: colors.success },
-              user?.gate_assignment === 'EXIT' && { backgroundColor: '#EF4444' },
-              user?.gate_assignment === 'BOTH' && { backgroundColor: colors.primary },
-            ]} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.terminalTitle}>
-                {user?.gate_assignment === 'ENTRY' && '🟢 ENTRY GATE TERMINAL'}
-                {user?.gate_assignment === 'EXIT' && '🔴 EXIT GATE TERMINAL'}
-                {user?.gate_assignment === 'BOTH' && '🔵 DUAL GATE TERMINAL'}
-                {!user?.gate_assignment && '⚫ GENERAL OPERATOR CONSOLE'}
-              </Text>
-              <Text style={styles.terminalSub}>
-                {user?.gate_assignment === 'ENTRY' && 'Authorized for vehicle entry registrations & ticket creation.'}
-                {user?.gate_assignment === 'EXIT' && 'Authorized for vehicle checkouts & payment processing.'}
-                {user?.gate_assignment === 'BOTH' && 'Full dual access for entry and checkout operations.'}
-                {!user?.gate_assignment && 'General access operator console.'}
-              </Text>
-            </View>
-          </View>
-        </Animated.View>
 
-        {/* Operator Status */}
-        <Animated.View entering={FadeInDown.delay(50).duration(400)} style={styles.operatorCard}>
-          <View>
-            <Text style={styles.label}>ACTIVE OPERATOR</Text>
-            <Text style={styles.operatorName}>{user?.name ?? 'Operator'}</Text>
-          </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            {offlineQueueCount > 0 ? (
-              <TouchableOpacity style={styles.offlineBadge} onPress={syncOfflineQueue} disabled={isSyncing}>
-                {isSyncing ? (
-                  <ActivityIndicator color="#FFF" size="small" />
-                ) : (
-                  <>
-                    <CloudUpload color="#FFF" size={12} style={{ marginRight: 4 }} />
-                    <Text style={styles.offlineText}>{offlineQueueCount} PENDING</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.onlineBadge}>
-                <Text style={styles.onlineText}>ONLINE</Text>
-              </View>
-            )}
-            <Text style={styles.roleText}>{user?.role?.replace('_', ' ')}</Text>
-          </View>
-        </Animated.View>
-
-        {/* Action Buttons */}
-        {user?.gate_assignment !== 'EXIT' && (
-          <Animated.View entering={FadeInDown.delay(100).duration(400)}>
-            <TouchableOpacity style={styles.checkInButton} onPress={() => navigation.navigate('Entry' as never)}>
-              <ParkingCircle color="#FFF" size={32} style={{ marginBottom: 8 }} />
-              <Text style={styles.actionButtonText}>CHECK IN VEHICLE</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-
-        {user?.gate_assignment !== 'ENTRY' && (
-          <Animated.View entering={FadeInDown.delay(150).duration(400)}>
-            <TouchableOpacity style={styles.scanButton} onPress={() => navigation.navigate('Exit' as never)}>
-              <Scan color="#FFF" size={32} style={{ marginBottom: 8 }} />
-              <Text style={[styles.actionButtonText, { color: '#FFF' }]}>SCAN TO CHECK OUT</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-
-        {/* Shift Overview */}
-        <Text style={styles.sectionTitle}>SHIFT OVERVIEW</Text>
-
+        {/* ── Stats Row ───────────────────────────────────────────────── */}
         {isLoadingStats && !stats ? (
-          <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
+          <ActivityIndicator color={colors.primary} style={{ marginVertical: 32 }} />
         ) : (
-          <Animated.View entering={FadeInDown.delay(200).duration(400)}>
-            {user?.gate_assignment === 'ENTRY' && (
-              <View style={styles.statsRow}>
-                <View style={[styles.overviewCard, { flex: 1, marginBottom: 0 }]}>
-                  <View style={styles.overviewHeader}>
-                    <Text style={styles.label}>CHECK-INS TODAY</Text>
-                    <CarFront color={colors.success} size={20} />
-                  </View>
-                  <Text style={[styles.overviewValue, { color: colors.success }]}>
-                    {stats?.totalVehicles ?? 0}
-                  </Text>
-                </View>
-                <View style={[styles.overviewCard, { flex: 1, marginLeft: 12, marginBottom: 0 }]}>
-                  <View style={styles.overviewHeader}>
-                    <Text style={styles.label}>ACTIVE VEHICLES</Text>
-                    <ParkingCircle color={colors.primary} size={20} />
-                  </View>
-                  <Text style={[styles.overviewValue, { color: colors.primary }]}>
-                    {Math.max(0, (stats?.totalVehicles ?? 0) - (stats?.completedSessions ?? 0))}
-                  </Text>
-                </View>
-              </View>
+          <View style={styles.statsRow}>
+            {user?.gate_assignment !== 'EXIT' && (
+              <StatCard
+                label="Check-ins"
+                value={stats?.totalVehicles ?? 0}
+                color={colors.success}
+                icon={CarFront}
+                delay={50}
+              />
             )}
-
-            {user?.gate_assignment === 'EXIT' && (
-              <View style={styles.statsRow}>
-                <View style={[styles.overviewCard, { flex: 1, marginBottom: 0 }]}>
-                  <View style={styles.overviewHeader}>
-                    <Text style={styles.label}>CHECK-OUTS TODAY</Text>
-                    <CheckCircle2 color="#FDBA74" size={20} />
-                  </View>
-                  <Text style={[styles.overviewValue, { color: '#FDBA74' }]}>
-                    {stats?.completedSessions ?? 0}
-                  </Text>
-                </View>
-                <View style={[styles.overviewCard, { flex: 1, marginLeft: 12, marginBottom: 0 }]}>
-                  <View style={styles.overviewHeader}>
-                    <Text style={styles.label}>TOTAL REVENUE</Text>
-                    <Banknote color={colors.success} size={20} />
-                  </View>
-                  <Text style={[styles.overviewValue, { color: colors.success }]}>
-                    {fmtRevenue(stats?.totalRevenue ?? 0)}
-                  </Text>
-                </View>
-              </View>
+            {user?.gate_assignment !== 'ENTRY' && (
+              <StatCard
+                label="Check-outs"
+                value={stats?.completedSessions ?? 0}
+                color={colors.warning}
+                icon={CheckCircle2}
+                delay={100}
+              />
             )}
-
-            {(user?.gate_assignment === 'BOTH' || !user?.gate_assignment) && (
-              <>
-                <View style={styles.statsRow}>
-                  <View style={[styles.overviewCard, { flex: 1 }]}>
-                    <View style={styles.overviewHeader}>
-                      <Text style={styles.label}>VEHICLES TODAY</Text>
-                      <CarFront color={colors.success} size={20} />
-                    </View>
-                    <Text style={[styles.overviewValue, { color: colors.success }]}>
-                      {stats?.totalVehicles ?? 0}
-                    </Text>
-                  </View>
-                  <View style={[styles.overviewCard, { flex: 1, marginLeft: 12 }]}>
-                    <View style={styles.overviewHeader}>
-                      <Text style={styles.label}>SESSIONS DONE</Text>
-                      <CheckCircle2 color="#FDBA74" size={20} />
-                    </View>
-                    <Text style={[styles.overviewValue, { color: '#FDBA74' }]}>
-                      {stats?.completedSessions ?? 0}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.overviewCard}>
-                  <View style={styles.overviewHeader}>
-                    <Text style={styles.label}>TOTAL REVENUE</Text>
-                    <Banknote color={colors.primary} size={20} />
-                  </View>
-                  <Text style={[styles.overviewValue, { color: colors.primary }]}>
-                    {fmtRevenue(stats?.totalRevenue ?? 0)}
-                  </Text>
-                </View>
-              </>
-            )}
-          </Animated.View>
+            <StatCard
+              label="Revenue"
+              value={fmtRevenue(stats?.totalRevenue ?? 0)}
+              color={colors.primary}
+              icon={Banknote}
+              delay={150}
+            />
+          </View>
         )}
 
-        {/* Recent Activity */}
-        <Animated.View entering={FadeInDown.delay(400).duration(400)}>
-          <View style={styles.activityHeader}>
-            <Text style={styles.sectionTitle}>RECENT ACTIVITY</Text>
-            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }} onPress={() => navigation.navigate('History' as never)}>
-              <Text style={styles.viewAllText}>VIEW ALL</Text>
-              <ArrowRight color={colors.primary} size={14} style={{ marginLeft: 4 }} />
+        {/* ── Quick Actions ───────────────────────────────────────────── */}
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
+
+        <View style={styles.actionsRow}>
+          {user?.gate_assignment !== 'EXIT' && (
+            <Animated.View entering={FadeInDown.delay(200).springify()} style={{ flex: 1, marginRight: 8 }}>
+              <TouchableOpacity
+                style={[styles.actionCard, { backgroundColor: colors.primary }]}
+                onPress={() => navigation.navigate('Entry' as never)}
+              >
+                <View style={styles.actionIconWrap}>
+                  <ParkingCircle color="#FFF" size={28} />
+                </View>
+                <Text style={styles.actionLabel}>Check In</Text>
+                <Text style={styles.actionSub}>Register vehicle</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+          {user?.gate_assignment !== 'ENTRY' && (
+            <Animated.View entering={FadeInDown.delay(250).springify()} style={{ flex: 1, marginLeft: user?.gate_assignment !== 'EXIT' ? 0 : 0 }}>
+              <TouchableOpacity
+                style={[styles.actionCard, { backgroundColor: colors.secondary }]}
+                onPress={() => navigation.navigate('Exit' as never)}
+              >
+                <View style={styles.actionIconWrap}>
+                  <Scan color="#FFF" size={28} />
+                </View>
+                <Text style={styles.actionLabel}>Check Out</Text>
+                <Text style={styles.actionSub}>Process exit</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+        </View>
+
+        {/* ── Recent Activity ─────────────────────────────────────────── */}
+        <Animated.View entering={FadeInDown.delay(300).duration(400)}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleRow}>
+              <TrendingUp color={colors.primary} size={16} />
+              <Text style={styles.sectionTitle}>Recent Activity</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.viewAllBtn}
+              onPress={() => navigation.navigate('History' as never)}
+            >
+              <Text style={styles.viewAllText}>See all</Text>
+              <ArrowRight color={colors.primary} size={14} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.activityCard}>
             {recentTickets.length === 0 ? (
-              <View style={{ padding: 20, alignItems: 'center' }}>
-                <Text style={{ color: colors.textSecondary }}>No activity yet today</Text>
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>No activity yet today</Text>
               </View>
             ) : (
               recentTickets.slice(0, 5).map((ticket, i) => (
-                <View key={ticket._id} style={i === Math.min(recentTickets.length, 5) - 1 ? { borderBottomWidth: 0 } : {}}>
-                  <TicketRow ticket={ticket} index={i} />
-                </View>
+                <TicketRow key={ticket._id} ticket={ticket} index={i} />
               ))
             )}
           </View>
         </Animated.View>
+
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container:       { flex: 1, backgroundColor: colors.background },
-  header:          { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
-  logoContainer:   { flexDirection: 'row', alignItems: 'center' },
-  logoText:        { color: colors.textSecondary, fontSize: 18, fontWeight: 'bold', marginLeft: 8, letterSpacing: 1 },
-  scrollContent:   { padding: 20, paddingBottom: 40 },
-  operatorCard:    { backgroundColor: colors.card, borderRadius: 16, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)', marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
-  label:           { color: colors.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 1, marginBottom: 4 },
-  operatorName:    { color: colors.text, fontSize: 18 },
-  onlineBadge:     { backgroundColor: colors.success, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 2, marginBottom: 4 },
-  onlineText:      { color: '#FFF', fontSize: 10, fontWeight: 'bold' },
-  offlineBadge:    { backgroundColor: '#F59E0B', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, marginBottom: 4, flexDirection: 'row', alignItems: 'center' },
-  offlineText:     { color: '#FFF', fontSize: 10, fontWeight: 'bold' },
-  roleText:        { color: colors.textSecondary, fontSize: 10 },
-  gateText:        { color: colors.primary, fontSize: 9, fontWeight: 'bold', marginTop: 2, letterSpacing: 0.5 },
-  checkInButton:   { backgroundColor: colors.primary, borderRadius: 16, padding: 24, alignItems: 'center', marginBottom: 16, shadowColor: colors.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 6 },
-  scanButton:      { backgroundColor: colors.secondary, borderRadius: 16, padding: 24, alignItems: 'center', marginBottom: 32, shadowColor: colors.secondary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 6 },
-  actionButtonText:{ color: '#FFF', fontSize: 15, fontWeight: '800', letterSpacing: 1 },
-  sectionTitle:    { color: colors.text, fontSize: 15, fontWeight: '900', marginBottom: 12, letterSpacing: 0.5 },
-  overviewCard:    { backgroundColor: colors.card, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)', marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
-  overviewHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  overviewValue:   { fontSize: 36, fontWeight: 'bold' },
-  statsRow:        { flexDirection: 'row', marginBottom: 12 },
-  activityHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 12 },
-  viewAllText:     { color: colors.primary, fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
-  activityCard:    { backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
-  activityItem:    { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
-  plateBadge:      { backgroundColor: colors.accent + '30', borderWidth: 1, borderColor: colors.accent, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 6, width: 80, alignItems: 'center' },
-  plateText:       { color: colors.text, fontSize: 11, fontFamily: 'monospace', fontWeight: 'bold' },
-  activityDetails: { flex: 1, marginLeft: 16 },
-  activityTitle:   { color: colors.text, fontSize: 14, fontWeight: 'bold' },
-  activityTime:    { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
-  statusBadge:     { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
-  statusBadgeText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
-  // Terminal banner styles
-  terminalCard:    { borderRadius: 12, padding: 16, borderWidth: 1, marginBottom: 16, borderColor: 'rgba(0,0,0,0.08)', backgroundColor: colors.card, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 4, elevation: 1 },
-  terminalEntry:   { borderColor: colors.success, borderLeftWidth: 3 },
-  terminalExit:    { borderColor: '#EF4444', borderLeftWidth: 3 },
-  terminalBoth:    { borderColor: colors.primary, borderLeftWidth: 3 },
-  terminalIndicator: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.textSecondary, marginTop: 2 },
-  terminalTitle:   { color: colors.text, fontSize: 13, fontWeight: 'bold', letterSpacing: 0.5, marginBottom: 2 },
-  terminalSub:     { color: colors.textSecondary, fontSize: 11 },
+  container:        { flex: 1, backgroundColor: colors.background },
+
+  // ── Header
+  header:           { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: sw(20), paddingTop: sw(16), paddingBottom: sw(12), backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border },
+  greeting:         { color: colors.textSecondary, fontSize: sf(13), fontWeight: '500', marginBottom: 2 },
+  userName:         { color: colors.text, fontSize: sf(20), fontWeight: '700', letterSpacing: -0.3 },
+  headerRight:      { flexDirection: 'row', alignItems: 'center', gap: sw(10) },
+  onlinePill:       { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.successBg, paddingHorizontal: sw(10), paddingVertical: sw(5), borderRadius: sw(20) },
+  onlineDot:        { width: sw(6), height: sw(6), borderRadius: sw(3), backgroundColor: colors.success, marginRight: sw(5) },
+  onlineText:       { color: colors.success, fontSize: sf(12), fontWeight: '600' },
+  syncBadge:        { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.warning, paddingHorizontal: sw(10), paddingVertical: sw(5), borderRadius: sw(20) },
+  syncText:         { color: '#FFF', fontSize: sf(12), fontWeight: '600' },
+  logoutBtn:        { padding: sw(4) },
+
+  // ── Content
+  scrollContent:    { padding: sw(20), paddingBottom: sw(32) },
+
+  // ── Stats
+  statsRow:         { flexDirection: 'row', gap: sw(10), marginBottom: sw(28) },
+  statCard:         { flex: 1, backgroundColor: colors.card, borderRadius: sw(16), padding: sw(16), alignItems: 'flex-start', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
+  statIconWrap:     { width: sw(38), height: sw(38), borderRadius: sw(12), justifyContent: 'center', alignItems: 'center', marginBottom: sw(10) },
+  statValue:        { fontSize: sf(22), fontWeight: '800', letterSpacing: -0.5, marginBottom: 2 },
+  statLabel:        { fontSize: sf(11), color: colors.textSecondary, fontWeight: '600' },
+
+  // ── Actions
+  sectionTitle:     { color: colors.text, fontSize: sf(16), fontWeight: '700', letterSpacing: -0.2, marginBottom: sw(12) },
+  actionsRow:       { flexDirection: 'row', gap: sw(12), marginBottom: sw(28) },
+  actionCard:       { borderRadius: sw(18), padding: sw(20), flex: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 14, elevation: 6 },
+  actionIconWrap:   { width: sw(50), height: sw(50), backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: sw(16), justifyContent: 'center', alignItems: 'center', marginBottom: sw(16) },
+  actionLabel:      { color: '#FFF', fontSize: sf(16), fontWeight: '700', marginBottom: 2 },
+  actionSub:        { color: 'rgba(255,255,255,0.75)', fontSize: sf(12), fontWeight: '500' },
+
+  // ── Activity
+  sectionHeader:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: sw(12) },
+  sectionTitleRow:  { flexDirection: 'row', alignItems: 'center', gap: sw(6) },
+  viewAllBtn:       { flexDirection: 'row', alignItems: 'center', gap: sw(4) },
+  viewAllText:      { color: colors.primary, fontSize: sf(13), fontWeight: '600' },
+  activityCard:     { backgroundColor: colors.card, borderRadius: sw(18), overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
+  activityItem:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: sw(16), paddingVertical: sw(14), borderBottomWidth: 1, borderBottomColor: colors.border },
+  plateBadge:       { backgroundColor: colors.accent, borderRadius: sw(8), paddingHorizontal: sw(8), paddingVertical: sw(6), width: sw(82), alignItems: 'center' },
+  plateText:        { color: colors.primary, fontSize: sf(11), fontFamily: 'monospace', fontWeight: '800', letterSpacing: 0.5 },
+  activityDetails:  { flex: 1, marginLeft: sw(12) },
+  activityTitle:    { color: colors.text, fontSize: sf(14), fontWeight: '600' },
+  activityTime:     { color: colors.textSecondary, fontSize: sf(12), marginTop: 2 },
+  statusBadge:      { paddingHorizontal: sw(8), paddingVertical: sw(4), borderRadius: sw(8) },
+  statusBadgeText:  { fontSize: sf(10), fontWeight: '700', letterSpacing: 0.3 },
+  emptyState:       { padding: sw(32), alignItems: 'center' },
+  emptyText:        { color: colors.textSecondary, fontSize: sf(14) },
 });
 
 export default DashboardScreen;
+

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Home, ScanLine, Clock, LogIn, LogOut } from 'lucide-react-native';
+import { Home, ScanLine, Clock, LogIn, LogOut, Settings2 } from 'lucide-react-native';
 import { View, ActivityIndicator, Platform } from 'react-native';
 
 import LoginScreen        from '../screens/LoginScreen';
@@ -12,6 +12,7 @@ import EntryScreen        from '../screens/EntryScreen';
 import ExitScreen         from '../screens/ExitScreen';
 import PaymentScreen      from '../screens/PaymentScreen';
 import HistoryScreen      from '../screens/HistoryScreen';
+import SettingsScreen     from '../screens/SettingsScreen';
 import TicketDetailScreen from '../screens/TicketDetailScreen';
 import { colors }         from '../theme/colors';
 import { useAuthStore }   from '../store/authStore';
@@ -24,14 +25,24 @@ const tabBarScreenOptions = {
   headerShown: false,
   tabBarStyle: {
     backgroundColor: colors.tabBar,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    height: Platform.OS === 'ios' ? 88 : 64,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
-    paddingTop: 12,
+    borderTopWidth: 0,
+    height: Platform.OS === 'ios' ? 88 : 68,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 14,
+    paddingTop: 10,
+    // Floating shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 16,
   },
   tabBarActiveTintColor:   colors.primary,
   tabBarInactiveTintColor: colors.textSecondary,
+  tabBarLabelStyle: {
+    fontSize: 10,
+    fontWeight: '600' as const,
+    marginTop: 2,
+  },
 };
 
 // ── 🟢 ENTRY-only tabs: Entry Gate home + History ─────────────────────────────
@@ -51,6 +62,14 @@ const EntryTabs = () => (
       options={{
         tabBarLabel: 'History',
         tabBarIcon: ({ color }) => <Clock color={color} size={24} />,
+      }}
+    />
+    <Tab.Screen
+      name="Settings"
+      component={SettingsScreen}
+      options={{
+        tabBarLabel: 'Settings',
+        tabBarIcon: ({ color }) => <Settings2 color={color} size={24} />,
       }}
     />
   </Tab.Navigator>
@@ -75,6 +94,14 @@ const ExitTabs = () => (
         tabBarIcon: ({ color }) => <Clock color={color} size={24} />,
       }}
     />
+    <Tab.Screen
+      name="Settings"
+      component={SettingsScreen}
+      options={{
+        tabBarLabel: 'Settings',
+        tabBarIcon: ({ color }) => <Settings2 color={color} size={24} />,
+      }}
+    />
   </Tab.Navigator>
 );
 
@@ -94,31 +121,7 @@ const BothTabs = () => (
       component={EntryScreen}
       options={{
         tabBarLabel: 'Entry',
-        tabBarIcon: ({ color, focused }) => (
-          <View style={{
-            backgroundColor: focused ? colors.success : 'transparent',
-            padding: 6, borderRadius: 8, marginTop: -4,
-          }}>
-            <LogIn color={focused ? '#fff' : color} size={22} />
-          </View>
-        ),
-        tabBarLabelStyle: { marginTop: 2 },
-      }}
-    />
-    <Tab.Screen
-      name="ExitTab"
-      component={ExitScreen}
-      options={{
-        tabBarLabel: 'Exit',
-        tabBarIcon: ({ color, focused }) => (
-          <View style={{
-            backgroundColor: focused ? '#EF4444' : 'transparent',
-            padding: 6, borderRadius: 8, marginTop: -4,
-          }}>
-            <LogOut color={focused ? '#fff' : color} size={22} />
-          </View>
-        ),
-        tabBarLabelStyle: { marginTop: 2 },
+        tabBarIcon: ({ color }) => <LogIn color={color} size={24} />,
       }}
     />
     <Tab.Screen
@@ -126,15 +129,25 @@ const BothTabs = () => (
       component={PaymentScreen}
       options={{
         tabBarLabel: 'Scanner',
-        tabBarIcon: ({ color, focused }) => (
+        tabBarIcon: ({ focused }) => (
           <View style={{
-            backgroundColor: focused ? colors.primary : 'transparent',
-            padding: 6, borderRadius: 8, marginTop: -4,
+            width: 56,
+            height: 56,
+            backgroundColor: colors.primary,
+            borderRadius: 28,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginTop: -32, // Floats above the tab bar
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.35,
+            shadowRadius: 12,
+            elevation: 8,
           }}>
-            <ScanLine color={focused ? '#fff' : color} size={22} />
+            <ScanLine color="#fff" size={26} />
           </View>
         ),
-        tabBarLabelStyle: { marginTop: 2 },
+        tabBarLabelStyle: { marginTop: 4, fontSize: 10, fontWeight: 'bold' },
       }}
     />
     <Tab.Screen
@@ -142,7 +155,15 @@ const BothTabs = () => (
       component={HistoryScreen}
       options={{
         tabBarLabel: 'History',
-        tabBarIcon: ({ color }) => <Clock color={color} size={22} />,
+        tabBarIcon: ({ color }) => <Clock color={color} size={24} />,
+      }}
+    />
+    <Tab.Screen
+      name="Settings"
+      component={SettingsScreen}
+      options={{
+        tabBarLabel: 'Settings',
+        tabBarIcon: ({ color }) => <Settings2 color={color} size={24} />,
       }}
     />
   </Tab.Navigator>
@@ -193,6 +214,7 @@ export default function AppNavigator() {
             <Stack.Screen name="Exit"         component={ExitScreen} />
             <Stack.Screen name="Payment"      component={PaymentScreen} />
             <Stack.Screen name="TicketDetail" component={TicketDetailScreen} />
+            <Stack.Screen name="Settings"     component={SettingsScreen} />
           </>
         ) : (
           <Stack.Screen name="Login" component={LoginScreen} />

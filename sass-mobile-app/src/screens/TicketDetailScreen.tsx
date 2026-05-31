@@ -9,6 +9,7 @@ import {
   Tag, User, RefreshCcw,
 } from 'lucide-react-native';
 import { colors } from '../theme/colors';
+import { sw, sf } from '../theme/responsive';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { Ticket } from '../types/api.types';
 import QRCode from 'react-native-qrcode-svg';
@@ -311,40 +312,40 @@ const TicketDetailScreen = () => {
 
 const styles = StyleSheet.create({
   container:       { flex: 1, backgroundColor: colors.background },
-  header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
-  logoRow:         { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  logoText:        { color: colors.primary, fontSize: 14, fontWeight: 'bold', letterSpacing: 1 },
-  statusBadge:     { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1 },
-  statusBadgeText: { fontSize: 10, fontWeight: 'bold', letterSpacing: 0.5 },
-  content:         { padding: 20, paddingBottom: 60 },
+  header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: sw(20), paddingVertical: sw(14), borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.card },
+  logoRow:         { flexDirection: 'row', alignItems: 'center', gap: sw(6) },
+  logoText:        { color: colors.primary, fontSize: sf(14), fontWeight: 'bold', letterSpacing: 1 },
+  statusBadge:     { paddingHorizontal: sw(10), paddingVertical: sw(4), borderRadius: sw(12), borderWidth: 1 },
+  statusBadgeText: { fontSize: sf(10), fontWeight: 'bold', letterSpacing: 0.5 },
+  content:         { padding: sw(20), paddingBottom: sw(60) },
 
-  vehicleBanner:    { alignItems: 'center', marginBottom: 24 },
-  vehicleIconCircle:{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  plateWrap:        { backgroundColor: '#FFF', borderRadius: 6, paddingHorizontal: 24, paddingVertical: 12, marginBottom: 6 },
-  plateText:        { color: '#000', fontSize: 26, fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: 4 },
-  vehicleTypeLabel: { color: colors.textSecondary, fontSize: 12, letterSpacing: 1 },
+  vehicleBanner:    { alignItems: 'center', marginBottom: sw(20) },
+  vehicleIconCircle:{ width: sw(72), height: sw(72), borderRadius: sw(36), backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', marginBottom: sw(12), shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+  plateWrap:        { backgroundColor: colors.accent, borderRadius: sw(8), paddingHorizontal: sw(20), paddingVertical: sw(10), marginBottom: sw(6) },
+  plateText:        { color: colors.primary, fontSize: sf(24), fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: 4 },
+  vehicleTypeLabel: { color: colors.textSecondary, fontSize: sf(12), letterSpacing: 1 },
 
-  ticketCard:     { backgroundColor: colors.card, borderRadius: 8, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 20 },
-  ticketHeader:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  ticketLabel:    { color: colors.primary, fontSize: 10, fontWeight: 'bold', letterSpacing: 1 },
-  ticketNumber:   { color: colors.textSecondary, fontSize: 12, fontFamily: 'monospace' },
+  ticketCard:     { backgroundColor: colors.card, borderRadius: sw(14), borderWidth: 1, borderColor: colors.border, padding: sw(16), marginBottom: sw(16), shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
+  ticketHeader:   { flexDirection: 'row', alignItems: 'center', gap: sw(8), marginBottom: sw(6) },
+  ticketLabel:    { color: colors.primary, fontSize: sf(10), fontWeight: 'bold', letterSpacing: 1 },
+  ticketNumber:   { color: colors.textSecondary, fontSize: sf(12), fontFamily: 'monospace' },
 
-  section:        { marginBottom: 20 },
-  sectionTitle:   { color: colors.textSecondary, fontSize: 10, fontWeight: 'bold', letterSpacing: 1, marginBottom: 10 },
-  card:           { backgroundColor: colors.card, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
-  divider:        { height: 1, backgroundColor: colors.border, marginHorizontal: 16 },
-  infoRow:        { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 14 },
-  infoIcon:       { width: 28, alignItems: 'center' },
-  infoLabel:      { color: colors.textSecondary, fontSize: 10, marginBottom: 2 },
-  infoValue:      { color: colors.text, fontSize: 14, fontWeight: '600' },
+  section:        { marginBottom: sw(16) },
+  sectionTitle:   { color: colors.textSecondary, fontSize: sf(10), fontWeight: '700', letterSpacing: 1, marginBottom: sw(8) },
+  card:           { backgroundColor: colors.card, borderRadius: sw(14), overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
+  divider:        { height: 1, backgroundColor: colors.border, marginHorizontal: sw(16) },
+  infoRow:        { flexDirection: 'row', alignItems: 'center', padding: sw(14), gap: sw(12) },
+  infoIcon:       { width: sw(28), alignItems: 'center' },
+  infoLabel:      { color: colors.textSecondary, fontSize: sf(11), marginBottom: 2 },
+  infoValue:      { color: colors.text, fontSize: sf(14), fontWeight: '600' },
   totalRow:       { justifyContent: 'space-between' },
-  totalLabel:     { color: colors.textSecondary, fontSize: 12, fontWeight: 'bold', letterSpacing: 1 },
-  totalValue:     { fontSize: 22, fontWeight: 'bold' },
+  totalLabel:     { color: colors.textSecondary, fontSize: sf(12), fontWeight: 'bold', letterSpacing: 0.5 },
+  totalValue:     { fontSize: sf(22), fontWeight: 'bold' },
 
-  actionButton:     { backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 52, borderRadius: 8, marginTop: 8 },
-  actionButtonText: { color: '#FFF', fontSize: 14, fontWeight: 'bold' },
-  printButton:      { backgroundColor: colors.inputBg, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 8, alignItems: 'center', marginTop: 12 },
-  printButtonText:  { color: colors.text, fontSize: 14, fontWeight: 'bold' },
+  actionButton:     { backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: sw(52), borderRadius: sw(14), marginTop: sw(8), shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4 },
+  actionButtonText: { color: '#FFF', fontSize: sf(14), fontWeight: 'bold' },
+  printButton:      { backgroundColor: colors.inputBg, borderWidth: 1.5, borderColor: colors.border, padding: sw(16), borderRadius: sw(14), alignItems: 'center', marginTop: sw(10) },
+  printButtonText:  { color: colors.text, fontSize: sf(14), fontWeight: '700' },
 });
 
 export default TicketDetailScreen;
