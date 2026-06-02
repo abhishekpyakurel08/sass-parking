@@ -1,4 +1,9 @@
 import 'dotenv/config';
+import crypto from 'crypto';
+
+if (!globalThis.crypto) {
+  (globalThis as any).crypto = crypto;
+}
 import express, { type Application, type Request, type Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
