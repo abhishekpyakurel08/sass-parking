@@ -1,17 +1,24 @@
 FROM node:20-alpine AS base
 WORKDIR /app
 
+# Install pnpm
+RUN npm install -g pnpm
+
 # Install dependencies
-COPY package*.json ./
-RUN npm ci --only=production
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prod
 
 # Build stage
 FROM node:20-alpine AS builder
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci
+
+# Install pnpm
+RUN npm install -g pnpm
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 COPY . .
-RUN npm run build
+RUN pnpm run build
 
 # Production image
 FROM node:20-alpine AS production
@@ -23,7 +30,7 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY --from=base    /app/node_modules ./node_modules
 COPY --from=builder /app/dist         ./dist
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml ./
 
 RUN mkdir -p logs && chown -R appuser:appgroup /app
 

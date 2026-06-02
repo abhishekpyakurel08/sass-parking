@@ -1,5 +1,5 @@
 [phases.build]
-cmds = ["npm install", "npm run build"]
+cmds = ["pnpm install --frozen-lockfile", "pnpm run build"]
 
 [phases.start]
 cmds = ["node dist/app.js"]
