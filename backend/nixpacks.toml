@@ -1,8 +1,9 @@
 [phases.build]
-cmds = ["npm run build"]
+cmds = ["npm install", "npm run build"]
 
 [phases.start]
-cmds = ["npm run start"]
+cmds = ["node dist/app.js"]
 
 [variables]
 NODE_ENV = "production"
+NIXPACKS_NODE_VERSION = "22"
