@@ -4,7 +4,6 @@ import { logger } from '../utils/logger.js';
 import { User } from '../models/user.model.js';
 import { UserRole } from '../types/enums.js';
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
 
 export const connectDB = async (): Promise<void> => {
   try {

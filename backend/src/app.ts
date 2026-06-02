@@ -1,11 +1,4 @@
 import 'dotenv/config';
-import crypto from 'crypto';
-
-// Polyfill crypto globally for Node.js 20+ ES modules
-if (!global.crypto) {
-  (global as any).crypto = crypto;
-}
-
 import express, { type Application, type Request, type Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
