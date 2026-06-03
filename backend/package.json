@@ -6,7 +6,7 @@
   "main": "dist/app.js",
   "scripts": {
     "dev": "nodemon --watch src --ext ts --exec tsx src/app.ts",
-    "build": "tsc --project tsconfig.json && mkdir -p dist/config && cp src/config/swagger.yaml dist/config/swagger.yaml",
+    "build": "rm -rf dist && tsc --project tsconfig.json && mkdir -p dist/config && cp src/config/swagger.yaml dist/config/swagger.yaml",
     "start": "node dist/app.js",
     "lint": "tsc --noEmit"
   },
