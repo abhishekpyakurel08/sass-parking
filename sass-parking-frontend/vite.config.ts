@@ -13,10 +13,13 @@ export default defineConfig(({ mode }) => {
       }
     },
     server: {
+      host: true, // allow network access during development
       proxy: {
         '/api': {
           target: proxyTarget,
-          changeOrigin: true
+          changeOrigin: true,
+          secure: false, // allow self-signed / local TLS during dev
+          ws: true,      // proxy websocket connections if any
         }
       }
     }

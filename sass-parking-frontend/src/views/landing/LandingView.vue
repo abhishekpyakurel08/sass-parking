@@ -2,45 +2,101 @@
   <div>
     <NavBar />
     <main class="min-h-screen bg-slate-50 font-sans">
-      <section id="home" class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-12 lg:py-16">
-        <div class="landing-panel reveal-on-scroll max-w-6xl">
-          <div class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-1 text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">
-            Smart parking platform
-          </div>
-          <h1 class="mt-6 text-4xl sm:text-6xl lg:text-7xl font-black text-slate-900 tracking-tight leading-[0.96] uppercase">
-            Fast & Smart<br />Parking<br />Management
-          </h1>
-          <p class="mt-6 text-lg text-slate-600 leading-9 max-w-4xl">
-            A complete POS system for parking operators. Issue QR-coded tickets, calculate fees by vehicle type, manage regular customers, and print thermal receipts instantly.
-          </p>
+      <!-- Hero -->
+      <section id="home" class="hero">
+        <div class="hero-inner">
+          <!-- left: text panel -->
+          <div class="landing-panel reveal-on-scroll max-w-6xl">
+            <div class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-1 text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">
+              Smart parking platform
+            </div>
+            <h1 class="mt-6 text-4xl sm:text-6xl lg:text-7xl font-black hero-title tracking-tight leading-[0.96] uppercase">
+              Fast & Smart<br />Parking<br />Management
+            </h1>
+            <p class="mt-6 text-lg lead leading-9 max-w-4xl">
+              A complete POS system for parking operators. Issue QR-coded tickets, calculate fees by vehicle type, manage regular customers, and print thermal receipts instantly.
+            </p>
 
 
-          <div class="mt-8 flex flex-col sm:flex-row sm:flex-wrap gap-3">
-            <RouterLink to="/login" class="inline-flex w-full sm:w-auto items-center justify-center rounded-xl bg-slate-900 px-8 py-4 text-base font-bold text-white border border-slate-900 hover:bg-slate-800 transition-colors">Open Go TO Dashboard</RouterLink>
-            <a href="#about" class="inline-flex w-full sm:w-auto items-center justify-center rounded-xl bg-white px-8 py-4 text-base font-bold text-slate-900 border border-slate-300 hover:bg-slate-100 transition-colors">View Features</a>
-          </div>
+            <div class="mt-8 flex flex-col sm:flex-row sm:flex-wrap gap-3">
+              <RouterLink to="/login" class="cta-primary hoverable">Open Dashboard</RouterLink>
+              <a href="#about" class="cta-ghost hoverable">View Features</a>
+            </div>
 
-          <div class="mt-10 border-t border-slate-200 pt-8">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div class="stats-inline reveal-on-scroll rounded-2xl border border-slate-200 bg-white px-4 py-5 text-center shadow-sm">
-                <div class="text-4xl font-black text-slate-900">15 min</div>
-                <div class="mt-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Grace Period</div>
-              </div>
-              <div class="stats-inline reveal-on-scroll rounded-2xl border border-slate-200 bg-white px-4 py-5 text-center shadow-sm">
-                <div class="text-4xl font-black text-slate-900">NPR</div>
-                <div class="mt-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Local Billing</div>
-              </div>
-              <div class="stats-inline reveal-on-scroll rounded-2xl border border-slate-200 bg-white px-4 py-5 text-center shadow-sm">
-                <div class="text-4xl font-black text-slate-900">QR</div>
-                <div class="mt-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Fast Entry / Exit</div>
-              </div>
-              <div class="stats-inline reveal-on-scroll rounded-2xl border border-slate-200 bg-white px-4 py-5 text-center shadow-sm">
-                <div class="text-4xl font-black text-slate-900">24/7</div>
-                <div class="mt-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Operations Ready</div>
+            <div class="mt-10 border-t border-white/20 pt-8">
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="stats-inline reveal-on-scroll feature-card glass-panel text-center">
+                  <div class="text-4xl font-black text-inverse">15 min</div>
+                  <div class="mt-2 text-sm font-semibold uppercase tracking-wide text-inverse/80">Grace Period</div>
+                </div>
+                <div class="stats-inline reveal-on-scroll feature-card glass-panel text-center">
+                  <div class="text-4xl font-black text-inverse">NPR</div>
+                  <div class="mt-2 text-sm font-semibold uppercase tracking-wide text-inverse/80">Local Billing</div>
+                </div>
+                <div class="stats-inline reveal-on-scroll feature-card glass-panel text-center">
+                  <div class="text-4xl font-black text-inverse">QR</div>
+                  <div class="mt-2 text-sm font-semibold uppercase tracking-wide text-inverse/80">Fast Entry / Exit</div>
+                </div>
+                <div class="stats-inline reveal-on-scroll feature-card glass-panel text-center">
+                  <div class="text-4xl font-black text-inverse">24/7</div>
+                  <div class="mt-2 text-sm font-semibold uppercase tracking-wide text-inverse/80">Operations Ready</div>
+                </div>
               </div>
             </div>
+          </div> <!-- /.landing-panel -->
+          <!-- right: visual / illustration placeholder (hidden on small screens) -->
+          <div class="hero-visual hidden md:flex items-center justify-center">
+            <div class="mockup w-full h-72 rounded-2xl overflow-hidden" role="img" aria-label="Parking illustration">
+              <!-- Inline responsive SVG illustration -->
+              <svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style="width:100%; height:100%; display:block;">
+                <defs>
+                  <linearGradient id="g1" x1="0" x2="1" y1="0" y2="1">
+                    <stop offset="0" stop-color="#4f46e5"/>
+                    <stop offset="1" stop-color="#4338ca"/>
+                  </linearGradient>
+                  <linearGradient id="g2" x1="0" x2="1">
+                    <stop offset="0" stop-color="#ffffff" stop-opacity="0.08"/>
+                    <stop offset="1" stop-color="#ffffff" stop-opacity="0.02"/>
+                  </linearGradient>
+                </defs>
+
+                <!-- background -->
+                <rect width="800" height="480" fill="url(#g1)"/>
+                <rect width="800" height="480" fill="url(#g2)"/>
+
+                <!-- parking lot base -->
+                <rect x="40" y="260" width="720" height="160" rx="14" fill="#0f172a" opacity="0.12"/>
+                <g transform="translate(60,280)" fill="#fff" opacity="0.95">
+                  <!-- three parking spots with a car in middle -->
+                  <rect x="0" y="0" width="180" height="120" rx="10" fill="#ffffff" opacity="0.06"/>
+                  <rect x="210" y="0" width="180" height="120" rx="10" fill="#ffffff" opacity="0.06"/>
+                  <rect x="420" y="0" width="180" height="120" rx="10" fill="#ffffff" opacity="0.06"/>
+
+                  <!-- stylized car (middle) -->
+                  <g transform="translate(235,20) scale(0.9)">
+                    <rect x="-40" y="18" width="120" height="40" rx="8" fill="#fff" opacity="0.95"/>
+                    <rect x="-10" y="-6" width="60" height="36" rx="6" fill="#fff" opacity="0.95"/>
+                    <circle cx="0" cy="62" r="8" fill="#000" opacity="0.8"/>
+                    <circle cx="50" cy="62" r="8" fill="#000" opacity="0.8"/>
+                  </g>
+                </g>
+
+                <!-- QR ticket floating -->
+                <g transform="translate(560,120)">
+                  <rect x="0" y="0" width="160" height="200" rx="12" fill="#fff" opacity="0.95" />
+                  <rect x="16" y="24" width="56" height="56" rx="6" fill="#0f172a"/>
+                  <rect x="80" y="30" width="60" height="12" rx="4" fill="#64748b"/>
+                  <rect x="80" y="50" width="60" height="12" rx="4" fill="#94a3b8"/>
+                  <rect x="16" y="96" width="124" height="8" fill="#e5e7eb" rx="4"/>
+                  <rect x="16" y="112" width="80" height="8" fill="#e5e7eb" rx="4"/>
+                </g>
+
+                <!-- subtle highlight overlay -->
+                <circle cx="680" cy="80" r="100" fill="#fff" opacity="0.04"/>
+              </svg>
+            </div>
           </div>
-        </div>
+        </div> <!-- /.hero-inner -->
       </section>
 
       <section id="how-it-works" class="reveal-on-scroll max-w-screen-2xl mx-auto px-4 sm:px-6 py-10 lg:py-14">
@@ -52,22 +108,22 @@
         </div>
 
         <div class="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div class="about-card reveal-on-scroll rounded-3xl bg-white border border-slate-200 p-6 shadow-sm">
+          <div class="about-card reveal-on-scroll rounded-3xl feature-card p-6">
             <div class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Step 1</div>
             <h3 class="mt-4 text-2xl font-extrabold text-slate-900">Entry Ticket</h3>
             <p class="mt-3 text-slate-600 leading-7">Staff creates a QR ticket when the vehicle enters the lot, so the session starts cleanly and can be traced later.</p>
           </div>
-          <div class="about-card reveal-on-scroll rounded-3xl bg-white border border-slate-200 p-6 shadow-sm">
+          <div class="about-card reveal-on-scroll rounded-3xl feature-card p-6">
             <div class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Step 2</div>
             <h3 class="mt-4 text-2xl font-extrabold text-slate-900">Parking Tracking</h3>
             <p class="mt-3 text-slate-600 leading-7">The app monitors the parked vehicle, current occupancy, and active ticket details while the car stays inside.</p>
           </div>
-          <div class="about-card reveal-on-scroll rounded-3xl bg-white border border-slate-200 p-6 shadow-sm">
+          <div class="about-card reveal-on-scroll rounded-3xl feature-card p-6">
             <div class="text-xs font-semibold uppercase tracking-[0.18em] text-violet-700">Step 3</div>
             <h3 class="mt-4 text-2xl font-extrabold text-slate-900">Auto Billing</h3>
             <p class="mt-3 text-slate-600 leading-7">At exit, the system calculates the total fee using vehicle type, time parked, grace period, and pricing rules.</p>
           </div>
-          <div class="about-card reveal-on-scroll rounded-3xl bg-white border border-slate-200 p-6 shadow-sm">
+          <div class="about-card reveal-on-scroll rounded-3xl feature-card p-6">
             <div class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">Step 4</div>
             <h3 class="mt-4 text-2xl font-extrabold text-slate-900">Reports</h3>
             <p class="mt-3 text-slate-600 leading-7">Operators review revenue, occupancy, and ticket history from the dashboard to keep the business under control.</p>
@@ -108,7 +164,7 @@
       </section>
 
       <section id="pricing" class="reveal-on-scroll max-w-screen-2xl mx-auto px-4 sm:px-6 py-8 lg:py-10">
-        <div class="engine-panel reveal-on-scroll rounded-[2rem] bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-300 p-7 sm:p-9 text-slate-900 shadow-xl">
+        <div class="engine-panel reveal-on-scroll rounded-[2rem] glass-panel p-7 sm:p-9 text-slate-900 shadow-xl">
           <div class="text-xs uppercase tracking-[0.18em] font-bold text-emerald-700">Powerful POS Engine</div>
           <h3 class="mt-3 text-3xl sm:text-4xl font-black tracking-tight">Automatic pricing rules for every vehicle type</h3>
           <p class="mt-4 text-slate-600 max-w-5xl leading-7">
@@ -143,7 +199,7 @@
 
         <div class="plan-shell reveal-on-scroll pricing-surface mt-10 p-7 sm:p-10">
           <div class="grid lg:grid-cols-3 gap-5 xl:gap-6">
-            <article class="plan-card reveal-on-scroll pricing-card rounded-[1.8rem] border border-slate-200 bg-white overflow-hidden">
+            <article class="plan-card reveal-on-scroll pricing-card rounded-[1.8rem] border border-slate-200 bg-white overflow-hidden feature-card">
               <div class="pricing-top px-7 py-10 text-center">
                 <div class="text-xs font-bold uppercase tracking-[0.28em] text-slate-600">Motorbike</div>
                 <div class="mt-6 text-6xl font-black text-slate-900 leading-none">Rs. 20</div>
@@ -160,7 +216,7 @@
               </div>
             </article>
 
-            <article class="plan-card reveal-on-scroll pricing-card rounded-[1.8rem] border border-slate-200 bg-white overflow-hidden">
+            <article class="plan-card reveal-on-scroll pricing-card rounded-[1.8rem] border border-slate-200 bg-white overflow-hidden feature-card">
               <div class="pricing-top px-7 py-10 text-center">
                 <div class="text-xs font-bold uppercase tracking-[0.28em] text-slate-600">Car / SUV</div>
                 <div class="mt-6 text-6xl font-black text-slate-900 leading-none">Rs. 50</div>
@@ -177,7 +233,7 @@
               </div>
             </article>
 
-            <article class="plan-card reveal-on-scroll pricing-card rounded-[1.8rem] border border-slate-200 bg-white overflow-hidden">
+            <article class="plan-card reveal-on-scroll pricing-card rounded-[1.8rem] border border-slate-200 bg-white overflow-hidden feature-card">
               <div class="pricing-top px-7 py-10 text-center">
                 <div class="text-xs font-bold uppercase tracking-[0.28em] text-slate-600">Bus / Truck</div>
                 <div class="mt-6 text-6xl font-black text-slate-900 leading-none">Rs. 100</div>
