@@ -24,10 +24,17 @@ if (!parsed.success) {
   process.exit(1);
 }
 
+// Ensure MONGODB_URI has a proper scheme for mongoose/mongodb driver.
+// If user provided "localhost:27017/db" or similar, prepend "mongodb://".
+let mongoUri = parsed.data.MONGODB_URI;
+if (!/^mongodb(?:\+srv)?:\/\//i.test(mongoUri)) {
+  mongoUri = `mongodb://${mongoUri}`;
+}
+
 export const env = {
   PORT: parseInt(parsed.data.PORT, 10),
   NODE_ENV: parsed.data.NODE_ENV,
-  MONGODB_URI: parsed.data.MONGODB_URI,
+  MONGODB_URI: mongoUri,
   JWT_ACCESS_SECRET: parsed.data.JWT_ACCESS_SECRET,
   JWT_REFRESH_SECRET: parsed.data.JWT_REFRESH_SECRET,
   ACCESS_TOKEN_EXPIRES: parsed.data.ACCESS_TOKEN_EXPIRES,

@@ -8,7 +8,7 @@ The ParkSaaS backend is a highly scalable, multi-tenant Node.js application buil
 - **Database**: MongoDB with Mongoose ODMs.
 - **Validation**: Joi (for strict request body, params, and query validation).
 - **Authentication**: JWT (JSON Web Tokens) with a rotating refresh-token strategy.
-- **API Documentation**: Swagger/OpenAPI (located in `src/config/swagger.yaml`).
+- **API Documentation**: Swagger/OpenAPI (served via the running API).
 
 ## 2. Multi-Tenant Architecture
 

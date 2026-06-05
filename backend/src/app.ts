@@ -13,10 +13,6 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import { mongoSanitize } from './middleware/mongoSanitize.js';
 import hpp from 'hpp';
-import swaggerUi from 'swagger-ui-express';
-import YAML from 'yamljs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 import { env } from './config/env.js';
 import { connectDB } from './DB/config.js';
@@ -36,9 +32,6 @@ import auditLogRoutes  from './routes/auditLog.route.js';
 import syncRoutes      from './routes/sync.route.js';
 import apiKeyRoutes    from './routes/apiKey.route.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
-
 const app: Application = express();
 
 app.use(helmet());
@@ -47,9 +40,21 @@ const allowedOrigins = env.CORS_ORIGIN.split(',').map(o => o.trim());
 
 app.use(cors({
   origin: (origin, callback) => {
+    // Allow non-browser requests (curl, server-to-server)
     if (!origin) return callback(null, true);
+
+    // Allow configured origins
     if (allowedOrigins.includes(origin)) return callback(null, true);
+
+    // Allow tecobit preview subdomains (production pattern)
     if (/^https?:\/\/[a-z0-9-]+\.tecobit\.cloud$/.test(origin)) return callback(null, true);
+
+    // During development, allow localhost / 127.0.0.1 on any port (helps Vite dev frontends)
+    if (env.NODE_ENV === 'development') {
+      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return callback(null, true);
+    }
+
+    // Otherwise reject
     callback(new Error(`CORS: origin '${origin}' not allowed`));
   },
   credentials: true,
@@ -102,34 +107,11 @@ app.use(morgan('combined', {
   skip: (_req, res) => res.statusCode < 400 && env.isProd,
 }));
 
-const swaggerDocument = YAML.load(path.join(__dirname, 'config/swagger.yaml'));
-app.use(
-  '/api-docs',
-  helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc:  ["'self'"],
-        scriptSrc:   ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-        styleSrc:    ["'self'", "'unsafe-inline'"],
-        fontSrc:     ["'self'", 'data:'],
-        imgSrc:      ["'self'", 'data:', 'https:'],
-        connectSrc:  ["'self'"],
-      },
-    },
-  }),
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerDocument, {
-    customSiteTitle: 'ParkSaaS Pro API',
-    customCss: '.swagger-ui .topbar { background-color: #1a1a2e; }',
-  })
-);
-
 app.get('/', (_req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     message: 'Welcome to ParkSaaS Pro API',
     version: '1.0.0',
-    docs: '/api-docs',
     health: '/health'
   });
 });

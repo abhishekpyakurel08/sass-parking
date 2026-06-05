@@ -19,4 +19,5 @@ app.use(Vue3Toastify, {
   clearOnUrlChange: false,
 } as ToastContainerOptions)
 
+// mount the app
 app.mount("#app")

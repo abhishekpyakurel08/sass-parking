@@ -3,11 +3,11 @@ import { ref, reactive } from 'vue';
 import { useAuthStore } from './auth';
 import { toast } from 'vue3-toastify';
 
-// Absolute backend URL — Vite dev proxy only works in dev mode, not in
-// production static builds. Using BASE_URL ensures all fetch() calls route
-// to the real backend and don't 405 against the static file server.
-const BASE_URL: string =
-  (import.meta as any).env?.VITE_API_URL ?? 'https://parking-backend.tecobit.cloud';
+// Absolute backend URL — prefer explicit VITE_API_URL. In dev, if unset,
+// use the Vite proxy by using an empty base so `/api/...` is a same-origin request.
+const VITE_API_URL: string | undefined = (import.meta as any).env?.VITE_API_URL;
+const MODE: string = (import.meta as any).env?.MODE ?? 'development';
+const BASE_URL: string = VITE_API_URL ?? (MODE === 'development' ? '' : 'https://parking-backend.tecobit.cloud');
 
 export const useTenantStore = defineStore('tenant', () => {
   const authStore = useAuthStore();

@@ -4,6 +4,7 @@ import { fileURLToPath, URL } from "node:url"
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+  const proxyTarget = env.VITE_API_URL || 'http://localhost:5000';
   return {
     plugins: [vue()],
     resolve: {
@@ -14,7 +15,7 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         '/api': {
-          target: env.VITE_API_URL,
+          target: proxyTarget,
           changeOrigin: true
         }
       }
