@@ -15,7 +15,6 @@ const TenantSchema = new Schema<ITenant>(
     contactNumber: { type: String, trim: true },
     address: { type: String, trim: true },
     ownerName: { type: String, trim: true },
-    subscriptionPlan: { type: String, default: 'FREE' },
   },
   { timestamps: true }
 );

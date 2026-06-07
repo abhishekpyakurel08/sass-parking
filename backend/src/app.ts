@@ -2,7 +2,7 @@ import 'dotenv/config';
 import crypto from 'crypto';
 
 if (!globalThis.crypto) {
-  (globalThis as any).crypto = crypto;
+  (globalThis as typeof globalThis & { crypto: typeof crypto }).crypto = crypto;
 }
 import express, { type Application, type Request, type Response } from 'express';
 import cors from 'cors';
@@ -13,12 +13,14 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import { mongoSanitize } from './middleware/mongoSanitize.js';
 import hpp from 'hpp';
+import mongoose from 'mongoose';
 
 import { env } from './config/env.js';
 import { connectDB } from './DB/config.js';
 import { logger } from './utils/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { startCronJobs } from './utils/cron.js';
+import { redis } from './config/redis.js';
 
 import authRoutes     from './routes/auth.route.js';
 import userRoutes     from './routes/user.route.js';
@@ -116,12 +118,18 @@ app.get('/', (_req: Request, res: Response) => {
   });
 });
 
-app.get('/health', (_req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    status: 'healthy',
-    service: 'ParkSaaS Pro API',
-    version: '1.0.0',
+app.get('/health', async (_req: Request, res: Response) => {
+  const [dbPing, redisPing] = await Promise.all([
+    mongoose.connection.db?.command({ ping: 1 }).then(() => 'ok').catch(() => 'error'),
+    redis.ping().then(() => 'ok').catch(() => 'error'),
+  ]);
+
+  const healthy = dbPing === 'ok' && redisPing === 'ok';
+  res.status(healthy ? 200 : 503).json({
+    success: healthy,
+    services: { database: dbPing, cache: redisPing },
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
     timestamp: new Date().toISOString(),
     environment: env.NODE_ENV,
   });

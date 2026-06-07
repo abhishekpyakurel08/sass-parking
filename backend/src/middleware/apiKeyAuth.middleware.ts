@@ -4,7 +4,7 @@ import { Tenant } from '../models/tenant.model.js';
 import { User } from '../models/user.model.js';
 import { AuthError, ForbiddenError } from '../errors/ApiError.js';
 import { TenantStatus, UserRole } from '../types/enums.js';
-import { apiKeyCache, tenantCache, invalidateApiKeysForUser, type CachedApiKey } from '../utils/cache.js';
+import { getApiKeyFromCache, setApiKeyCache, getTenantFromCache, setTenantCache, invalidateApiKeysForUser, type CachedApiKey, redis } from '../utils/cache.js';
 import { logSecurity } from '../utils/logger.js';
 
 export const apiKeyAuth = async (
@@ -24,7 +24,7 @@ export const apiKeyAuth = async (
 
     const keyHash = hashApiKeyString(rawKey);
 
-    let cached = apiKeyCache.get<CachedApiKey>(keyHash);
+    let cached = await getApiKeyFromCache(keyHash);
 
     if (!cached) {
       const keyDoc = await ApiKey.findOne({ keyHash }).lean();
@@ -55,7 +55,7 @@ export const apiKeyAuth = async (
         isActive: keyDoc.isActive,
       };
 
-      apiKeyCache.set(keyHash, cached);
+      await setApiKeyCache(keyHash, cached);
 
       ApiKey.updateOne({ _id: keyDoc._id }, { $set: { lastUsedAt: new Date() } })
         .exec()
@@ -63,21 +63,21 @@ export const apiKeyAuth = async (
     }
 
     if (!cached.isActive) {
-      apiKeyCache.del(keyHash);
+      await redis.del(`apikey:${keyHash}`);
       return next(new AuthError('API key is inactive'));
     }
 
     interface TenantDoc { name: string; status: string; }
-    let tenantDoc = tenantCache.get<TenantDoc>(cached.tenantId);
+    let tenantDoc = await getTenantFromCache(cached.tenantId);
     if (!tenantDoc) {
       const tenant = await Tenant.findById(cached.tenantId).lean();
       if (!tenant) return next(new AuthError('Tenant not found for this API key'));
       tenantDoc = { name: tenant.name, status: tenant.status };
-      tenantCache.set(cached.tenantId, tenantDoc);
+      await setTenantCache(cached.tenantId, tenantDoc);
     }
 
     if (tenantDoc.status === TenantStatus.SUSPENDED) {
-      if (cached.userId) invalidateApiKeysForUser(cached.userId);
+      if (cached.userId) await invalidateApiKeysForUser(cached.userId);
       return next(new ForbiddenError('Tenant account is suspended'));
     }
 

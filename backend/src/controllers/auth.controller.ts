@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { User } from '../models/user.model.js';
 import { Tenant } from '../models/tenant.model.js';
@@ -10,6 +11,8 @@ import { logSecurity } from '../utils/logger.js';
 import type { JwtPayload } from '../types/express.js';
 
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const { name, corporate_email, total_capacity, owner_name, owner_email, password } = req.body;
 
@@ -18,37 +21,48 @@ export const register = async (req: Request, res: Response, next: NextFunction):
       User.findOne({ email: owner_email }),
     ]);
 
-    if (existingTenant) return next(new ConflictError(`Tenant with email ${corporate_email} already exists`));
-    if (existingUser)   return next(new ConflictError(`User with email ${owner_email} already exists`));
+    if (existingTenant) {
+      await session.abortTransaction();
+      return next(new ConflictError(`Tenant with email ${corporate_email} already exists`));
+    }
+    if (existingUser) {
+      await session.abortTransaction();
+      return next(new ConflictError(`User with email ${owner_email} already exists`));
+    }
 
-    const tenant = await Tenant.create({
+    const tenant = await Tenant.create([{
       name,
       corporate_email,
       total_capacity,
       status: TenantStatus.ACTIVE,
-    });
+    }], { session });
 
     const password_hash = await bcrypt.hash(password, env.BCRYPT_ROUNDS);
-    const owner = await User.create({
-      tenant_id: tenant._id,
+    const owner = await User.create([{
+      tenant_id: tenant[0]._id,
       name: owner_name,
       email: owner_email,
       password_hash,
       role: UserRole.TENANT_OWNER,
-    });
+    }], { session });
+
+    await session.commitTransaction();
 
     res.status(201).json({
       success: true,
       message: 'Tenant registered successfully',
       data: {
-        tenant_id: tenant._id,
-        tenant_name: tenant.name,
-        owner_id: owner._id,
-        owner_email: owner.email,
+        tenant_id: tenant[0]._id,
+        tenant_name: tenant[0].name,
+        owner_id: owner[0]._id,
+        owner_email: owner[0].email,
       },
     });
   } catch (err) {
+    await session.abortTransaction();
     next(err);
+  } finally {
+    session.endSession();
   }
 };
 
@@ -73,9 +87,9 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     }
 
     const payload: JwtPayload = {
-      userId: (user._id as any).toString(),
+      userId: user._id.toString(),
       tenantId: user.tenant_id ? user.tenant_id.toString() : null,
-      role: user.role as UserRole,
+      role: user.role,
     };
 
     const accessToken  = signAccessToken(payload);
@@ -135,9 +149,9 @@ export const refresh = async (req: Request, res: Response, next: NextFunction): 
     }
 
     const payload: JwtPayload = {
-      userId: (user._id as any).toString(),
+      userId: user._id.toString(),
       tenantId: user.tenant_id ? user.tenant_id.toString() : null,
-      role: user.role as UserRole,
+      role: user.role,
     };
 
     const newAccessToken  = signAccessToken(payload);
@@ -172,7 +186,7 @@ export const logout = async (req: Request, res: Response, next: NextFunction): P
       await User.findByIdAndUpdate(userId, { refresh_token: null });
     }
 
-    res.clearCookie('refresh_token', { httpOnly: true, sameSite: 'strict' });
+    res.clearCookie('refresh_token', { httpOnly: true, sameSite: 'strict', secure: env.isProd });
     res.status(200).json({ success: true, message: 'Logged out successfully' });
   } catch (err) {
     next(err);

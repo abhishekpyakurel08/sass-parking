@@ -12,6 +12,8 @@ const UserSchema = new Schema<IUser>(
     gate_assignment: { type: String, enum: Object.values(GateAssignment), default: GateAssignment.BOTH },
     ticket_prefix: { type: String, default: '' },
     refresh_token: { type: String, default: null },
+    is_email_verified: { type: Boolean, default: false },
+    email_verification_token: { type: String, default: null },
   },
   { timestamps: true }
 );

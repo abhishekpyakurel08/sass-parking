@@ -6,10 +6,7 @@ import {
 import { useRoute, useRouter } from "vue-router"
 import { useAuthStore } from "../../stores/auth"
 import { toast } from "vue3-toastify"
-
-// Use absolute URL so production builds (static site) route to the real backend,
-// not the static file server (which returns 405 on POST requests).
-const API_BASE = import.meta.env.VITE_API_URL ?? 'https://parking-backend.tecobit.cloud'
+import { authEndpoints, userEndpoints } from "../../utils/endpoints"
 
 const router = useRouter()
 const route = useRoute()
@@ -22,37 +19,55 @@ const selectedRole = computed(() => {
   return ""
 })
 
-const view = ref<"login" | "register">("login")
+const view = ref<"login" | "register" | "verify">("login")
 const isLoading = ref(false)
 const showLoginPassword = ref(false)
 const showRegisterPassword = ref(false)
+const verificationToken = ref("")
 
 const loginData = reactive({ email: "", password: "", rememberMe: false })
 const registerData = reactive({ businessName: "", slug: "", ownerName: "", ownerEmail: "", password: "" })
 
-const toggleView = (target: "login" | "register") => {
+const toggleView = (target: "login" | "register" | "verify") => {
   view.value = target
+}
+
+const handleVerifyEmail = async () => {
+  isLoading.value = true
+  try {
+    const success = await authStore.verifyEmail(verificationToken.value)
+    if (success) {
+      toast.success("Email verified successfully! Please login.")
+      toggleView("login")
+    }
+  } catch {
+    toast.error("Verification failed. Please try again.")
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const handleResendVerification = async () => {
+  isLoading.value = true
+  try {
+    const success = await authStore.resendEmailVerification()
+    if (success) {
+      toast.success("Verification email sent. Please check your inbox.")
+    }
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const onSubmit = async () => {
   isLoading.value = true
   try {
     if (view.value === "login") {
-      const res = await fetch(`${API_BASE}/api/v1/user/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: loginData.email,
-          password: loginData.password,
-          rememberMe: loginData.rememberMe
-        })
+      const data = await authEndpoints.login({
+        email: loginData.email,
+        password: loginData.password,
+        rememberMe: loginData.rememberMe
       })
-      const data = await res.json()
-      if (!res.ok) {
-        const msg = data.errors?.[0]?.message || data.message || "Login failed"
-        toast.error(msg)
-        return
-      }
       authStore.setAuth(data.token, data.user)
       toast.success(`Welcome back, ${data.user.name}!`)
       await new Promise(r => setTimeout(r, 600))
@@ -68,28 +83,19 @@ const onSubmit = async () => {
         router.push("/")
       }
     } else if (view.value === "register") {
-      const res = await fetch(`${API_BASE}/api/v1/user/auth/onboard`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: registerData.businessName,
-          corporate_email: registerData.ownerEmail,
-          owner_name: registerData.ownerName,
-          owner_email: registerData.ownerEmail,
-          password: registerData.password,
-        })
+      const data = await userEndpoints.registerTenantOwner({
+        name: registerData.businessName,
+        corporate_email: registerData.ownerEmail,
+        owner_name: registerData.ownerName,
+        owner_email: registerData.ownerEmail,
+        password: registerData.password,
       })
-      const data = await res.json()
-      if (!res.ok) {
-        const msg = data.errors?.[0]?.message || data.message || "Registration failed"
-        toast.error(msg)
-        return
-      }
       toast.success("Account created! Please sign in.")
       toggleView("login")
     }
-  } catch {
-    toast.error("Network error. Please check your connection.")
+  } catch (error: any) {
+    const msg = error.message || "Operation failed"
+    toast.error(msg)
   } finally {
     isLoading.value = false
   }
@@ -246,6 +252,42 @@ const onSubmit = async () => {
                 <span v-else>Register Facility</span>
                 <ArrowRight v-if="!isLoading" class="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
+            </form>
+
+            <!-- VERIFY EMAIL FORM -->
+            <form v-else-if="view === 'verify'" @submit.prevent="handleVerifyEmail" class="space-y-6 w-full absolute inset-0">
+              <div class="space-y-2">
+                <h2 class="text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">Verify Email</h2>
+                <p class="text-slate-500 dark:text-slate-400">Enter the verification code sent to your email.</p>
+              </div>
+
+              <div class="space-y-5 pt-4">
+                <div class="space-y-1.5">
+                  <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Verification Code</label>
+                  <input v-model="verificationToken" type="text" placeholder="Enter verification code" required
+                         class="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none text-slate-900 dark:text-slate-100 font-medium tracking-widest uppercase" />
+                </div>
+              </div>
+
+              <button type="submit" :disabled="isLoading"
+                      class="w-full bg-[#10b981] hover:bg-[#059669] disabled:bg-[#10b981]/50 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all group shadow-xl shadow-[#10b981]/20 mt-8">
+                <Loader2 v-if="isLoading" class="w-5 h-5 animate-spin" />
+                <span v-else>Verify Email</span>
+              </button>
+
+              <div class="text-center pt-4">
+                <button type="button" @click="handleResendVerification" :disabled="isLoading"
+                        class="text-sm text-emerald-600 dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400 font-medium transition-colors">
+                  Resend verification code
+                </button>
+              </div>
+
+              <div class="text-center pt-2">
+                <button type="button" @click="toggleView('login')"
+                        class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 font-medium transition-colors">
+                  Back to login
+                </button>
+              </div>
             </form>
 
           </Transition>

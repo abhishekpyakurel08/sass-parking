@@ -3,7 +3,7 @@ import { Tenant } from '../models/tenant.model.js';
 import { AuthError, ForbiddenError, NotFoundError } from '../errors/ApiError.js';
 import { UserRole, TenantStatus } from '../types/enums.js';
 import { logSecurity } from '../utils/logger.js';
-import { tenantCache, invalidateTenant } from '../utils/cache.js';
+import { getTenantFromCache, setTenantCache, invalidateTenant } from '../utils/cache.js';
 import mongoose from 'mongoose';
 
 export const tenantMiddleware = async (
@@ -39,18 +39,17 @@ export const tenantMiddleware = async (
       return next(new ForbiddenError('Cross-tenant access is not permitted'));
     }
 
-    interface TenantDoc { name: string; status: string; }
-    let tenantDoc = tenantCache.get<TenantDoc>(resolvedId);
+    let tenantDoc = await getTenantFromCache(resolvedId);
 
     if (!tenantDoc) {
       const tenant = await Tenant.findById(resolvedId).lean();
       if (!tenant) return next(new NotFoundError('Tenant not found'));
       tenantDoc = { name: tenant.name, status: tenant.status };
-      tenantCache.set(resolvedId, tenantDoc);
+      await setTenantCache(resolvedId, tenantDoc);
     }
 
     if (tenantDoc.status === TenantStatus.SUSPENDED) {
-      invalidateTenant(resolvedId);
+      await invalidateTenant(resolvedId);
       return next(new ForbiddenError('Tenant account is suspended. Contact support.'));
     }
 

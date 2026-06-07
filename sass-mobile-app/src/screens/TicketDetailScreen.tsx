@@ -15,7 +15,7 @@ import type { Ticket } from '../types/api.types';
 import QRCode from 'react-native-qrcode-svg';
 import RNPrint from 'react-native-print';
 import { Alert } from 'react-native';
-import { parkingService } from '../services/parking.service';
+import { operatorService } from '../services/parking.service';
 
 const STATUS_COLOR: Record<string, string> = {
   ACTIVE:          colors.success,
@@ -93,7 +93,7 @@ const TicketDetailScreen = () => {
   const handlePrintReceipt = async () => {
     try {
       setIsPrinting(true);
-      const res = await parkingService.getReceipt(ticket._id);
+      const res = await operatorService.getReceipt(ticket._id);
       if (res.success && res.printable_text) {
         // Convert ASCII to HTML for the print service
         const html = `

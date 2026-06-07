@@ -9,7 +9,6 @@ export interface ITenant {
   contactNumber?: string;
   address?: string;
   ownerName?: string;
-  subscriptionPlan?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }

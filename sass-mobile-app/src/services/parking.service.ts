@@ -1,4 +1,3 @@
-import api from './api.client';
 import type {
   CheckInPayload,
   CheckInResponse,
@@ -13,59 +12,42 @@ import type {
   LostTicketPayload,
   LostTicketResponse,
 } from '../types/api.types';
+import { operatorEndpoints } from './endpoints';
 
-export const parkingService = {
-  // POST /api/v1/operator/lost-ticket
+export const operatorService = {
   async lostTicket(payload: LostTicketPayload): Promise<LostTicketResponse> {
-    const { data } = await api.post<LostTicketResponse>('/operator/lost-ticket', payload);
-    return data;
+    return await operatorEndpoints.lostTicket(payload);
   },
 
-  // POST /api/v1/operator/check-in
   async checkIn(payload: CheckInPayload): Promise<CheckInResponse> {
-    const { data } = await api.post<CheckInResponse>('/operator/check-in', payload);
-    return data;
+    return await operatorEndpoints.checkIn(payload);
   },
 
-  // POST /api/v1/operator/scan  — scan QR/plate to get ticket details
   async scanTicket(payload: ScanPayload): Promise<ScanResponse> {
-    const { data } = await api.post<ScanResponse>('/operator/scan', payload);
-    return data;
+    return await operatorEndpoints.scanTicket(payload);
   },
 
-  // POST /api/v1/operator/check-out  — calculate fare, move to PENDING_PAYMENT
   async checkOut(payload: CheckOutPayload): Promise<CheckOutResponse> {
-    const { data } = await api.post<CheckOutResponse>('/operator/check-out', payload);
-    return data;
+    return await operatorEndpoints.checkOut(payload);
   },
 
-  // POST /api/v1/operator/process-payment  — finalise payment, open gate
   async processPayment(payload: ProcessPaymentPayload): Promise<ProcessPaymentResponse> {
-    const { data } = await api.post<ProcessPaymentResponse>('/operator/process-payment', payload);
-    return data;
+    return await operatorEndpoints.processPayment(payload);
   },
 
-  // GET /api/v1/parking/tickets
   async getTickets(params?: { status?: string; page?: number; limit?: number }): Promise<TicketsResponse> {
-    const { data } = await api.get<TicketsResponse>('/parking/tickets', { params });
-    return data;
+    return await operatorEndpoints.getTickets(params);
   },
 
-  // GET /api/v1/operator/stats  — today's dashboard stats
   async getDailyStats(): Promise<DailyStats> {
-    const { data } = await api.get<DailyStats>('/operator/stats');
-    return data;
+    return await operatorEndpoints.getDailyStats();
   },
 
-  // POST /api/v1/sync/batch — upload offline operations
   async syncBatch(payload: { operations: any[] }): Promise<any> {
-    const { data } = await api.post<any>('/sync/batch', payload);
-    return data;
+    return await operatorEndpoints.syncBatch(payload);
   },
 
-  // GET /api/v1/parking/:ticket_id/receipt
   async getReceipt(ticket_id: string): Promise<{ success: boolean; printable_text: string }> {
-    const { data } = await api.get<{ success: boolean; printable_text: string }>(`/parking/${ticket_id}/receipt`);
-    return data;
+    return await operatorEndpoints.getReceipt(ticket_id);
   }
 };

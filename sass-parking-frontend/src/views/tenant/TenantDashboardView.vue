@@ -9,11 +9,14 @@ import { Search, RefreshCcw, Sun, Moon } from 'lucide-vue-next';
 import TenantSidebar from '../../components/tenant/TenantSidebar.vue';
 
 // Tab components
-import OverviewTab  from '../../components/tenant/OverviewTab.vue';
-import StaffTab     from '../../components/tenant/StaffTab.vue';
-import RatesTab     from '../../components/tenant/RatesTab.vue';
-import TicketsTab   from '../../components/tenant/TicketsTab.vue';
-import SettingsTab  from '../../components/tenant/SettingsTab.vue';
+import OverviewTab          from '../../components/tenant/OverviewTab.vue';
+import StaffTab             from '../../components/tenant/StaffTab.vue';
+import RatesTab             from '../../components/tenant/RatesTab.vue';
+import TicketsTab           from '../../components/tenant/TicketsTab.vue';
+import CustomersTab         from '../../components/tenant/CustomersTab.vue';
+import ParkingOperationsTab from '../../components/tenant/ParkingOperationsTab.vue';
+import AnalyticsTab         from '../../components/tenant/AnalyticsTab.vue';
+import SettingsTab          from '../../components/tenant/SettingsTab.vue';
 
 const store     = useTenantStore();
 const authStore = useAuthStore();
@@ -133,12 +136,15 @@ onMounted(() => {
 
             <!-- Tab Router -->
             <template v-else>
-              <OverviewTab  v-if="activeTab === 'overview'" />
-              <StaffTab     v-else-if="activeTab === 'staff'" />
-              <RatesTab     v-else-if="activeTab === 'lots'" />
-              <TicketsTab   v-else-if="activeTab === 'tickets'" />
-              <SettingsTab  v-else-if="activeTab === 'settings'" />
-              <OverviewTab  v-else />
+              <OverviewTab          v-if="activeTab === 'overview'" />
+              <StaffTab             v-else-if="activeTab === 'staff'" />
+              <RatesTab             v-else-if="activeTab === 'lots'" />
+              <TicketsTab           v-else-if="activeTab === 'tickets'" />
+              <CustomersTab         v-else-if="activeTab === 'customers'" />
+              <ParkingOperationsTab v-else-if="activeTab === 'operations'" />
+              <AnalyticsTab         v-else-if="activeTab === 'analytics'" />
+              <SettingsTab          v-else-if="activeTab === 'settings'" />
+              <OverviewTab          v-else />
             </template>
 
           </div>

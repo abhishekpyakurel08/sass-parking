@@ -11,7 +11,7 @@ import {
   ValidationError,
   ForbiddenError,
 } from '../errors/ApiError.js';
-import { TicketStatus, PaymentMethod, UserRole, GateAssignment } from '../types/enums.js';
+import { TicketStatus, PaymentMethod, UserRole, GateAssignment, CustomerStatus } from '../types/enums.js';
 import { logTransaction } from '../utils/logger.js';
 import { generateQrCodeDataUri } from '../utils/qr.js';
 import { calculateFare } from '../utils/billing.js';
@@ -34,7 +34,7 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction): 
         await session.abortTransaction();
         return next(new NotFoundError('Regular customer not found with the provided code.'));
       }
-      if (customer.status !== 'ACTIVE') {
+      if (customer.status !== CustomerStatus.ACTIVE) {
         await session.abortTransaction();
         return next(new ValidationError(`Customer account is ${customer.status}.`));
       }
@@ -155,19 +155,22 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
       return next(new ForbiddenError('Access denied: You are only authorized to process entries.'));
     }
 
-    const query = mongoose.isValidObjectId(ticket_id)
-      ? { _id: ticket_id, tenant_id: tenantId, status: TicketStatus.ACTIVE }
-      : {
-          tenant_id: tenantId,
-          status: TicketStatus.ACTIVE,
-          $or: [
-            { ticket_number: ticket_id },
-            { ticket_number: ticket_id.toLowerCase() },
-            { license_plate: ticket_id.toUpperCase() }
-          ]
-        };
-
-    const ticket = await Ticket.findOne(query).session(session).populate('customer_id');
+    let ticket;
+    if (mongoose.isValidObjectId(ticket_id)) {
+      ticket = await Ticket.findOne({ _id: ticket_id, tenant_id: tenantId, status: TicketStatus.ACTIVE }).session(session).populate('customer_id');
+    } else {
+      const normalizedTicketId = ticket_id.toLowerCase();
+      const normalizedPlate = ticket_id.toUpperCase();
+      ticket = await Ticket.findOne({
+        tenant_id: tenantId,
+        status: TicketStatus.ACTIVE,
+        $or: [
+          { ticket_number: ticket_id },
+          { ticket_number: normalizedTicketId },
+          { license_plate: normalizedPlate }
+        ]
+      }).session(session).populate('customer_id');
+    }
 
     if (!ticket) {
       await session.abortTransaction();
@@ -189,8 +192,8 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
     let base_fare = billing.base_fare;
     let discount_amount = 0;
 
-    if (ticket.customer_id && typeof (ticket.customer_id as any).discount_percentage === 'number' && base_fare > 0) {
-      const customerDiscountPct = (ticket.customer_id as any).discount_percentage;
+    if (ticket.customer_id && typeof ticket.customer_id === 'object' && 'discount_percentage' in ticket.customer_id && typeof (ticket.customer_id as unknown as { discount_percentage: number }).discount_percentage === 'number' && base_fare > 0) {
+      const customerDiscountPct = (ticket.customer_id as unknown as { discount_percentage: number }).discount_percentage;
       discount_amount = Math.round(base_fare * (customerDiscountPct / 100));
       base_fare -= discount_amount;
     }
@@ -350,19 +353,22 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
       return next(new ForbiddenError('Access denied: You are only authorized to process entries.'));
     }
 
-    const query = mongoose.isValidObjectId(ticket_id)
-      ? { _id: ticket_id, tenant_id: tenantId, status: TicketStatus.PENDING_PAYMENT }
-      : {
-          tenant_id: tenantId,
-          status: TicketStatus.PENDING_PAYMENT,
-          $or: [
-            { ticket_number: ticket_id },
-            { ticket_number: ticket_id.toLowerCase() },
-            { license_plate: ticket_id.toUpperCase() }
-          ]
-        };
-
-    const ticket = await Ticket.findOne(query).session(session);
+    let ticket;
+    if (mongoose.isValidObjectId(ticket_id)) {
+      ticket = await Ticket.findOne({ _id: ticket_id, tenant_id: tenantId, status: TicketStatus.PENDING_PAYMENT }).session(session);
+    } else {
+      const normalizedTicketId = ticket_id.toLowerCase();
+      const normalizedPlate = ticket_id.toUpperCase();
+      ticket = await Ticket.findOne({
+        tenant_id: tenantId,
+        status: TicketStatus.PENDING_PAYMENT,
+        $or: [
+          { ticket_number: ticket_id },
+          { ticket_number: normalizedTicketId },
+          { license_plate: normalizedPlate }
+        ]
+      }).session(session);
+    }
 
     if (!ticket) {
       await session.abortTransaction();
@@ -472,18 +478,21 @@ export const scanTicket = async (req: Request, res: Response, next: NextFunction
       return next(new ValidationError('Scan code is required'));
     }
 
-    const query = mongoose.isValidObjectId(code)
-      ? { _id: code, tenant_id: tenantId }
-      : {
-          tenant_id: tenantId,
-          $or: [
-            { ticket_number: code },
-            { ticket_number: code.toLowerCase() },
-            { license_plate: code.toUpperCase() }
-          ]
-        };
-
-    const ticket = await Ticket.findOne(query).populate('customer_id');
+    let ticket;
+    if (mongoose.isValidObjectId(code)) {
+      ticket = await Ticket.findOne({ _id: code, tenant_id: tenantId }).populate('customer_id');
+    } else {
+      const normalizedCode = code.toLowerCase();
+      const normalizedPlate = code.toUpperCase();
+      ticket = await Ticket.findOne({
+        tenant_id: tenantId,
+        $or: [
+          { ticket_number: code },
+          { ticket_number: normalizedCode },
+          { license_plate: normalizedPlate }
+        ]
+      }).populate('customer_id');
+    }
 
     if (!ticket) {
       return next(new NotFoundError('No ticket matches the scanned QR code/license plate'));
@@ -509,10 +518,10 @@ export const scanTicket = async (req: Request, res: Response, next: NextFunction
         change_given: ticket.change_given,
         transaction_reference: ticket.transaction_reference,
         notes: ticket.notes,
-        customer_details: ticket.customer_id ? {
-          name: (ticket.customer_id as any).name,
-          customer_code: (ticket.customer_id as any).customer_code,
-          discount_percentage: (ticket.customer_id as any).discount_percentage,
+        customer_details: ticket.customer_id && typeof ticket.customer_id === 'object' && 'name' in ticket.customer_id ? {
+          name: (ticket.customer_id as unknown as { name: string }).name,
+          customer_code: (ticket.customer_id as unknown as { customer_code: string }).customer_code,
+          discount_percentage: (ticket.customer_id as unknown as { discount_percentage: number }).discount_percentage,
         } : undefined,
         qr_code_url: qrCodeDataUrl,
       }
@@ -556,7 +565,7 @@ export const exportReport = async (req: Request, res: Response, next: NextFuncti
     const tenantId = req.tenant!.tenantId;
     const { filter = 'all' } = req.query;
 
-    const query: any = { tenant_id: tenantId };
+    const query: Record<string, unknown> = { tenant_id: tenantId };
     
     const now = new Date();
     let startDate: Date | null = null;
@@ -606,7 +615,7 @@ export const exportReport = async (req: Request, res: Response, next: NextFuncti
       const checkIn = fmtDate(t.check_in_time);
       const checkOut = fmtDate(t.check_out_time);
       const payable = (t.fare_amount || 0) + (t.penalty_amount || 0) - (t.discount_amount || 0);
-      const customerName = t.customer_id ? (t.customer_id as any).name : 'Standard';
+      const customerName = t.customer_id && typeof t.customer_id === 'object' && 'name' in t.customer_id ? (t.customer_id as unknown as { name: string }).name : 'Standard';
 
       const row = [
         t.ticket_number,
@@ -626,7 +635,7 @@ export const exportReport = async (req: Request, res: Response, next: NextFuncti
     }
 
     res.header('Content-Type', 'text/csv');
-    res.attachment(`parking_export_${filter}_${new Date().getTime()}.csv`);
+    res.header('Content-Disposition', `attachment; filename="parking_export_${filter}_${new Date().getTime()}.csv"`);
     res.send(csvRows.join('\n'));
   } catch (err) { next(err); }
 };
@@ -636,20 +645,25 @@ export const getReceipt = async (req: Request, res: Response, next: NextFunction
     const tenantId = req.tenant!.tenantId;
     const ticketId = req.params.id as string;
 
-    const query = mongoose.isValidObjectId(ticketId)
-      ? { _id: ticketId, tenant_id: tenantId }
-      : {
-          tenant_id: tenantId,
-          $or: [
-            { ticket_number: ticketId },
-            { ticket_number: ticketId.toLowerCase() },
-            { license_plate: ticketId.toUpperCase() }
-          ]
-        };
-
-    const ticket = await Ticket.findOne(query)
+    let ticket;
+    if (mongoose.isValidObjectId(ticketId)) {
+      ticket = await Ticket.findOne({ _id: ticketId, tenant_id: tenantId })
+        .populate('customer_id', 'name discount_percentage')
+        .lean();
+    } else {
+      const normalizedTicketId = ticketId.toLowerCase();
+      const normalizedPlate = ticketId.toUpperCase();
+      ticket = await Ticket.findOne({
+        tenant_id: tenantId,
+        $or: [
+          { ticket_number: ticketId },
+          { ticket_number: normalizedTicketId },
+          { license_plate: normalizedPlate }
+        ]
+      })
       .populate('customer_id', 'name discount_percentage')
       .lean();
+    }
 
     if (!ticket) {
       return next(new NotFoundError('Ticket not found'));
@@ -664,7 +678,7 @@ export const getReceipt = async (req: Request, res: Response, next: NextFunction
       const pad = (n: number) => n.toString().padStart(2, '0');
       const formattedDate = `${entryTime.getFullYear()}-${pad(entryTime.getMonth() + 1)}-${pad(entryTime.getDate())} ${pad(entryTime.getHours())}:${pad(entryTime.getMinutes())}:${pad(entryTime.getSeconds())}`;
       
-      const customer = ticket.customer_id as any;
+      const customer = ticket.customer_id && typeof ticket.customer_id === 'object' && 'name' in ticket.customer_id ? ticket.customer_id as unknown as { name: string; discount_percentage: number } : null;
       printableText = [
         '========================================',
         `          ${businessName.toUpperCase().padEnd(28).substring(0, 28)}`,

@@ -7,7 +7,7 @@ import { Clock, Filter, ChevronRight, CalendarDays, X } from 'lucide-react-nativ
 import { colors } from '../theme/colors';
 import { sw, sf } from '../theme/responsive';
 import { useNavigation } from '@react-navigation/native';
-import { parkingService } from '../services/parking.service';
+import { operatorService } from '../services/parking.service';
 import type { Ticket } from '../types/api.types';
 
 type FilterStatus = 'ALL' | 'ACTIVE' | 'PENDING_PAYMENT' | 'PAID' | 'EXPIRED';
@@ -140,7 +140,7 @@ const HistoryScreen = () => {
       const { from, to } = getDateRange(date);
       if (from) params.from = from;
       if (to)   params.to   = to;
-      const res = await parkingService.getTickets(params);
+      const res = await operatorService.getTickets(params);
       setTickets(prev => replace ? res.data : [...prev, ...res.data]);
       setTotalPages(res.pagination.totalPages);
       setPage(pg);

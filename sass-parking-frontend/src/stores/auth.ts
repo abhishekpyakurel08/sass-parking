@@ -1,15 +1,15 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { toast } from 'vue3-toastify';
-import { apiFetch } from '../utils/api';
+import { authEndpoints, userEndpoints } from '../utils/endpoints';
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || '');
-  const user = ref<{ id: string; name: string; role: string; tenantId?: string; tenant_id?: string } | null>(
+  const user = ref<{ id: string; name: string; role: string; tenantId?: string; tenant_id?: string; is_email_verified?: boolean } | null>(
     JSON.parse(localStorage.getItem('user') || 'null')
   );
 
-  const setAuth = (newToken: string, newUser: { id: string; name: string; role: string; tenantId?: string; tenant_id?: string }) => {
+  const setAuth = (newToken: string, newUser: { id: string; name: string; role: string; tenantId?: string; tenant_id?: string; is_email_verified?: boolean }) => {
     token.value = newToken;
     newUser.tenantId = newUser.tenantId || newUser.tenant_id;
     user.value = newUser;
@@ -19,13 +19,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   const logout = async () => {
     try {
-      // Call backend to clear httpOnly cookie
-      await apiFetch('/api/v1/auth/logout', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token.value}` },
-      });
+      await authEndpoints.logout();
     } catch {
-      // Silently fail — still clear local state
     }
     token.value = '';
     user.value = null;
@@ -34,7 +29,33 @@ export const useAuthStore = defineStore('auth', () => {
     toast.info('You have been signed out.');
   };
 
+  const resendEmailVerification = async () => {
+    try {
+      await userEndpoints.resendEmailVerification();
+      toast.success('Verification email sent successfully');
+      return true;
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to send verification email');
+      return false;
+    }
+  };
+
+  const verifyEmail = async (token: string) => {
+    try {
+      await userEndpoints.verifyEmail(token);
+      toast.success('Email verified successfully');
+      if (user.value) {
+        user.value.is_email_verified = true;
+        localStorage.setItem('user', JSON.stringify(user.value));
+      }
+      return true;
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to verify email');
+      return false;
+    }
+  };
+
   const isAuthenticated = () => !!token.value;
 
-  return { token, user, setAuth, logout, isAuthenticated };
+  return { token, user, setAuth, logout, isAuthenticated, resendEmailVerification, verifyEmail };
 });

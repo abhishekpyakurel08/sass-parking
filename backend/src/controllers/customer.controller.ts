@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
 import { Customer } from '../models/customer.model.js';
 import { ConflictError, NotFoundError, ValidationError } from '../errors/ApiError.js';
 import { CustomerStatus } from '../types/enums.js';
@@ -9,12 +10,15 @@ export const createCustomer = async (req: Request, res: Response, next: NextFunc
     const tenantId = req.tenant!.tenantId;
     const { name, customer_code, email, phone_number, discount_percentage } = req.body;
 
-    const existing = await Customer.findOne({ tenant_id: tenantId, $or: [{ customer_code }, { email }, { phone_number }] });
-    if (existing) {
-      if (existing.customer_code === customer_code) return next(new ConflictError('Customer with this code already exists.'));
-      if (email && existing.email === email) return next(new ConflictError('Customer with this email already exists.'));
-      if (phone_number && existing.phone_number === phone_number) return next(new ConflictError('Customer with this phone number already exists.'));
-    }
+    const [existingByCode, existingByEmail, existingByPhone] = await Promise.all([
+      Customer.findOne({ tenant_id: tenantId, customer_code }),
+      email ? Customer.findOne({ tenant_id: tenantId, email }) : null,
+      phone_number ? Customer.findOne({ tenant_id: tenantId, phone_number }) : null,
+    ]);
+
+    if (existingByCode) return next(new ConflictError('Customer with this code already exists.'));
+    if (existingByEmail) return next(new ConflictError('Customer with this email already exists.'));
+    if (existingByPhone) return next(new ConflictError('Customer with this phone number already exists.'));
 
     const customer = await Customer.create({
       tenant_id: tenantId,
@@ -36,7 +40,7 @@ export const getCustomers = async (req: Request, res: Response, next: NextFuncti
     const tenantId = req.tenant!.tenantId;
     const { search, status } = req.query;
 
-    const filter: any = { tenant_id: tenantId };
+    const filter: Record<string, unknown> = { tenant_id: tenantId };
     if (search) {
       filter.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -45,7 +49,12 @@ export const getCustomers = async (req: Request, res: Response, next: NextFuncti
         { phone_number: { $regex: search, $options: 'i' } },
       ];
     }
-    if (status) filter.status = status;
+    if (status) {
+      if (!Object.values(CustomerStatus).includes(status as CustomerStatus)) {
+        return next(new ValidationError('Invalid status value'));
+      }
+      filter.status = status;
+    }
 
     const customers = await Customer.find(filter).sort({ name: 1 }).lean();
     res.status(200).json({ success: true, data: customers });
@@ -56,6 +65,10 @@ export const getCustomerById = async (req: Request, res: Response, next: NextFun
   try {
     const tenantId = req.tenant!.tenantId;
     const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return next(new ValidationError('Invalid customer ID'));
+    }
 
     const customer = await Customer.findOne({ _id: id, tenant_id: tenantId }).lean();
     if (!customer) return next(new NotFoundError('Customer not found'));
@@ -70,9 +83,21 @@ export const updateCustomer = async (req: Request, res: Response, next: NextFunc
     const { id } = req.params;
     const updates = req.body;
 
+    if (!mongoose.isValidObjectId(id)) {
+      return next(new ValidationError('Invalid customer ID'));
+    }
+
+    const allowedUpdates = ['name', 'email', 'phone_number', 'discount_percentage'];
+    const filteredUpdates: Record<string, unknown> = {};
+    for (const key of allowedUpdates) {
+      if (updates[key] !== undefined) {
+        filteredUpdates[key] = updates[key];
+      }
+    }
+
     const customer = await Customer.findOneAndUpdate(
       { _id: id, tenant_id: tenantId },
-      { $set: updates },
+      { $set: filteredUpdates },
       { new: true, runValidators: true }
     ).lean();
     if (!customer) return next(new NotFoundError('Customer not found'));
@@ -86,6 +111,10 @@ export const deleteCustomer = async (req: Request, res: Response, next: NextFunc
     const tenantId = req.tenant!.tenantId;
     const { id } = req.params;
 
+    if (!mongoose.isValidObjectId(id)) {
+      return next(new ValidationError('Invalid customer ID'));
+    }
+
     const customer = await Customer.findOneAndDelete({ _id: id, tenant_id: tenantId });
     if (!customer) return next(new NotFoundError('Customer not found'));
 
@@ -98,12 +127,19 @@ export const regenerateCustomerQr = async (req: Request, res: Response, next: Ne
     const tenantId = req.tenant!.tenantId;
     const { id } = req.params;
 
+    if (!mongoose.isValidObjectId(id)) {
+      return next(new ValidationError('Invalid customer ID'));
+    }
+
     const customer = await Customer.findOne({ _id: id, tenant_id: tenantId });
     if (!customer) return next(new NotFoundError('Customer not found'));
 
     if (!customer.customer_code) return next(new ValidationError('Customer does not have a customer code to generate QR from.'));
 
     const newQrCodeDataUrl = await generateQrCodeDataUri(customer.customer_code);
+
+    customer.qr_data = customer.customer_code;
+    await customer.save();
 
     res.status(200).json({
       success: true,

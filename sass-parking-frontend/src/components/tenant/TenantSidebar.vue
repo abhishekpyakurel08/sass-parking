@@ -3,7 +3,7 @@ import { useAuthStore } from '../../stores/auth';
 import { useTenantStore } from '../../stores/tenant';
 import {
   LayoutDashboard, ParkingSquare, Users, Settings,
-  LogOut, Terminal, Ticket as TicketIcon,
+  LogOut, Terminal, Ticket as TicketIcon, UserCircle, Car, BarChart3,
   ChevronLeft, ChevronRight
 } from 'lucide-vue-next';
 
@@ -18,10 +18,13 @@ const authStore = useAuthStore();
 const store = useTenantStore();
 
 const navItems = [
-  { tab: 'overview',  label: 'Dashboard',       icon: LayoutDashboard },
-  { tab: 'lots',      label: 'Parking Rates',   icon: ParkingSquare },
-  { tab: 'tickets',   label: 'Parking Tickets', icon: TicketIcon },
-  { tab: 'staff',     label: 'Staff',            icon: Users },
+  { tab: 'overview',   label: 'Dashboard',        icon: LayoutDashboard },
+  { tab: 'operations', label: 'Operations',       icon: Car },
+  { tab: 'analytics',   label: 'Analytics',        icon: BarChart3 },
+  { tab: 'lots',       label: 'Parking Rates',    icon: ParkingSquare },
+  { tab: 'tickets',    label: 'Parking Tickets',  icon: TicketIcon },
+  { tab: 'customers',  label: 'Customers',        icon: UserCircle },
+  { tab: 'staff',      label: 'Staff',            icon: Users },
 ];
 </script>
 

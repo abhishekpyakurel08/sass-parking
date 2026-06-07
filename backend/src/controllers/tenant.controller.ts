@@ -2,12 +2,14 @@ import type { Request, Response, NextFunction } from 'express';
 import { Tenant } from '../models/tenant.model.js';
 import { User } from '../models/user.model.js';
 import { ApiKey, generateApiKeyValues } from '../models/apiKey.model.js';
+import { Ticket } from '../models/ticket.model.js';
+import { Customer } from '../models/customer.model.js';
+import { HourlyRate } from '../models/hourlyRate.model.js';
 import { ConflictError, NotFoundError, ValidationError } from '../errors/ApiError.js';
 import { UserRole } from '../types/enums.js';
 import bcrypt from 'bcryptjs';
 import { env } from '../config/env.js';
 import { invalidateTenant, invalidateApiKeysForUser } from '../utils/cache.js';
-
 
 export const getAllTenants = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -48,7 +50,7 @@ export const updateTenant = async (req: Request, res: Response, next: NextFuncti
     const tenant = await Tenant.findByIdAndUpdate(id, { $set: updates }, { new: true, runValidators: true });
     if (!tenant) return next(new NotFoundError('Tenant not found'));
 
-    invalidateTenant(id);
+    await invalidateTenant(id);
 
     res.status(200).json({ success: true, data: tenant });
   } catch (err) { next(err); }
@@ -58,12 +60,21 @@ export const updateTenant = async (req: Request, res: Response, next: NextFuncti
 export const deleteTenant = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
-    const tenant = await Tenant.findByIdAndDelete(id);
+    const tenantId = id as string;
+    const tenant = await Tenant.findByIdAndDelete(tenantId);
     if (!tenant) return next(new NotFoundError('Tenant not found'));
 
-    await User.updateMany({ tenant_id: id }, { $set: { refresh_token: null } });
+    await Promise.all([
+      User.deleteMany({ tenant_id: tenantId }),
+      Ticket.deleteMany({ tenant_id: tenantId }),
+      Customer.deleteMany({ tenant_id: tenantId }),
+      HourlyRate.deleteMany({ tenant_id: tenantId }),
+      ApiKey.deleteMany({ tenantId: tenantId }),
+    ]);
 
-    res.status(200).json({ success: true, message: 'Tenant deleted successfully' });
+    await invalidateTenant(tenantId);
+
+    res.status(200).json({ success: true, message: 'Tenant and all associated data deleted successfully' });
   } catch (err) { next(err); }
 };
 
@@ -93,17 +104,10 @@ export const updateMyTenant = async (req: Request, res: Response, next: NextFunc
   } catch (err) { next(err); }
 };
 
-
-
 export const createStaff = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { name, email, password, gate_assignment, ticket_prefix } = req.body;
     const tenantId = req.tenant!.tenantId;
-
-    const staffCount = await User.countDocuments({ tenant_id: tenantId, role: UserRole.GATE_STAFF });
-    if (staffCount >= 2) {
-      return next(new ValidationError('Staff limit reached. Tenants can only create up to 2 staff members.'));
-    }
 
     const existing = await User.findOne({ email });
     if (existing) return next(new ConflictError('User with this email already exists'));
@@ -151,7 +155,6 @@ export const createStaff = async (req: Request, res: Response, next: NextFunctio
   } catch (err) { next(err); }
 };
 
-
 export const getStaff = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const staff = await User.find({ tenant_id: req.tenant!.tenantId, role: UserRole.GATE_STAFF })
@@ -160,7 +163,6 @@ export const getStaff = async (req: Request, res: Response, next: NextFunction):
     res.status(200).json({ success: true, data: staff });
   } catch (err) { next(err); }
 };
-
 
 export const updateStaff = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -202,7 +204,6 @@ export const updateStaff = async (req: Request, res: Response, next: NextFunctio
   } catch (err) { next(err); }
 };
 
-
 export const deleteStaff = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const id = req.params.id as string;
@@ -210,12 +211,11 @@ export const deleteStaff = async (req: Request, res: Response, next: NextFunctio
     if (!staff) return next(new NotFoundError('Staff member not found'));
 
     await ApiKey.deleteMany({ userId: id });
-    invalidateApiKeysForUser(id);
+    await invalidateApiKeysForUser(id);
 
     res.status(200).json({ success: true, message: 'Staff member and their API keys deleted successfully' });
   } catch (err) { next(err); }
 };
-
 
 export const regenerateStaffApiKey = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -226,7 +226,7 @@ export const regenerateStaffApiKey = async (req: Request, res: Response, next: N
     if (!staff) return next(new NotFoundError('Staff member not found'));
 
     await ApiKey.deleteMany({ userId: id, tenantId });
-    invalidateApiKeysForUser(id);
+    await invalidateApiKeysForUser(id);
 
     const { rawKey, prefix, keyHash } = generateApiKeyValues();
     const apiKey = await ApiKey.create({

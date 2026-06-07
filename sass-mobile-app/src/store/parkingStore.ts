@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { parkingService } from '../services/parking.service';
+import { operatorService } from '../services/parking.service';
 import { enqueue, loadQueue, removeFromQueue, isNetworkError } from '../services/offlineQueue';
 import type { Ticket, CheckOutResponse, ScanResponse, DailyStats } from '../types/api.types';
 import { Alert } from 'react-native';
@@ -82,7 +82,7 @@ export const useParkingStore = create<ParkingState>((set, get) => ({
     
     set({ isSyncing: true });
     try {
-      const res = await parkingService.syncBatch({ operations: q });
+      const res = await operatorService.syncBatch({ operations: q });
       if (res.success) {
         // Clear all synced operations
         // Ideally we check results.successful vs errors, but for simplicity we clear the whole queue
@@ -106,8 +106,8 @@ export const useParkingStore = create<ParkingState>((set, get) => ({
     set({ isLoadingStats: true, error: null });
     try {
       const [statsRes, ticketsRes] = await Promise.all([
-        parkingService.getDailyStats(),
-        parkingService.getTickets({ limit: 10 }),
+        operatorService.getDailyStats(),
+        operatorService.getTickets({ limit: 10 }),
       ]);
       set({
         stats: statsRes.data,
@@ -130,7 +130,7 @@ export const useParkingStore = create<ParkingState>((set, get) => ({
     set({ isLoading: true, error: null, lastCheckIn: null, lastCheckInReceiptText: null });
     const formattedPlate = license_plate.trim().toUpperCase();
     try {
-      const res = await parkingService.checkIn({
+      const res = await operatorService.checkIn({
         license_plate: formattedPlate || undefined,
         vehicle_type: vehicle_type as any,
         customer_code,
@@ -179,7 +179,7 @@ export const useParkingStore = create<ParkingState>((set, get) => ({
   scanTicket: async (code) => {
     set({ isLoading: true, error: null, scannedTicket: null });
     try {
-      const res = await parkingService.scanTicket({ code });
+      const res = await operatorService.scanTicket({ code });
       set({ scannedTicket: res.ticket, isLoading: false });
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? 'Scan failed — ticket not found';
@@ -191,7 +191,7 @@ export const useParkingStore = create<ParkingState>((set, get) => ({
   checkOut: async (ticket_id) => {
     set({ isLoading: true, error: null, checkoutSummary: null });
     try {
-      const res = await parkingService.checkOut({ ticket_id });
+      const res = await operatorService.checkOut({ ticket_id });
       set({ checkoutSummary: res.summary, isLoading: false });
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? 'Checkout failed';
@@ -203,7 +203,7 @@ export const useParkingStore = create<ParkingState>((set, get) => ({
   lostTicket: async (vehicle_type, license_plate, assumed_duration_hours) => {
     set({ isLoading: true, error: null, checkoutSummary: null });
     try {
-      const res = await parkingService.lostTicket({
+      const res = await operatorService.lostTicket({
         vehicle_type: vehicle_type as any,
         license_plate,
         assumed_duration_hours,
@@ -238,7 +238,7 @@ export const useParkingStore = create<ParkingState>((set, get) => ({
   processPayment: async (ticket_id, payment_method, amount_received, transaction_reference) => {
     set({ isLoading: true, error: null, paymentReceipt: null });
     try {
-      const res = await parkingService.processPayment({
+      const res = await operatorService.processPayment({
         ticket_id,
         payment_method,
         amount_received,

@@ -1,11 +1,6 @@
-import NodeCache from 'node-cache';
+import { redis } from '../config/redis.js';
 
-export const tenantCache = new NodeCache({
-  stdTTL: 5 * 60,
-  checkperiod: 60,
-  useClones: false,
-  deleteOnExpire: true,
-});
+export { redis };
 
 export interface CachedApiKey {
   keyId: string;
@@ -15,43 +10,46 @@ export interface CachedApiKey {
   isActive: boolean;
 }
 
-export const apiKeyCache = new NodeCache({
-  stdTTL: 10 * 60,
-  checkperiod: 120,
-  useClones: false,
-  deleteOnExpire: true,
-});
-
-export const rateLimitCache = new NodeCache({
-  stdTTL: 60,
-  checkperiod: 30,
-  useClones: false,
-  deleteOnExpire: true,
-});
-
-export const invalidateTenant = (tenantId: string): void => {
-  tenantCache.del(tenantId);
+export const getTenantFromCache = async (tenantId: string) => {
+  const raw = await redis.get(`tenant:${tenantId}`);
+  return raw ? JSON.parse(raw) : null;
 };
 
-export const invalidateApiKeysForUser = (userId: string): void => {
-  const allKeys = apiKeyCache.keys();
-  for (const k of allKeys) {
-    const entry = apiKeyCache.get<CachedApiKey>(k);
-    if (entry?.userId === userId) {
-      apiKeyCache.del(k);
+export const setTenantCache = async (tenantId: string, data: object) => {
+  await redis.setex(`tenant:${tenantId}`, 300, JSON.stringify(data));
+};
+
+export const invalidateTenant = async (tenantId: string) => {
+  await redis.del(`tenant:${tenantId}`);
+};
+
+export const getApiKeyFromCache = async (key: string) => {
+  const raw = await redis.get(`apikey:${key}`);
+  return raw ? JSON.parse(raw) : null;
+};
+
+export const setApiKeyCache = async (key: string, data: CachedApiKey) => {
+  await redis.setex(`apikey:${key}`, 600, JSON.stringify(data));
+};
+
+export const invalidateApiKeysForUser = async (userId: string) => {
+  const pattern = 'apikey:*';
+  const keys = await redis.keys(pattern);
+  for (const k of keys) {
+    const raw = await redis.get(k);
+    if (raw) {
+      const entry = JSON.parse(raw) as CachedApiKey;
+      if (entry.userId === userId) {
+        await redis.del(k);
+      }
     }
   }
 };
 
-export const incrementRateCount = (key: string): number => {
-  const current = rateLimitCache.get<number>(key) ?? 0;
-  const next = current + 1;
-  const ttl = rateLimitCache.getTtl(key);
-  if (ttl) {
-    const remaining = Math.max(Math.ceil((ttl - Date.now()) / 1000), 1);
-    rateLimitCache.set(key, next, remaining);
-  } else {
-    rateLimitCache.set(key, next);
+export const incrementRateCount = async (key: string): Promise<number> => {
+  const current = await redis.incr(key);
+  if (current === 1) {
+    await redis.expire(key, 60);
   }
-  return next;
+  return current;
 };

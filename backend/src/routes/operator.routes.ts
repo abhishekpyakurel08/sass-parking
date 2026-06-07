@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticateAny, requireRole } from '../middleware/auth.middleware.js';
-import { getDailyStats } from '../controllers/operator.controller.js';
+import { getDailyStats, getOperatorConfig } from '../controllers/operator.controller.js';
 import { checkIn, checkOut, processPayment, scanTicket, handleLostTicket } from '../controllers/parking.controller.js';
 import { validate } from '../middleware/validate.middleware.js';
 import { checkInSchema, checkOutSchema, processPaymentSchema, scanSchema, lostTicketSchema } from '../utils/validation.schemas.js';
@@ -55,6 +55,12 @@ router.get(
   '/operator/stats',
   requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER),
   getDailyStats
+);
+
+router.get(
+  '/operator/config',
+  requireRole(UserRole.GATE_STAFF, UserRole.TENANT_OWNER),
+  getOperatorConfig
 );
 
 export default router;

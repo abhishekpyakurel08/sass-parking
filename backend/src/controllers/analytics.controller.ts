@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { Tenant } from '../models/tenant.model.js';
 import { Ticket } from '../models/ticket.model.js';
 import { TicketStatus, TenantStatus, UserRole } from '../types/enums.js';
+import { redis } from '../config/redis.js';
 
 export const getGlobalAnalytics = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -45,7 +46,17 @@ export const getTenantAnalytics = async (req: Request, res: Response, next: Next
     const userRole = req.user?.role;
     const isOperator = userRole === UserRole.GATE_STAFF;
     
-    const filter = isOperator ? 'today' : (req.query.filter as string || 'today');
+    const rawFilter = isOperator ? 'today' : (req.query.filter as string || 'today');
+    const allowedFilters = ['today', 'weekly', 'monthly'];
+    const filter = allowedFilters.includes(rawFilter) ? rawFilter : 'today';
+
+    // Check cache first
+    const cacheKey = `analytics:${tenantId}:${filter}`;
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      res.status(200).json(JSON.parse(cached));
+      return;
+    }
 
     const now = new Date();
     let startDate: Date;
@@ -88,7 +99,7 @@ export const getTenantAnalytics = async (req: Request, res: Response, next: Next
 
     const totalRevenue = revenueStats[0]?.revenue ?? 0;
 
-    res.status(200).json({
+    const response = {
       success: true,
       data: {
         filter,
@@ -97,6 +108,11 @@ export const getTenantAnalytics = async (req: Request, res: Response, next: Next
         vehicle_trends: vehicleTrends,
         generated_at: new Date().toISOString(),
       },
-    });
+    };
+
+    // Cache for 5 minutes (analytics don't need to be real-time)
+    await redis.setex(cacheKey, 300, JSON.stringify(response));
+
+    res.status(200).json(response);
   } catch (err) { next(err); }
 };

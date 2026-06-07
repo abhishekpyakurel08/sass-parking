@@ -10,6 +10,8 @@ export interface IUser {
   gate_assignment?: GateAssignment;
   ticket_prefix?: string;
   refresh_token?: string | null;
+  is_email_verified?: boolean;
+  email_verification_token?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
