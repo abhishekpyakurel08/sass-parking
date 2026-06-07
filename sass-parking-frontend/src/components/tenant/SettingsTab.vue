@@ -4,13 +4,19 @@ import { useTenantStore } from '../../stores/tenant';
 import { useAuthStore } from '../../stores/auth';
 import {
   Building2, Save, Lock, ShieldCheck, CreditCard,
-  Phone, MapPin, Mail, User, BadgeCheck, AlertTriangle,
+  Phone, MapPin, Mail, User, BadgeCheck, AlertTriangle, Copy,
 } from 'lucide-vue-next';
 
 const store = useTenantStore();
 const authStore = useAuthStore();
 
 const activeSection = ref<'profile' | 'subscription' | 'security'>('profile');
+
+const copySlug = () => {
+  if (store.profile?.slug) {
+    navigator.clipboard.writeText(store.profile.slug);
+  }
+};
 
 const sections = [
   { id: 'profile',      label: 'Company Profile',    icon: Building2 },
@@ -56,6 +62,29 @@ const sections = [
           </div>
         </div>
         <div class="p-6 space-y-5">
+          <!-- Slug Display -->
+          <div class="md:col-span-2">
+            <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+              <BadgeCheck class="w-3 h-3" /> Tenant Slug (URL)
+              <span class="ml-1 px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded text-[9px] font-black uppercase tracking-wider">Public</span>
+            </label>
+            <div class="flex items-center gap-2">
+              <div class="flex-1 px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 font-mono text-sm">
+                {{ store.profile.slug || 'Loading...' }}
+              </div>
+              <button 
+                @click="copySlug"
+                class="px-3 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors"
+                title="Copy slug"
+              >
+                <Copy class="w-4 h-4" />
+              </button>
+            </div>
+            <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+              Your dashboard URL: <span class="font-mono text-emerald-600 dark:text-emerald-400">/tenant/{{ store.profile.slug }}</span>
+            </p>
+          </div>
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
             <!-- Company Name -->

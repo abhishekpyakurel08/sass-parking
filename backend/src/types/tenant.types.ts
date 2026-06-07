@@ -3,6 +3,7 @@ import { TenantStatus } from './enums.js';
 
 export interface ITenant {
   name: string;
+  slug: string;
   corporate_email: string;
   total_capacity: number;
   status: TenantStatus;

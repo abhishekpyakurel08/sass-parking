@@ -12,6 +12,8 @@ export interface IUser {
   refresh_token?: string | null;
   is_email_verified?: boolean;
   email_verification_token?: string | null;
+  password_reset_token?: string | null;
+  password_reset_expires?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
 }

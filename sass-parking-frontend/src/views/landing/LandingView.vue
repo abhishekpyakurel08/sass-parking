@@ -23,6 +23,27 @@
               <a href="#about" class="cta-ghost hoverable">View Features</a>
             </div>
 
+            <!-- Quick Tenant Access -->
+            <div class="mt-6 glass-panel rounded-xl p-4 reveal-on-scroll">
+              <div class="flex items-center gap-3">
+                <div class="flex-1">
+                  <input 
+                    v-model="tenantSlug" 
+                    type="text" 
+                    placeholder="Enter your tenant slug (e.g., abc-parking)" 
+                    class="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    @keyup.enter="goToTenant"
+                  />
+                </div>
+                <button 
+                  @click="goToTenant"
+                  class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg transition-colors"
+                >
+                  Go
+                </button>
+              </div>
+            </div>
+
             <div class="mt-10 border-t border-white/20 pt-8">
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="stats-inline reveal-on-scroll feature-card glass-panel text-center">
@@ -319,10 +340,20 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from "vue"
+import { ref, onBeforeUnmount, onMounted } from "vue"
+import { useRouter } from "vue-router"
 import { Car, Users, Star, Ticket, Printer, Cog, BarChart3, Check } from "lucide-vue-next" // Removed MapPin, ShieldCheck
 import NavBar from '../../components/NavBar.vue'
 import AppFooter from '../../components/AppFooter.vue'
+
+const router = useRouter()
+const tenantSlug = ref("")
+
+const goToTenant = () => {
+  if (tenantSlug.value.trim()) {
+    router.push(`/tenant/${tenantSlug.value.trim()}`)
+  }
+}
 
 let revealObserver: IntersectionObserver | null = null
 

@@ -14,14 +14,25 @@ export const registerTenantOwner = async (req: Request, res: Response): Promise<
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { name, owner_name, owner_email, password, corporate_email, total_capacity } = req.body;
+    const { name, slug, owner_name, owner_email, password, corporate_email, total_capacity } = req.body;
     const ownerEmail = owner_email;
     const tenantEmail = corporate_email || owner_email;
+    
+    // Generate slug from name if not provided
+    let tenantSlug = slug;
+    if (!tenantSlug && name) {
+      tenantSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    }
+    
+    // Ensure slug is not empty
+    if (!tenantSlug) {
+      tenantSlug = `tenant-${Date.now()}`;
+    }
 
-    const existingTenant = await Tenant.findOne({ corporate_email: tenantEmail });
+    const existingTenant = await Tenant.findOne({ slug: tenantSlug });
     if (existingTenant) {
       await session.abortTransaction();
-      res.status(400).json({ success: false, message: 'A tenant with this email already exists.' });
+      res.status(400).json({ success: false, message: 'A tenant with this slug already exists.' });
       return;
     }
 
@@ -34,6 +45,7 @@ export const registerTenantOwner = async (req: Request, res: Response): Promise<
 
     const tenant = await Tenant.create([{
       name: name || owner_name,
+      slug: tenantSlug,
       corporate_email: tenantEmail,
       total_capacity: total_capacity || 100,
       status: TenantStatus.ACTIVE,
@@ -54,11 +66,13 @@ export const registerTenantOwner = async (req: Request, res: Response): Promise<
       success: true,
       message: 'Tenant onboarded successfully.',
       tenant_id: tenant[0]._id,
+      slug: tenant[0].slug,
       owner_id: owner[0]._id,
     });
   } catch (error: unknown) {
     await session.abortTransaction();
     const message = error instanceof Error ? error.message : 'An unknown error occurred';
+    console.error('Registration error:', error);
     res.status(500).json({ success: false, error: message });
   } finally {
     session.endSession();
@@ -105,11 +119,18 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
       maxAge: cookieMaxAge,
     });
 
+    // Get tenant slug if user has a tenant
+    let tenantSlug = null;
+    if (user.tenant_id) {
+      const tenant = await Tenant.findById(user.tenant_id);
+      tenantSlug = tenant?.slug || null;
+    }
+
     res.status(200).json({
       success: true,
       message: 'Login successful.',
       token,
-      user: { id: user._id, name: user.name, role: user.role, tenant_id: user.tenant_id ?? null },
+      user: { id: user._id, name: user.name, role: user.role, tenant_id: user.tenant_id ?? null, slug: tenantSlug },
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'An unknown error occurred';
@@ -227,6 +248,100 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
     await user.save();
 
     res.status(200).json({ success: true, message: 'Email verified successfully' });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'An unknown error occurred';
+    res.status(500).json({ success: false, error: message });
+  }
+};
+
+export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      res.status(400).json({ success: false, message: 'Email is required' });
+      return;
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      // Don't reveal if email exists for security
+      res.status(200).json({ success: true, message: 'If an account exists, a password reset email has been sent' });
+      return;
+    }
+
+    const resetToken = jwt.sign(
+      { userId: user._id.toString() },
+      env.JWT_ACCESS_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    user.password_reset_token = resetToken;
+    user.password_reset_expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
+
+    // Send password reset email
+    const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+    
+    try {
+      await sendVerificationEmail(email, resetToken);
+    } catch (emailError) {
+      console.error('Failed to send password reset email:', emailError);
+    }
+
+    res.status(200).json({ success: true, message: 'If an account exists, a password reset email has been sent' });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'An unknown error occurred';
+    res.status(500).json({ success: false, error: message });
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) {
+      res.status(400).json({ success: false, message: 'Token and new password are required' });
+      return;
+    }
+
+    let decoded: { userId: string };
+    try {
+      decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as { userId: string };
+    } catch (jwtError) {
+      if (jwtError instanceof jwt.TokenExpiredError) {
+        res.status(400).json({ success: false, message: 'Reset token has expired' });
+        return;
+      }
+      if (jwtError instanceof jwt.JsonWebTokenError) {
+        res.status(400).json({ success: false, message: 'Invalid reset token' });
+        return;
+      }
+      res.status(500).json({ success: false, message: 'Token verification failed' });
+      return;
+    }
+
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      res.status(404).json({ success: false, message: 'User not found' });
+      return;
+    }
+
+    if (user.password_reset_token !== token) {
+      res.status(400).json({ success: false, message: 'Invalid reset token' });
+      return;
+    }
+
+    if (!user.password_reset_expires || user.password_reset_expires < new Date()) {
+      res.status(400).json({ success: false, message: 'Reset token has expired' });
+      return;
+    }
+
+    const password_hash = await bcrypt.hash(newPassword, env.BCRYPT_ROUNDS);
+    user.password_hash = password_hash;
+    user.password_reset_token = null;
+    user.password_reset_expires = null;
+    await user.save();
+
+    res.status(200).json({ success: true, message: 'Password reset successfully' });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'An unknown error occurred';
     res.status(500).json({ success: false, error: message });

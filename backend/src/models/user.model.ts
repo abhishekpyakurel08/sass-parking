@@ -14,6 +14,8 @@ const UserSchema = new Schema<IUser>(
     refresh_token: { type: String, default: null },
     is_email_verified: { type: Boolean, default: false },
     email_verification_token: { type: String, default: null },
+    password_reset_token: { type: String, default: null },
+    password_reset_expires: { type: Date, default: null },
   },
   { timestamps: true }
 );

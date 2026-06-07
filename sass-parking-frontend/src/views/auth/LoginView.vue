@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed } from "vue"
+import { ref, reactive, computed, onMounted } from "vue"
 import {
   Loader2, Car, Building2, Mail, Lock, ArrowRight, Eye, EyeOff
 } from "lucide-vue-next"
@@ -19,16 +19,34 @@ const selectedRole = computed(() => {
   return ""
 })
 
-const view = ref<"login" | "register" | "verify">("login")
+const view = ref<"login" | "register" | "verify" | "forgot" | "reset">("login")
 const isLoading = ref(false)
 const showLoginPassword = ref(false)
 const showRegisterPassword = ref(false)
+const showResetPassword = ref(false)
 const verificationToken = ref("")
+const resetToken = ref("")
+const forgotEmail = ref("")
+const resetPasswordData = reactive({ newPassword: "", confirmPassword: "" })
+
+// Auto-verify email if token is in URL
+onMounted(async () => {
+  const token = route.query.token as string
+  if (token && route.name === "verify-email") {
+    verificationToken.value = token
+    view.value = "verify"
+    // Auto-submit verification
+    await handleVerifyEmail()
+  } else if (token && route.name === "reset-password") {
+    resetToken.value = token
+    view.value = "reset"
+  }
+})
 
 const loginData = reactive({ email: "", password: "", rememberMe: false })
 const registerData = reactive({ businessName: "", slug: "", ownerName: "", ownerEmail: "", password: "" })
 
-const toggleView = (target: "login" | "register" | "verify") => {
+const toggleView = (target: "login" | "register" | "verify" | "forgot" | "reset") => {
   view.value = target
 }
 
@@ -59,6 +77,45 @@ const handleResendVerification = async () => {
   }
 }
 
+const handleForgotPassword = async () => {
+  isLoading.value = true
+  try {
+    const success = await authStore.forgotPassword(forgotEmail.value)
+    if (success) {
+      toast.success("Password reset email sent. Please check your inbox.")
+      toggleView("login")
+    }
+  } catch {
+    toast.error("Failed to send reset email. Please try again.")
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const handleResetPassword = async () => {
+  if (resetPasswordData.newPassword !== resetPasswordData.confirmPassword) {
+    toast.error("Passwords do not match")
+    return
+  }
+  if (resetPasswordData.newPassword.length < 8) {
+    toast.error("Password must be at least 8 characters")
+    return
+  }
+  
+  isLoading.value = true
+  try {
+    const success = await authStore.resetPassword(resetToken.value, resetPasswordData.newPassword)
+    if (success) {
+      toast.success("Password reset successfully. Please login.")
+      toggleView("login")
+    }
+  } catch {
+    toast.error("Failed to reset password. Please try again.")
+  } finally {
+    isLoading.value = false
+  }
+}
+
 const onSubmit = async () => {
   isLoading.value = true
   try {
@@ -76,7 +133,11 @@ const onSubmit = async () => {
         await authStore.logout()
         return
       } else if (data.user.role === "TENANT_OWNER") {
-        router.push("/tenant")
+        if (data.user.slug) {
+          router.push(`/tenant/${data.user.slug}`)
+        } else {
+          router.push("/tenant")
+        }
       } else if (data.user.role === "SUPER_ADMIN") {
         router.push("/superadmin")
       } else {
@@ -85,6 +146,7 @@ const onSubmit = async () => {
     } else if (view.value === "register") {
       const data = await userEndpoints.registerTenantOwner({
         name: registerData.businessName,
+        slug: registerData.slug,
         corporate_email: registerData.ownerEmail,
         owner_name: registerData.ownerName,
         owner_email: registerData.ownerEmail,
@@ -166,7 +228,7 @@ const onSubmit = async () => {
                 <div class="space-y-1.5">
                   <div class="flex justify-between items-center">
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Master Password</label>
-                    <a href="#" class="text-xs font-bold text-emerald-600 dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors">Forgot?</a>
+                    <button type="button" @click="toggleView('forgot')" class="text-xs font-bold text-emerald-600 dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors">Forgot?</button>
                   </div>
                   <div class="relative group">
                     <Lock class="absolute left-3.5 top-3 h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
@@ -281,6 +343,83 @@ const onSubmit = async () => {
                   Resend verification code
                 </button>
               </div>
+
+              <div class="text-center pt-2">
+                <button type="button" @click="toggleView('login')"
+                        class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 font-medium transition-colors">
+                  Back to login
+                </button>
+              </div>
+            </form>
+
+            <!-- FORGOT PASSWORD FORM -->
+            <form v-else-if="view === 'forgot'" @submit.prevent="handleForgotPassword" class="space-y-6 w-full absolute inset-0">
+              <div class="space-y-2">
+                <h2 class="text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">Forgot Password</h2>
+                <p class="text-slate-500 dark:text-slate-400">Enter your email to receive a password reset link.</p>
+              </div>
+
+              <div class="space-y-5 pt-4">
+                <div class="space-y-1.5">
+                  <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Email Address</label>
+                  <div class="relative group">
+                    <Mail class="absolute left-3.5 top-3 h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
+                    <input v-model="forgotEmail" type="email" placeholder="admin@facility.com" required
+                           class="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 font-medium" />
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" :disabled="isLoading"
+                      class="w-full bg-[#10b981] hover:bg-[#059669] disabled:bg-[#10b981]/50 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all group shadow-xl shadow-[#10b981]/20 mt-8">
+                <Loader2 v-if="isLoading" class="w-5 h-5 animate-spin" />
+                <span v-else>Send Reset Link</span>
+              </button>
+
+              <div class="text-center pt-2">
+                <button type="button" @click="toggleView('login')"
+                        class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 font-medium transition-colors">
+                  Back to login
+                </button>
+              </div>
+            </form>
+
+            <!-- RESET PASSWORD FORM -->
+            <form v-else-if="view === 'reset'" @submit.prevent="handleResetPassword" class="space-y-6 w-full absolute inset-0">
+              <div class="space-y-2">
+                <h2 class="text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">Reset Password</h2>
+                <p class="text-slate-500 dark:text-slate-400">Enter your new password.</p>
+              </div>
+
+              <div class="space-y-5 pt-4">
+                <div class="space-y-1.5">
+                  <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">New Password</label>
+                  <div class="relative group">
+                    <Lock class="absolute left-3.5 top-3 h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
+                    <input v-model="resetPasswordData.newPassword" :type="showResetPassword ? 'text' : 'password'" placeholder="••••••••" required minlength="8"
+                           class="w-full pl-11 pr-11 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none text-slate-900 dark:text-slate-100 font-medium tracking-widest" />
+                    <button type="button" @click="showResetPassword = !showResetPassword" class="absolute right-3.5 top-3 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 focus:outline-none transition-colors">
+                      <EyeOff v-if="showResetPassword" class="h-5 w-5" />
+                      <Eye v-else class="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div class="space-y-1.5">
+                  <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Confirm Password</label>
+                  <div class="relative group">
+                    <Lock class="absolute left-3.5 top-3 h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
+                    <input v-model="resetPasswordData.confirmPassword" :type="showResetPassword ? 'text' : 'password'" placeholder="••••••••" required minlength="8"
+                           class="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none text-slate-900 dark:text-slate-100 font-medium tracking-widest" />
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" :disabled="isLoading"
+                      class="w-full bg-[#10b981] hover:bg-[#059669] disabled:bg-[#10b981]/50 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all group shadow-xl shadow-[#10b981]/20 mt-8">
+                <Loader2 v-if="isLoading" class="w-5 h-5 animate-spin" />
+                <span v-else>Reset Password</span>
+              </button>
 
               <div class="text-center pt-2">
                 <button type="button" @click="toggleView('login')"

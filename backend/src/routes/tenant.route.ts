@@ -2,7 +2,7 @@ import { Router } from 'express';
 import {
   getAllTenants, createTenant, updateTenant, deleteTenant,
   getMyTenant, updateMyTenant, createStaff, getStaff, updateStaff, deleteStaff,
-  regenerateStaffApiKey,
+  regenerateStaffApiKey, getTenantBySlug,
 } from '../controllers/tenant.controller.js';
 import { authenticate, requireRole } from '../middleware/auth.middleware.js';
 import { tenantMiddleware } from '../middleware/tenant.middleware.js';
@@ -12,10 +12,14 @@ import { createTenantSchema, updateTenantSchema, createStaffSchema } from '../ut
 import { UserRole } from '../types/enums.js';
 
 const router: Router = Router();
+
+// Public route to get tenant by slug
+router.get('/slug/:slug', getTenantBySlug);
+
 router.use(authenticate);
 
 router.get('/me',  requireRole(UserRole.TENANT_OWNER), tenantMiddleware, getMyTenant);
-router.put('/me',  requireRole(UserRole.TENANT_OWNER), tenantMiddleware, updateMyTenant);
+router.put('/me', requireRole(UserRole.TENANT_OWNER), tenantMiddleware, updateMyTenant);
 
 router.get('/staff',     requireRole(UserRole.TENANT_OWNER), tenantMiddleware, getStaff);
 router.post('/staff',    requireRole(UserRole.TENANT_OWNER), tenantMiddleware, validate(createStaffSchema), auditAction('Staff:Create'), createStaff);

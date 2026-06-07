@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { loginUser, registerTenantOwner, logoutUser, posLogin, getMe, resendEmailVerification, verifyEmail } from '../controllers/user.controller.js';
+import { loginUser, registerTenantOwner, logoutUser, posLogin, getMe, resendEmailVerification, verifyEmail, forgotPassword, resetPassword } from '../controllers/user.controller.js';
 import { validate } from '../middleware/validate.middleware.js';
 import { loginSchema, registerSchema } from '../utils/validation.schemas.js';
 import { authenticate } from '../middleware/auth.middleware.js';
@@ -14,5 +14,7 @@ router.get('/me', authenticate, getMe);
 router.post('/auth/resend-verification', authenticate, resendEmailVerification);
 router.post('/auth/verify-email', verifyEmail);
 router.get('/auth/verify-email', verifyEmail);
+router.post('/auth/forgot-password', forgotPassword);
+router.post('/auth/reset-password', resetPassword);
 
 export default router;

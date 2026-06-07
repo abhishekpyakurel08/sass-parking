@@ -3,8 +3,6 @@ import { ref, reactive } from 'vue';
 import { useAuthStore } from './auth';
 import { toast } from 'vue3-toastify';
 
-// Absolute backend URL — prefer explicit VITE_API_URL. In dev, if unset,
-// use the Vite proxy by using an empty base so `/api/...` is a same-origin request.
 const VITE_API_URL: string | undefined = (import.meta as any).env?.VITE_API_URL;
 const MODE: string = (import.meta as any).env?.MODE ?? 'development';
 const BASE_URL: string = VITE_API_URL ?? (MODE === 'development' ? '' : 'https://parking-backend.tecobit.cloud');
@@ -36,6 +34,7 @@ export const useTenantStore = defineStore('tenant', () => {
     address: '',
     subscriptionStatus: '',
     subscriptionPlan: '',
+    slug: '',
   });
 
   const authHeaders = () => ({
@@ -59,6 +58,7 @@ export const useTenantStore = defineStore('tenant', () => {
           profile.address = data.data.address || '';
           profile.subscriptionStatus = data.data.status || 'ACTIVE';
           profile.subscriptionPlan = data.data.subscriptionPlan || 'BASIC';
+          profile.slug = data.data.slug || '';
         }
       } else {
         const err = await res.json();

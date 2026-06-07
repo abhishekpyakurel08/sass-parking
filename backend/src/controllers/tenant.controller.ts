@@ -251,3 +251,17 @@ export const regenerateStaffApiKey = async (req: Request, res: Response, next: N
     });
   } catch (err) { next(err); }
 };
+
+export const getTenantBySlug = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { slug } = req.params;
+    
+    const tenant = await Tenant.findOne({ slug }).lean();
+    if (!tenant) {
+      res.status(404).json({ success: false, message: 'Tenant not found' });
+      return;
+    }
+
+    res.status(200).json({ success: true, data: tenant });
+  } catch (err) { next(err); }
+};

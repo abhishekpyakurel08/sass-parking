@@ -10,7 +10,6 @@ const router: Router = Router();
 router.use(authenticate);
 router.use(requireRole(UserRole.TENANT_OWNER, UserRole.GATE_STAFF));
 router.use(tenantMiddleware);
-
 router.post('/', auditAction('ApiKey:Create'), createApiKey);
 router.get('/', getApiKeys);
 router.patch('/:id', auditAction('ApiKey:Update'), updateApiKey);

@@ -79,10 +79,19 @@ export const userEndpoints = {
     method: 'POST',
     body: JSON.stringify({ token }),
   }),
+  forgotPassword: (email: string) => apiFetch<{ success: boolean }>('/api/v1/user/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  }),
+  resetPassword: (token: string, newPassword: string) => apiFetch<{ success: boolean }>('/api/v1/user/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, newPassword }),
+  }),
 };
 
 export const tenantEndpoints = {
   getProfile: () => apiFetch<{ success: boolean; data: any }>('/api/v1/tenant/profile'),
+  getBySlug: (slug: string) => apiFetch<{ success: boolean; data: any }>(`/api/v1/tenant/slug/${slug}`),
   updateProfile: (data: any) => apiFetch<{ success: boolean; data: any }>('/api/v1/tenant/profile', {
     method: 'PUT',
     body: JSON.stringify(data),
