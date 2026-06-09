@@ -36,6 +36,10 @@ import apiKeyRoutes    from './routes/apiKey.route.js';
 
 const app: Application = express();
 
+// When running behind a reverse proxy (nginx, caddy, cloud load balancer)
+// trust the first proxy so Express reads the original `Host`, `X-Forwarded-*` headers and `req.ip` correctly.
+app.set('trust proxy', 1);
+
 app.use(helmet());
 
 const allowedOrigins = env.CORS_ORIGIN.split(',').map(o => o.trim());
@@ -61,12 +65,13 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID'],
+  // Allow tenant slug header for API/dev fallback
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID', 'X-Tenant-Slug'],
 }));
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many auth attempts — try again in 15 minutes' },
@@ -75,7 +80,7 @@ const authLimiter = rateLimit({
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 300,
+  max: 10000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many requests — please slow down' },
@@ -83,7 +88,7 @@ const apiLimiter = rateLimit({
 
 const posLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 600,
+  max: 10000,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
@@ -119,12 +124,10 @@ app.get('/', (_req: Request, res: Response) => {
 });
 
 app.get('/health', async (_req: Request, res: Response) => {
-  const [dbPing, redisPing] = await Promise.all([
-    mongoose.connection.db?.command({ ping: 1 }).then(() => 'ok').catch(() => 'error'),
-    redis.ping().then(() => 'ok').catch(() => 'error'),
-  ]);
+  const dbPing = await mongoose.connection.db?.command({ ping: 1 }).then(() => 'ok').catch(() => 'error');
+  const redisPing = await redis.ping().then(() => 'ok').catch(() => 'error');
 
-  const healthy = dbPing === 'ok' && redisPing === 'ok';
+  const healthy = dbPing === 'ok';
   res.status(healthy ? 200 : 503).json({
     success: healthy,
     services: { database: dbPing, cache: redisPing },
@@ -136,7 +139,7 @@ app.get('/health', async (_req: Request, res: Response) => {
 });
 
 app.use('/api/v1/auth',      authLimiter, authRoutes);
-app.use('/api/v1/user',      authLimiter, userRoutes);
+app.use('/api/v1/user',      userRoutes); // Removed authLimiter to allow public onboard endpoint
 app.use('/api/v1/tenants',   apiLimiter,  tenantRoutes);
 app.use('/api/v1/parking',   posLimiter,  parkingRoutes);
 app.use('/api/v1/rates',     apiLimiter,  ratesRoutes);

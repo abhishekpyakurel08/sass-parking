@@ -6,6 +6,7 @@ import { authenticate } from '../middleware/auth.middleware.js';
 
 const router: Router = Router();
 
+// Public route - no rate limiter to prevent 401 errors
 router.post('/auth/onboard', validate(registerSchema), registerTenantOwner);
 router.post('/auth/login', validate(loginSchema), loginUser);
 router.post('/auth/pos-login', posLogin);

@@ -27,3 +27,29 @@ export const sendVerificationEmail = async (email: string, token: string): Promi
     throw error;
   }
 };
+
+export const sendOnboardingEmail = async (email: string, tenantName: string, ownerName: string): Promise<void> => {
+  const dashboardUrl = `${env.FRONTEND_URL}/dashboard`;
+
+  try {
+    await resend.emails.send({
+      from: 'ParkSaaS <onboarding@resend.dev>',
+      to: email,
+      subject: `Welcome to ParkSaaS - ${tenantName}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Welcome to ParkSaaS!</h2>
+          <p style="color: #666;">Hi ${ownerName},</p>
+          <p style="color: #666;">Your parking management system <strong>${tenantName}</strong> has been successfully set up.</p>
+          <p style="color: #666;">You can now start managing your parking operations efficiently.</p>
+          <a href="${dashboardUrl}" style="display: inline-block; padding: 12px 24px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 4px; margin: 16px 0;">Go to Dashboard</a>
+          <p style="color: #666;">If you have any questions, feel free to reach out to our support team.</p>
+          <p style="color: #999; font-size: 12px;">Best regards,<br>The ParkSaaS Team</p>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error('Failed to send onboarding email:', error);
+    throw error;
+  }
+};

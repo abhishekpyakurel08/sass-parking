@@ -7,7 +7,6 @@ const TenantSchema = new Schema<ITenant>(
     name: { type: String, required: true, trim: true },
     slug: { type: String, unique: true, lowercase: true, trim: true, default: '' },
     corporate_email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    total_capacity: { type: Number, required: true, min: 1, default: 100 },
     status: {
       type: String,
       enum: Object.values(TenantStatus),
@@ -21,6 +20,5 @@ const TenantSchema = new Schema<ITenant>(
 );
 
 TenantSchema.index({ status: 1 });
-TenantSchema.index({ slug: 1 }, { unique: true });
 
 export const Tenant = model<ITenant>('Tenant', TenantSchema);

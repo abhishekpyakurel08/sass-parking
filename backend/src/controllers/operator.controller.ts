@@ -28,7 +28,7 @@ export const getOperatorConfig = async (req: Request, res: Response): Promise<vo
     res.json({
       success: true,
       config: {
-        tenant: { name: tenant?.name, capacity: tenant?.total_capacity },
+        tenant: { name: tenant?.name },
         rates,
         operator: { gate_assignment: me?.gate_assignment, ticket_prefix: me?.ticket_prefix },
         server_time: new Date().toISOString(),

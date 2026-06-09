@@ -10,6 +10,7 @@ import { UserRole } from '../types/enums.js';
 import bcrypt from 'bcryptjs';
 import { env } from '../config/env.js';
 import { invalidateTenant, invalidateApiKeysForUser } from '../utils/cache.js';
+import { normalizeSlug, validateSlug } from '../utils/subdomain.js';
 
 export const getAllTenants = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -32,12 +33,33 @@ export const getAllTenants = async (req: Request, res: Response, next: NextFunct
 
 export const createTenant = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, corporate_email, total_capacity } = req.body;
+    const { name, corporate_email } = req.body;
 
     const existing = await Tenant.findOne({ corporate_email });
     if (existing) return next(new ConflictError(`Tenant with email ${corporate_email} already exists`));
 
-    const tenant = await Tenant.create({ name, corporate_email, total_capacity });
+    // Generate normalized slug from name and ensure uniqueness
+    const baseSlug = normalizeSlug(name || '');
+    const slugValidation = validateSlug(baseSlug);
+    if (!slugValidation.valid) {
+      return next(new ValidationError(`Invalid tenant name for slug generation: ${slugValidation.error}`));
+    }
+
+    let uniqueSlug = baseSlug;
+    let counter = 1;
+    // If a tenant with this slug exists, append -1, -2, ... until unique
+    // Note: corporate_email uniqueness already checked above
+    // Use a loop with a limit to avoid infinite loops
+    const MAX_ATTEMPTS = 1000;
+    while (await Tenant.findOne({ slug: uniqueSlug })) {
+      uniqueSlug = `${baseSlug}-${counter}`;
+      counter += 1;
+      if (counter > MAX_ATTEMPTS) {
+        return next(new ConflictError('Unable to generate unique slug for tenant'));
+      }
+    }
+
+    const tenant = await Tenant.create({ name, corporate_email, slug: uniqueSlug });
     res.status(201).json({ success: true, data: tenant });
   } catch (err) { next(err); }
 };
@@ -92,7 +114,6 @@ export const updateMyTenant = async (req: Request, res: Response, next: NextFunc
     const updates = req.body;
     delete updates.status;
     delete updates.corporate_email;
-    delete updates.total_capacity;
 
     const tenant = await Tenant.findByIdAndUpdate(
       req.tenant!.tenantId,

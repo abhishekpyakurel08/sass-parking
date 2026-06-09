@@ -1,20 +1,19 @@
 import type { Request, Response } from 'express';
 import mongoose from 'mongoose';
+import crypto from 'crypto';
 import { Tenant } from '../models/tenant.model.js';
 import { User } from '../models/user.model.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import { TenantStatus, UserRole } from '../types/enums.js';
-import { sendVerificationEmail } from '../utils/email.js';
+import { sendVerificationEmail, sendOnboardingEmail } from '../utils/email.js';
 
 const COOKIE_NAME = 'park_session';
 
 export const registerTenantOwner = async (req: Request, res: Response): Promise<void> => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
   try {
-    const { name, slug, owner_name, owner_email, password, corporate_email, total_capacity } = req.body;
+    const { name, slug, owner_name, owner_email, password, corporate_email } = req.body;
     const ownerEmail = owner_email;
     const tenantEmail = corporate_email || owner_email;
     
@@ -31,51 +30,63 @@ export const registerTenantOwner = async (req: Request, res: Response): Promise<
 
     const existingTenant = await Tenant.findOne({ slug: tenantSlug });
     if (existingTenant) {
-      await session.abortTransaction();
       res.status(400).json({ success: false, message: 'A tenant with this slug already exists.' });
       return;
     }
 
     const existingUser = await User.findOne({ email: ownerEmail });
     if (existingUser) {
-      await session.abortTransaction();
       res.status(400).json({ success: false, message: 'An account with this email already exists.' });
       return;
     }
 
-    const tenant = await Tenant.create([{
+    const tenant = await Tenant.create({
       name: name || owner_name,
       slug: tenantSlug,
       corporate_email: tenantEmail,
-      total_capacity: total_capacity || 100,
       status: TenantStatus.ACTIVE,
-    }], { session });
+    });
 
+    const email_verification_token = crypto.randomBytes(32).toString('hex');
     const password_hash = await bcrypt.hash(password, env.BCRYPT_ROUNDS);
-    const owner = await User.create([{
-      tenant_id: tenant[0]._id,
+    const owner = await User.create({
+      tenant_id: tenant._id,
       name: owner_name,
       email: ownerEmail,
       password_hash,
       role: UserRole.TENANT_OWNER,
-    }], { session });
+      is_email_verified: false,
+      email_verification_token,
+    });
 
-    await session.commitTransaction();
+    // Send verification email
+    try {
+      await sendVerificationEmail(ownerEmail, email_verification_token);
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      // Don't fail registration if email fails
+    }
+
+    // Send onboarding email
+    try {
+      await sendOnboardingEmail(ownerEmail, tenant.name, owner_name);
+    } catch (emailError) {
+      console.error('Failed to send onboarding email:', emailError);
+      // Don't fail registration if email fails
+    }
 
     res.status(201).json({
       success: true,
-      message: 'Tenant onboarded successfully.',
-      tenant_id: tenant[0]._id,
-      slug: tenant[0].slug,
-      owner_id: owner[0]._id,
+      message: 'Tenant onboarded successfully. Please check your email to verify your account.',
+      tenant_id: tenant._id,
+      slug: tenant.slug,
+      owner_id: owner._id,
+      requires_email_verification: true,
     });
   } catch (error: unknown) {
-    await session.abortTransaction();
     const message = error instanceof Error ? error.message : 'An unknown error occurred';
     console.error('Registration error:', error);
     res.status(500).json({ success: false, error: message });
-  } finally {
-    session.endSession();
   }
 };
 

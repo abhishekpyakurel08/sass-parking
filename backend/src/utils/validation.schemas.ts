@@ -5,7 +5,6 @@ export const registerSchema = z.object({
   name: z.string().min(2, 'Business name must be at least 2 characters'),
   slug: z.string().optional(),
   corporate_email: z.string().email('Invalid corporate email'),
-  total_capacity: z.number().int().positive('Capacity must be a positive integer').default(100),
   owner_name: z.string().min(2, 'Owner name is required'),
   owner_email: z.string().email('Invalid owner email'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
@@ -23,12 +22,10 @@ export const refreshTokenSchema = z.object({
 export const createTenantSchema = z.object({
   name: z.string().min(2),
   corporate_email: z.string().email(),
-  total_capacity: z.number().int().positive().default(100),
 });
 
 export const updateTenantSchema = z.object({
   name: z.string().min(2).optional(),
-  total_capacity: z.number().int().positive().optional(),
   status: z.enum(['ACTIVE', 'SUSPENDED']).optional(),
 });
 

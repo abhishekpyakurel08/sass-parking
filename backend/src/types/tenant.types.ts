@@ -5,7 +5,6 @@ export interface ITenant {
   name: string;
   slug: string;
   corporate_email: string;
-  total_capacity: number;
   status: TenantStatus;
   contactNumber?: string;
   address?: string;

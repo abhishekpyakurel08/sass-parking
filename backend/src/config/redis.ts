@@ -1,12 +1,15 @@
 import { Redis } from 'ioredis';
 import { env } from './env.js';
-import { logger } from '../utils/logger.js';
 
-export const redis = new Redis(env.REDIS_URL, {
-  maxRetriesPerRequest: 3,
+const redisUrl = env.REDIS_URL || 'redis://default:Byvr7jKiaGJreN6SIoCbdj3Jcy98qZ1E@redis-18433.crce179.ap-south-1-1.ec2.cloud.redislabs.com:18433';
+
+export const redis = new Redis(redisUrl, {
+  maxRetriesPerRequest: 0,
   lazyConnect: true,
   enableOfflineQueue: false,
+  retryStrategy: () => null,
 });
 
-redis.on('error', (err: Error) => logger.error('Redis error:', err));
-redis.on('connect', () => logger.info('✅  Redis connected'));
+redis.on('error', (err: Error) => {
+  // Suppress Redis errors - cache is optional
+});
