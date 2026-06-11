@@ -99,8 +99,9 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
 
     let tenantSlug = null;
     let tenantBranding = null;
+    let tenant = null;
     if (user.tenant_id) {
-      const tenant = await Tenant.findById(user.tenant_id);
+      tenant = await Tenant.findById(user.tenant_id);
       console.log('Login - Tenant lookup:', {
         tenant_id: user.tenant_id,
         tenant: tenant ? { id: tenant._id, name: tenant.name, slug: tenant.slug } : null,
@@ -155,6 +156,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
           role: user.role,
           tenant_id: user.tenant_id,
           slug: tenantSlug,
+          tenant_name: tenant?.name,
           gate_assignment: user.gate_assignment,
           ticket_prefix: user.ticket_prefix,
         },

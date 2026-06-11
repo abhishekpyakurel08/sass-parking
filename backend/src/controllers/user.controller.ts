@@ -179,11 +179,13 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
       return;
     }
     let slug = null;
+    let tenant_name = null;
     if (user.tenant_id) {
       const tenant = await Tenant.findById(user.tenant_id);
       slug = tenant?.slug || null;
+      tenant_name = tenant?.name || null;
     }
-    res.status(200).json({ success: true, data: { ...user, slug } });
+    res.status(200).json({ success: true, data: { ...user, slug, tenant_name } });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'An unknown error occurred';
     res.status(500).json({ success: false, error: message });

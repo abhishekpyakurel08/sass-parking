@@ -74,6 +74,10 @@ export const authService = {
       if (response.data.user?.slug) {
         setTenantSlug(response.data.user.slug);
       }
+      // Add tenant_name to user object if available
+      if (response.data.user && response.data.tenant_name) {
+        response.data.user.tenant_name = response.data.tenant_name;
+      }
       return response;
     }
     throw new Error(response.message || 'Login failed');
@@ -143,6 +147,10 @@ export const authService = {
     if (response.success && response.data) {
       if (response.data.slug) {
         setTenantSlug(response.data.slug);
+      }
+      // Add tenant_name to user object if available
+      if (response.data.tenant_name) {
+        response.data.tenant_name = response.data.tenant_name;
       }
       return response.data;
     }

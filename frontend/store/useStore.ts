@@ -9,6 +9,7 @@ export type User = {
   name: string;
   email?: string;
   slug?: string;
+  tenant_name?: string;
 }
 
 type State = {
