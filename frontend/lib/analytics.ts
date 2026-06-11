@@ -21,22 +21,22 @@ export interface VehicleStats {
 
 export const analyticsService = {
   async getDashboardStats() {
-    const response = await api.get('/analytics/dashboard');
+    const response = await api.get('/analytics/tenant?type=dashboard');
     return response.data;
   },
 
   async getRevenueStats(period: 'today' | 'week' | 'month' = 'today') {
-    const response = await api.get(`/analytics/revenue?period=${period}`);
+    const response = await api.get(`/analytics/tenant?type=revenue&period=${period}`);
     return response.data;
   },
 
   async getVehicleStats(period: 'today' | 'week' | 'month' = 'today') {
-    const response = await api.get(`/analytics/vehicles?period=${period}`);
+    const response = await api.get(`/analytics/tenant?type=vehicles&period=${period}`);
     return response.data;
   },
 
   async getStaffStats(period: 'today' | 'week' = 'today') {
-    const response = await api.get(`/analytics/staff?period=${period}`);
+    const response = await api.get(`/analytics/tenant?type=staff&period=${period}`);
     return response.data;
   },
 };

@@ -2,454 +2,190 @@
 
 import { useState, useEffect } from 'react'
 import DashboardLayout from '../../../components/DashboardLayout'
-import { customerService, type Customer } from '../../../lib/customer'
+import { customerService, type Customer, type CreateCustomerData, type UpdateCustomerData } from '../../../lib/customer'
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [showModal, setShowModal] = useState(false)
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
+  const [formError, setFormError] = useState('')
+  const [formLoading, setFormLoading] = useState(false)
 
-  const [formData, setFormData] = useState({
-    name: '',
-    customer_code: '',
-    email: '',
-    phone_number: '',
-    discount_percentage: 0,
-  })
+  const emptyForm: CreateCustomerData = { name: '', customer_code: '', email: '', phone_number: '', discount_percentage: 0 }
+  const [form, setForm] = useState<any>(emptyForm)
 
-  useEffect(() => {
-    loadCustomers()
-  }, [page])
+  useEffect(() => { load() }, [page])
 
-  const loadCustomers = async () => {
+  const load = async () => {
     try {
       setLoading(true)
-      const data = await customerService.getCustomers(page, 20)
-      setCustomers(data.data || [])
-      setTotalPages(data.pagination?.totalPages || 1)
-    } catch (err) {
-      console.error('Failed to load customers:', err)
-    } finally {
-      setLoading(false)
-    }
+      const data: any = await customerService.getCustomers(page, 15)
+      setCustomers(data?.data || [])
+      setTotalPages(data?.pagination?.totalPages || 1)
+      setTotal(data?.pagination?.total || 0)
+    } catch (err) { console.error(err) }
+    finally { setLoading(false) }
   }
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-      await customerService.createCustomer(formData)
-      setShowModal(false)
-      setFormData({ name: '', customer_code: '', email: '', phone_number: '', discount_percentage: 0 })
-      loadCustomers()
-    } catch (err) {
-      console.error('Failed to create customer:', err)
-    }
-  }
+  const openCreate = () => { setEditingCustomer(null); setForm(emptyForm); setFormError(''); setShowModal(true) }
+  const openEdit = (c: Customer) => { setEditingCustomer(c); setForm({ name: c.name, customer_code: c.customer_code, email: c.email || '', phone_number: c.phone_number || '', discount_percentage: c.discount_percentage, status: c.status }); setFormError(''); setShowModal(true) }
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingCustomer) return
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); setFormError(''); setFormLoading(true)
     try {
-      await customerService.updateCustomer(editingCustomer._id, formData)
-      setShowModal(false)
-      setEditingCustomer(null)
-      setFormData({ name: '', customer_code: '', email: '', phone_number: '', discount_percentage: 0 })
-      loadCustomers()
-    } catch (err) {
-      console.error('Failed to update customer:', err)
-    }
+      if (editingCustomer) await customerService.updateCustomer(editingCustomer._id, form)
+      else await customerService.createCustomer(form)
+      setShowModal(false); load()
+    } catch (err: any) { setFormError(err.message || 'Operation failed') }
+    finally { setFormLoading(false) }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this customer?')) return
-    try {
-      await customerService.deleteCustomer(id)
-      loadCustomers()
-    } catch (err) {
-      console.error('Failed to delete customer:', err)
-    }
+    if (!confirm('Delete this customer?')) return
+    try { await customerService.deleteCustomer(id); load() } catch {}
   }
 
-  const handleEdit = (customer: Customer) => {
-    setEditingCustomer(customer)
-    setFormData({
-      name: customer.name,
-      customer_code: customer.customer_code,
-      email: customer.email || '',
-      phone_number: customer.phone_number || '',
-      discount_percentage: customer.discount_percentage,
-    })
-    setShowModal(true)
+  const handleRegenQR = async (id: string) => {
+    try { await customerService.regenerateQrCode(id); load() } catch {}
   }
 
-  const openCreateModal = () => {
-    setEditingCustomer(null)
-    setFormData({ name: '', customer_code: '', email: '', phone_number: '', discount_percentage: 0 })
-    setShowModal(true)
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ACTIVE':
-        return '#10b981'
-      case 'SUSPENDED':
-        return '#f59e0b'
-      case 'EXPIRED':
-        return '#ef4444'
-      default:
-        return '#6b7280'
-    }
+  const statusBadge = (s: string) => {
+    const map: Record<string, string> = { ACTIVE: 'badge-green', SUSPENDED: 'badge-red', EXPIRED: 'badge-yellow' }
+    return <span className={`badge ${map[s] || 'badge-blue'}`}>{s}</span>
   }
 
   return (
-    <DashboardLayout>
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h2 style={{ fontSize: '28px', color: '#1a1a2e' }}>
-            Customers
-          </h2>
-          <button
-            onClick={openCreateModal}
-            style={{
-              padding: '10px 20px',
-              background: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer'
-            }}
-          >
-            Add Customer
-          </button>
-        </div>
+    <DashboardLayout title="Customers" subtitle={`${total} registered customers`}>
+      <div className="page-header" style={{ marginBottom: 20 }}>
+        <div />
+        <button id="add-customer-btn" className="btn btn-primary" onClick={openCreate}>
+          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Customer
+        </button>
+      </div>
 
+      <div className="table-container">
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '48px', color: '#6b7280' }}>
-            Loading customers...
+          <div className="loading-container"><div className="loading-spinner" /></div>
+        ) : customers.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">👥</div>
+            <div className="empty-title">No customers yet</div>
+            <p style={{ fontSize: 13, marginTop: 8 }}>Add your first registered customer</p>
           </div>
         ) : (
-          <>
-            <div style={{
-              background: 'white',
-              borderRadius: '12px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              overflow: 'hidden'
-            }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead style={{ background: '#f9fafb' }}>
-                  <tr>
-                    <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                      Customer Code
-                    </th>
-                    <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                      Name
-                    </th>
-                    <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                      Email
-                    </th>
-                    <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                      Phone
-                    </th>
-                    <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                      Discount
-                    </th>
-                    <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                      Status
-                    </th>
-                    <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                      Total Savings
-                    </th>
-                    <th style={{ padding: '16px', textAlign: 'right', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {customers.map((customer) => (
-                    <tr key={customer._id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                      <td style={{ padding: '16px', fontSize: '14px', color: '#1a1a2e', fontWeight: '600' }}>
-                        {customer.customer_code}
-                      </td>
-                      <td style={{ padding: '16px', fontSize: '14px', color: '#1a1a2e' }}>
-                        {customer.name}
-                      </td>
-                      <td style={{ padding: '16px', fontSize: '14px', color: '#6b7280' }}>
-                        {customer.email || '-'}
-                      </td>
-                      <td style={{ padding: '16px', fontSize: '14px', color: '#6b7280' }}>
-                        {customer.phone_number || '-'}
-                      </td>
-                      <td style={{ padding: '16px', fontSize: '14px', color: '#1a1a2e', fontWeight: '600' }}>
-                        {customer.discount_percentage}%
-                      </td>
-                      <td style={{ padding: '16px' }}>
-                        <span style={{
-                          padding: '4px 12px',
-                          background: `${getStatusColor(customer.status)}20`,
-                          color: getStatusColor(customer.status),
-                          borderRadius: '9999px',
-                          fontSize: '12px',
-                          fontWeight: '500'
-                        }}>
-                          {customer.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: '16px', fontSize: '14px', color: '#1a1a2e', fontWeight: '600' }}>
-                        Rs. {customer.total_savings.toFixed(2)}
-                      </td>
-                      <td style={{ padding: '16px', textAlign: 'right' }}>
-                        <button
-                          onClick={() => handleEdit(customer)}
-                          style={{
-                            padding: '6px 12px',
-                            background: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            marginRight: '8px'
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(customer._id)}
-                          style={{
-                            padding: '6px 12px',
-                            background: '#ef4444',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {totalPages > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '24px' }}>
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  style={{
-                    padding: '8px 16px',
-                    background: page === 1 ? '#e5e7eb' : '#3b82f6',
-                    color: page === 1 ? '#9ca3af' : 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    cursor: page === 1 ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  Previous
-                </button>
-                <span style={{ padding: '8px 16px', color: '#6b7280' }}>
-                  Page {page} of {totalPages}
-                </span>
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  style={{
-                    padding: '8px 16px',
-                    background: page === totalPages ? '#e5e7eb' : '#3b82f6',
-                    color: page === totalPages ? '#9ca3af' : 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    cursor: page === totalPages ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  Next
-                </button>
-              </div>
-            )}
-          </>
-        )}
-
-        {showModal && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}>
-            <div style={{
-              background: 'white',
-              padding: '32px',
-              borderRadius: '12px',
-              width: '100%',
-              maxWidth: '500px',
-              maxHeight: '90vh',
-              overflowY: 'auto'
-            }}>
-              <h3 style={{ fontSize: '24px', marginBottom: '24px', color: '#1a1a2e' }}>
-                {editingCustomer ? 'Edit Customer' : 'Add Customer'}
-              </h3>
-
-              <form onSubmit={editingCustomer ? handleUpdate : handleCreate}>
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#374151', fontSize: '14px', fontWeight: '500' }}>
-                    Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#374151', fontSize: '14px', fontWeight: '500' }}>
-                    Customer Code *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.customer_code}
-                    onChange={(e) => setFormData({ ...formData, customer_code: e.target.value })}
-                    required
-                    disabled={!!editingCustomer}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box',
-                      background: editingCustomer ? '#f3f4f6' : 'white'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#374151', fontSize: '14px', fontWeight: '500' }}>
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#374151', fontSize: '14px', fontWeight: '500' }}>
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.phone_number}
-                    onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '24px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#374151', fontSize: '14px', fontWeight: '500' }}>
-                    Discount Percentage (%)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.discount_percentage}
-                    onChange={(e) => setFormData({ ...formData, discount_percentage: parseFloat(e.target.value) || 0 })}
-                    min="0"
-                    max="100"
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button
-                    type="submit"
-                    style={{
-                      flex: 1,
-                      padding: '12px',
-                      background: '#3b82f6',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {editingCustomer ? 'Update' : 'Create'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowModal(false)
-                      setEditingCustomer(null)
-                      setFormData({ name: '', customer_code: '', email: '', phone_number: '', discount_percentage: 0 })
-                    }}
-                    style={{
-                      padding: '12px 24px',
-                      background: '#6b7280',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Code</th>
+                <th>Contact</th>
+                <th>Discount</th>
+                <th>Savings</th>
+                <th>Status</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {customers.map(c => (
+                <tr key={c._id}>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{
+                        width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 13, fontWeight: 700, color: '#fff',
+                      }}>{c.name.charAt(0).toUpperCase()}</div>
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 14 }}>{c.name}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.email || '—'}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ fontFamily: 'monospace', color: 'var(--accent)', fontWeight: 600 }}>{c.customer_code}</td>
+                  <td>{c.phone_number || '—'}</td>
+                  <td>
+                    {c.discount_percentage > 0
+                      ? <span className="badge badge-purple">{c.discount_percentage}% off</span>
+                      : <span style={{ color: 'var(--text-muted)' }}>None</span>}
+                  </td>
+                  <td style={{ color: 'var(--green)', fontWeight: 600 }}>Rs. {(c.total_savings || 0).toLocaleString()}</td>
+                  <td>{statusBadge(c.status)}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      <button className="btn btn-ghost btn-sm" onClick={() => handleRegenQR(c._id)} title="Regenerate QR">♻️</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)}>Edit</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => handleDelete(c._id)}>Del</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="pagination">
+          <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>← Prev</button>
+          <span>Page {page} of {totalPages}</span>
+          <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next →</button>
+        </div>
+      )}
+
+      {showModal && (
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
+          <div className="modal">
+            <h3 className="modal-title">{editingCustomer ? 'Edit Customer' : 'Add Customer'}</h3>
+            <form onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label className="form-label">Full Name *</label>
+                <input className="form-input" required placeholder="John Doe" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+              </div>
+              {!editingCustomer && (
+                <div className="form-group">
+                  <label className="form-label">Customer Code *</label>
+                  <input className="form-input" required placeholder="CUST-001" value={form.customer_code} onChange={e => setForm({ ...form, customer_code: e.target.value.toUpperCase() })} style={{ textTransform: 'uppercase' }} />
+                </div>
+              )}
+              <div className="form-group">
+                <label className="form-label">Email</label>
+                <input className="form-input" type="email" placeholder="john@email.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Phone Number</label>
+                <input className="form-input" type="tel" placeholder="+977 98XXXXXXXX" value={form.phone_number} onChange={e => setForm({ ...form, phone_number: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Discount Percentage (%)</label>
+                <input className="form-input" type="number" min={0} max={100} placeholder="0" value={form.discount_percentage} onChange={e => setForm({ ...form, discount_percentage: parseFloat(e.target.value) || 0 })} />
+              </div>
+              {editingCustomer && (
+                <div className="form-group">
+                  <label className="form-label">Status</label>
+                  <select className="form-select" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+                    <option value="ACTIVE">Active</option>
+                    <option value="SUSPENDED">Suspended</option>
+                    <option value="EXPIRED">Expired</option>
+                  </select>
+                </div>
+              )}
+              {formError && <div className="alert alert-error">{formError}</div>}
+              <div className="modal-actions">
+                <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="submit" disabled={formLoading} className="btn btn-primary" style={{ flex: 2 }}>
+                  {formLoading ? 'Saving…' : editingCustomer ? 'Update Customer' : 'Create Customer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   )
 }

@@ -5,34 +5,48 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { authService } from '../../lib/auth'
 import { useStore } from '../../store/useStore'
+import AuthLayout from '../../components/AuthLayout'
+import GlassCard from '../../components/ui/GlassCard'
+import TextField from '../../components/ui/TextField'
+import PasswordField from '../../components/ui/PasswordField'
+import Button from '../../components/ui/Button'
 
 export default function RegisterPage() {
   const router = useRouter()
   const setUser = useStore((s) => s.setUser)
-  
-  const [formData, setFormData] = useState({
-    name: '',
-    slug: '',
-    corporate_email: '',
-    owner_name: '',
-    owner_email: '',
-    password: '',
-  })
+  const [form, setForm] = useState({ name: '', tenantName: '', email: '', password: '', confirmPassword: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
-  }
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setLoading(true)
 
+    if (form.password !== form.confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+
+    if (!agreedToTerms) {
+      setError('Please agree to the terms and conditions')
+      return
+    }
+
+    setLoading(true)
     try {
-      const response = await authService.register(formData)
-      setUser(response.user)
+      const response = await authService.register(form)
+      // Store user data if available
+      if (response.data?.owner_id) {
+        setUser({
+          id: response.data.owner_id,
+          name: form.name,
+          email: form.email,
+          role: 'TENANT_OWNER',
+          tenant_id: response.data.tenant_id,
+        })
+      }
+      // Redirect to dashboard after successful registration
       router.push('/dashboard')
     } catch (err: any) {
       setError(err.message || 'Registration failed')
@@ -42,262 +56,158 @@ export default function RegisterPage() {
   }
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center',
-      padding: '20px',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-    }}>
-      <div style={{
-        background: 'white',
-        padding: '40px',
-        borderRadius: '12px',
-        boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-        width: '100%',
-        maxWidth: '500px'
-      }}>
-        <h1 style={{ 
-          textAlign: 'center', 
-          marginBottom: '8px',
-          color: '#333',
-          fontSize: '28px',
-          fontWeight: 'bold'
-        }}>
-          Register Your Business
-        </h1>
-        <p style={{ 
-          textAlign: 'center', 
-          marginBottom: '32px',
-          color: '#666',
-          fontSize: '14px'
-        }}>
-          Create your ParkSaaS tenant account
-        </p>
-
+    <AuthLayout
+      brandTitle="Join 200+ Growing Businesses"
+      brandSubtitle="Start your parking management journey with ParkSaaS. Multi-tenant support, real-time analytics, and seamless operations."
+      showStats={false}
+    >
+      <GlassCard
+        title="Create Account"
+        subtitle="Register your parking business and start managing operations"
+      >
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '6px',
-              color: '#333',
-              fontSize: '13px',
-              fontWeight: '500'
-            }}>
-              Business Name *
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
+          <div className="animate-stagger-1">
+            <TextField
+              label="Business Name"
+              placeholder="ABC Parking Pvt. Ltd."
+              value={form.tenantName}
+              onChange={(value) => setForm({ ...form, tenantName: value })}
               required
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '14px',
-                boxSizing: 'border-box'
-              }}
-              placeholder="Your business name"
+              icon={
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
+                  <line x1="9" y1="22" x2="9" y2="2" />
+                  <path d="M9 7h6" />
+                  <path d="M9 12h6" />
+                  <path d="M9 17h6" />
+                </svg>
+              }
             />
           </div>
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '6px',
-              color: '#333',
-              fontSize: '13px',
-              fontWeight: '500'
-            }}>
-              Slug (optional)
-            </label>
-            <input
-              type="text"
-              name="slug"
-              value={formData.slug}
-              onChange={handleChange}
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '14px',
-                boxSizing: 'border-box'
-              }}
-              placeholder="your-business-slug"
+          <div className="animate-stagger-2">
+            <TextField
+              label="Owner Name"
+              placeholder="Ram Sharma"
+              value={form.name}
+              onChange={(value) => setForm({ ...form, name: value })}
+              required
+              icon={
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              }
             />
           </div>
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '6px',
-              color: '#333',
-              fontSize: '13px',
-              fontWeight: '500'
-            }}>
-              Corporate Email *
-            </label>
-            <input
+          <div className="animate-stagger-3">
+            <TextField
+              label="Email Address"
               type="email"
-              name="corporate_email"
-              value={formData.corporate_email}
-              onChange={handleChange}
+              placeholder="owner@abc.com"
+              value={form.email}
+              onChange={(value) => setForm({ ...form, email: value })}
               required
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '14px',
-                boxSizing: 'border-box'
-              }}
-              placeholder="business@company.com"
+              icon={
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                  <polyline points="22,6 12,13 2,6" />
+                </svg>
+              }
             />
           </div>
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '6px',
-              color: '#333',
-              fontSize: '13px',
-              fontWeight: '500'
-            }}>
-              Owner Name *
-            </label>
-            <input
-              type="text"
-              name="owner_name"
-              value={formData.owner_name}
-              onChange={handleChange}
-              required
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '14px',
-                boxSizing: 'border-box'
-              }}
-              placeholder="Owner's full name"
-            />
-          </div>
-
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '6px',
-              color: '#333',
-              fontSize: '13px',
-              fontWeight: '500'
-            }}>
-              Owner Email *
-            </label>
-            <input
-              type="email"
-              name="owner_email"
-              value={formData.owner_email}
-              onChange={handleChange}
-              required
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '14px',
-                boxSizing: 'border-box'
-              }}
-              placeholder="owner@email.com"
-            />
-          </div>
-
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '6px',
-              color: '#333',
-              fontSize: '13px',
-              fontWeight: '500'
-            }}>
-              Password *
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              minLength={8}
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '14px',
-                boxSizing: 'border-box'
-              }}
+          <div className="animate-stagger-4">
+            <PasswordField
+              label="Password"
               placeholder="Min 8 characters"
+              value={form.password}
+              onChange={(value) => setForm({ ...form, password: value })}
+              showStrength={true}
+              required
             />
+          </div>
+
+          <div className="animate-stagger-5">
+            <PasswordField
+              label="Confirm Password"
+              placeholder="Re-enter password"
+              value={form.confirmPassword}
+              onChange={(value) => setForm({ ...form, confirmPassword: value })}
+              required
+            />
+          </div>
+
+          <div className="animate-stagger-6" style={{ marginBottom: '20px' }}>
+            <label style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 8,
+              fontSize: '13px',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+            }}>
+              <input
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                style={{
+                  marginTop: 2,
+                  width: 16,
+                  height: 16,
+                  cursor: 'pointer',
+                }}
+              />
+              <span>
+                I agree to the{' '}
+                <Link href="/terms" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
+                  Terms of Service
+                </Link>
+                {' '}and{' '}
+                <Link href="/privacy" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
+                  Privacy Policy
+                </Link>
+              </span>
+            </label>
           </div>
 
           {error && (
-            <div style={{
-              padding: '12px',
-              marginBottom: '20px',
-              background: '#fee',
-              border: '1px solid #fcc',
-              borderRadius: '6px',
-              color: '#c33',
-              fontSize: '14px'
-            }}>
+            <div className="alert alert-error" style={{ marginBottom: '20px' }}>
               {error}
             </div>
           )}
 
-          <button
+          <Button
             type="submit"
-            disabled={loading}
-            style={{
-              width: '100%',
-              padding: '12px',
-              background: loading ? '#999' : '#667eea',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'background 0.2s'
-            }}
+            loading={loading}
+            fullWidth
+            size="lg"
+            icon={
+              <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="8.5" cy="7" r="4" />
+                <line x1="20" y1="8" x2="20" y2="14" />
+                <line x1="23" y1="11" x2="17" y2="11" />
+              </svg>
+            }
           >
-            {loading ? 'Creating account...' : 'Create Account'}
-          </button>
-        </form>
+            Create Account
+          </Button>
 
-        <div style={{ 
-          marginTop: '24px', 
-          textAlign: 'center',
-          fontSize: '14px',
-          color: '#666'
-        }}>
-          Already have an account?{' '}
-          <Link 
-            href="/login"
-            style={{ 
-              color: '#667eea', 
-              textDecoration: 'none',
-              fontWeight: '500'
-            }}
-          >
-            Sign In
-          </Link>
-        </div>
-      </div>
-    </div>
+          <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '14px', color: 'var(--text-muted)' }}>
+            Already have an account?{' '}
+            <Link href="/login" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+              Sign In
+            </Link>
+          </div>
+          <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '14px', color: 'var(--text-muted)' }}>
+            <Link href="/" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+              ← Back to Home
+            </Link>
+          </div>
+        </form>
+      </GlassCard>
+    </AuthLayout>
   )
 }

@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
-import { register, login, refresh, logout, verifyEmail } from '../controllers/auth.controller.js';
+import { register, login, refresh, logout, verifyEmail, forgotPassword, resetPassword, getTenantBranding } from '../controllers/auth.controller.js';
 import { validate } from '../middleware/validate.middleware.js';
 import { authenticate } from '../middleware/auth.middleware.js';
-import { registerSchema, loginSchema, refreshTokenSchema } from '../utils/validation.schemas.js';
+import { authRegisterSchema, loginSchema, refreshTokenSchema } from '../utils/validation.schemas.js';
 
 const router: Router = Router();
 
@@ -15,10 +15,21 @@ const verifyEmailLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-router.post('/register', validate(registerSchema), register);
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // 3 requests per hour
+  message: { success: false, message: 'Too many password reset attempts. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post('/register', validate(authRegisterSchema), register);
 router.post('/login', validate(loginSchema), login);
 router.post('/refresh', refresh);
 router.post('/logout', authenticate, logout);
 router.get('/verify-email', verifyEmailLimiter, verifyEmail);
+router.post('/forgot-password', forgotPasswordLimiter, forgotPassword);
+router.post('/reset-password', resetPassword);
+router.get('/branding/:slug', getTenantBranding);
 
 export default router;

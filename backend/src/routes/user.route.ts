@@ -12,7 +12,7 @@ router.post('/auth/login', validate(loginSchema), loginUser);
 router.post('/auth/pos-login', posLogin);
 router.post('/auth/logout', logoutUser);
 router.get('/me', authenticate, getMe);
-router.post('/auth/resend-verification', authenticate, resendEmailVerification);
+router.post('/auth/resend-verification', resendEmailVerification);
 router.post('/auth/verify-email', verifyEmail);
 router.get('/auth/verify-email', verifyEmail);
 router.post('/auth/forgot-password', forgotPassword);

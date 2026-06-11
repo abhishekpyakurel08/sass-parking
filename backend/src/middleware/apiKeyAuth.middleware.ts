@@ -63,7 +63,11 @@ export const apiKeyAuth = async (
     }
 
     if (!cached.isActive) {
-      await redis.del(`apikey:${keyHash}`);
+      try {
+        await redis.del(`apikey:${keyHash}`);
+      } catch (e) {
+        // ignore
+      }
       return next(new AuthError('API key is inactive'));
     }
 

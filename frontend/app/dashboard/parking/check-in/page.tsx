@@ -7,146 +7,79 @@ import { parkingService, type VehicleType } from '../../../../lib/parking'
 
 export default function CheckInPage() {
   const router = useRouter()
-  
-  const [formData, setFormData] = useState({
-    license_plate: '',
-    vehicle_type: 'CAR' as VehicleType,
-    customer_code: '',
-    notes: '',
-  })
+  const [formData, setFormData] = useState({ license_plate: '', vehicle_type: 'CAR' as VehicleType, customer_code: '', notes: '' })
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
   const [ticketData, setTicketData] = useState<any>(null)
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setLoading(true)
-
     try {
-      const data = await parkingService.checkIn(formData)
+      const payload = {
+        license_plate: formData.license_plate || undefined,
+        vehicle_type: formData.vehicle_type,
+        customer_code: formData.customer_code || undefined,
+        notes: formData.notes || undefined,
+      }
+      const data = await parkingService.checkIn(payload)
       setTicketData(data)
-      setSuccess(true)
-    } catch (err: any) {
-      setError(err.message || 'Check-in failed')
-    } finally {
-      setLoading(false)
-    }
+    } catch (err: any) { setError(err.message || 'Check-in failed') }
+    finally { setLoading(false) }
   }
 
-  if (success && ticketData) {
+  const vehicleTypes: { value: VehicleType; label: string; icon: string }[] = [
+    { value: 'CAR', label: 'Car', icon: '🚗' }, { value: 'BIKE', label: 'Bike', icon: '🏍️' },
+    { value: 'SUV', label: 'SUV', icon: '🚙' }, { value: 'TRUCK', label: 'Truck', icon: '🚛' },
+    { value: 'BUS', label: 'Bus', icon: '🚌' },
+  ]
+
+  if (ticketData) {
+    const t = ticketData.ticket
     return (
-      <DashboardLayout>
-        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-          <div style={{
-            background: 'white',
-            padding: '32px',
-            borderRadius: '12px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            textAlign: 'center'
-          }}>
+      <DashboardLayout title="Check-In Successful" subtitle="Vehicle has been checked in">
+        <div style={{ maxWidth: 560, margin: '0 auto' }}>
+          <div className="card" style={{ textAlign: 'center', padding: 40 }}>
             <div style={{
-              width: '80px',
-              height: '80px',
-              background: '#10b981',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 24px',
-              color: 'white',
-              fontSize: '40px',
-              fontWeight: 'bold'
+              width: 80, height: 80, borderRadius: '50%', margin: '0 auto 24px',
+              background: 'var(--green-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: '2px solid var(--green)',
             }}>
-              ✓
+              <svg width="36" height="36" fill="none" stroke="var(--green)" strokeWidth="2.5" viewBox="0 0 24 24">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
             </div>
-            <h2 style={{ fontSize: '24px', marginBottom: '16px', color: '#1a1a2e' }}>
-              Vehicle Checked In Successfully
-            </h2>
-            
-            <div style={{
-              background: '#f9fafb',
-              padding: '24px',
-              borderRadius: '8px',
-              marginBottom: '24px',
-              textAlign: 'left'
-            }}>
-              <div style={{ marginBottom: '12px' }}>
-                <strong>Ticket Number:</strong> {ticketData.ticket.ticket_number}
-              </div>
-              <div style={{ marginBottom: '12px' }}>
-                <strong>License Plate:</strong> {ticketData.ticket.license_plate}
-              </div>
-              <div style={{ marginBottom: '12px' }}>
-                <strong>Vehicle Type:</strong> {ticketData.ticket.vehicle_type}
-              </div>
-              <div style={{ marginBottom: '12px' }}>
-                <strong>Check-in Time:</strong> {new Date(ticketData.ticket.check_in_time).toLocaleString()}
-              </div>
-              {ticketData.ticket.customer_name && (
-                <div style={{ marginBottom: '12px' }}>
-                  <strong>Customer:</strong> {ticketData.ticket.customer_name}
+            <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 24 }}>Vehicle Checked In!</h2>
+
+            <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: 24, textAlign: 'left', marginBottom: 24, border: '1px solid var(--border)' }}>
+              {[
+                ['Ticket Number', t?.ticket_number, true],
+                ['License Plate', t?.license_plate || 'Guest'],
+                ['Vehicle Type', t?.vehicle_type],
+                ['Check-In Time', t?.check_in_time ? new Date(t.check_in_time).toLocaleString() : '—'],
+                t?.customer_name ? ['Customer', t.customer_name] : null,
+              ].filter(Boolean).map(([k, v, accent]: any) => (
+                <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{k}</span>
+                  <span style={{ fontWeight: 600, color: accent ? 'var(--accent)' : 'var(--text)', fontFamily: accent ? 'monospace' : undefined }}>{v}</span>
                 </div>
-              )}
+              ))}
             </div>
 
-            {ticketData.receipt.qr_code_url && (
-              <div style={{ marginBottom: '24px' }}>
-                <img 
-                  src={ticketData.receipt.qr_code_url} 
-                  alt="QR Code" 
-                  style={{ maxWidth: '200px', margin: '0 auto' }}
-                />
-                <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>
-                  Scan QR code to check out
-                </p>
+            {ticketData.receipt?.qr_code_url && (
+              <div style={{ marginBottom: 24 }}>
+                <img src={ticketData.receipt.qr_code_url} alt="QR Code" style={{ width: 160, height: 160, borderRadius: 8, border: '1px solid var(--border)' }} />
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>Scan QR to check out</p>
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-              <button
-                onClick={() => {
-                  setSuccess(false)
-                  setTicketData(null)
-                  setFormData({
-                    license_plate: '',
-                    vehicle_type: 'CAR',
-                    customer_code: '',
-                    notes: '',
-                  })
-                }}
-                style={{
-                  padding: '12px 24px',
-                  background: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                Check In Another Vehicle
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <button className="btn btn-ghost" onClick={() => { setTicketData(null); setFormData({ license_plate: '', vehicle_type: 'CAR', customer_code: '', notes: '' }) }}>
+                Check In Another
               </button>
-              <button
-                onClick={() => router.push('/dashboard/parking/check-out')}
-                style={{
-                  padding: '12px 24px',
-                  background: '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                Go to Check Out
+              <button className="btn btn-success" onClick={() => router.push('/dashboard/parking/check-out')}>
+                Go to Check-Out →
               </button>
             </div>
           </div>
@@ -156,170 +89,63 @@ export default function CheckInPage() {
   }
 
   return (
-    <DashboardLayout>
-      <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-        <h2 style={{ fontSize: '28px', marginBottom: '24px', color: '#1a1a2e' }}>
-          Vehicle Check-In
-        </h2>
-
-        <div style={{
-          background: 'white',
-          padding: '32px',
-          borderRadius: '12px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-        }}>
+    <DashboardLayout title="Vehicle Check-In" subtitle="Register a new vehicle entering the parking facility">
+      <div style={{ maxWidth: 580, margin: '0 auto' }}>
+        <div className="card">
           <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '8px',
-                color: '#374151',
-                fontSize: '14px',
-                fontWeight: '500'
-              }}>
-                License Plate
-              </label>
-              <input
-                type="text"
-                name="license_plate"
-                value={formData.license_plate}
-                onChange={handleChange}
-                placeholder="BA 12345"
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  boxSizing: 'border-box'
-                }}
-              />
-              <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
-                Leave empty for guest vehicles
-              </p>
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '8px',
-                color: '#374151',
-                fontSize: '14px',
-                fontWeight: '500'
-              }}>
-                Vehicle Type *
-              </label>
-              <select
-                name="vehicle_type"
-                value={formData.vehicle_type}
-                onChange={handleChange}
-                required
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  boxSizing: 'border-box'
-                }}
-              >
-                <option value="CAR">Car</option>
-                <option value="BIKE">Bike</option>
-                <option value="SUV">SUV</option>
-                <option value="TRUCK">Truck</option>
-                <option value="BUS">Bus</option>
-              </select>
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '8px',
-                color: '#374151',
-                fontSize: '14px',
-                fontWeight: '500'
-              }}>
-                Customer Code
-              </label>
-              <input
-                type="text"
-                name="customer_code"
-                value={formData.customer_code}
-                onChange={handleChange}
-                placeholder="CUST001"
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  boxSizing: 'border-box'
-                }}
-              />
-              <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
-                Enter customer code for registered customers
-              </p>
-            </div>
-
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '8px',
-                color: '#374151',
-                fontSize: '14px',
-                fontWeight: '500'
-              }}>
-                Notes
-              </label>
-              <textarea
-                name="notes"
-                value={formData.notes}
-                onChange={handleChange}
-                placeholder="Any additional notes..."
-                rows={3}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  boxSizing: 'border-box',
-                  resize: 'vertical'
-                }}
-              />
-            </div>
-
-            {error && (
-              <div style={{
-                padding: '12px',
-                marginBottom: '20px',
-                background: '#fee',
-                border: '1px solid #fcc',
-                borderRadius: '6px',
-                color: '#c33',
-                fontSize: '14px'
-              }}>
-                {error}
+            {/* Vehicle Type Selector */}
+            <div className="form-group">
+              <label className="form-label">Vehicle Type *</label>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {vehicleTypes.map(vt => (
+                  <button key={vt.value} type="button"
+                    onClick={() => setFormData({ ...formData, vehicle_type: vt.value })}
+                    style={{
+                      flex: 1, minWidth: 80, padding: '12px 8px', borderRadius: 10, cursor: 'pointer',
+                      border: formData.vehicle_type === vt.value ? '2px solid var(--accent)' : '1px solid var(--border)',
+                      background: formData.vehicle_type === vt.value ? 'var(--accent-glow)' : 'var(--bg-elevated)',
+                      color: formData.vehicle_type === vt.value ? 'var(--accent)' : 'var(--text-subtle)',
+                      fontFamily: 'inherit', transition: 'var(--transition)', textAlign: 'center',
+                    }}>
+                    <div style={{ fontSize: 22 }}>{vt.icon}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, marginTop: 4 }}>{vt.label}</div>
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '12px',
-                background: loading ? '#999' : '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '16px',
-                fontWeight: '600',
-                cursor: loading ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {loading ? 'Processing...' : 'Check In Vehicle'}
-            </button>
+            <div className="form-group">
+              <label className="form-label">License Plate</label>
+              <input id="checkin-plate" className="form-input" type="text" placeholder="BA 12 BA 1234"
+                value={formData.license_plate}
+                onChange={e => setFormData({ ...formData, license_plate: e.target.value.toUpperCase() })}
+                style={{ textTransform: 'uppercase', letterSpacing: 2, fontWeight: 600 }} />
+              <p className="form-hint">Leave empty for guest vehicles without registration</p>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Customer Code</label>
+              <input id="checkin-customer" className="form-input" type="text" placeholder="CUST-001 (optional)"
+                value={formData.customer_code}
+                onChange={e => setFormData({ ...formData, customer_code: e.target.value.toUpperCase() })} />
+              <p className="form-hint">Registered customers get their discount applied automatically</p>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Notes</label>
+              <textarea id="checkin-notes" className="form-textarea" placeholder="Any additional notes..."
+                value={formData.notes}
+                onChange={e => setFormData({ ...formData, notes: e.target.value })} style={{ minHeight: 80 }} />
+            </div>
+
+            {error && <div className="alert alert-error">{error}</div>}
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button type="button" className="btn btn-ghost" onClick={() => router.back()}>Cancel</button>
+              <button id="checkin-submit" type="submit" disabled={loading} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
+                {loading ? <><span className="loading-spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Processing…</> : '🚗 Check In Vehicle'}
+              </button>
+            </div>
           </form>
         </div>
       </div>

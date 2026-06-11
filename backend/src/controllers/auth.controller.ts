@@ -15,31 +15,27 @@ import { sendVerificationEmail, sendOnboardingEmail } from '../utils/email.js';
 
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, slug, corporate_email, owner_name, owner_email, password } = req.body;
+    const { tenantName, name, email, password } = req.body;
 
-    const [existingTenant, existingUser, existingSlug] = await Promise.all([
-      Tenant.findOne({ corporate_email }),
-      User.findOne({ email: owner_email }),
-      slug ? Tenant.findOne({ slug }) : null,
+    const [existingTenant, existingUser] = await Promise.all([
+      Tenant.findOne({ corporate_email: email }),
+      User.findOne({ email }),
     ]);
 
     if (existingTenant) {
-      return next(new ConflictError(`Tenant with email ${corporate_email} already exists`));
+      return next(new ConflictError(`Tenant with email ${email} already exists`));
     }
     if (existingUser) {
-      return next(new ConflictError(`User with email ${owner_email} already exists`));
-    }
-    if (existingSlug) {
-      return next(new ConflictError(`Tenant with slug ${slug} already exists`));
+      return next(new ConflictError(`User with email ${email} already exists`));
     }
 
-    // Generate slug from name if not provided
-    const tenantSlug = slug || name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    // Generate slug from tenant name
+    const tenantSlug = tenantName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 
     const tenant = await Tenant.create({
-      name,
+      name: tenantName,
       slug: tenantSlug,
-      corporate_email,
+      corporate_email: email,
       status: TenantStatus.ACTIVE,
     });
 
@@ -47,25 +43,25 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     const password_hash = await bcrypt.hash(password, env.BCRYPT_ROUNDS);
     const owner = await User.create({
       tenant_id: tenant._id,
-      name: owner_name,
-      email: owner_email,
+      name,
+      email,
       password_hash,
       role: UserRole.TENANT_OWNER,
       is_email_verified: false,
       email_verification_token,
     });
 
-    // Send verification email
+    // Send verification email with tenant branding
     try {
-      await sendVerificationEmail(owner_email, email_verification_token);
+      await sendVerificationEmail(email, email_verification_token, tenant._id.toString(), name);
     } catch (emailError) {
       console.error('Failed to send verification email:', emailError);
       // Don't fail registration if email fails
     }
 
-    // Send onboarding email
+    // Send onboarding email with tenant branding
     try {
-      await sendOnboardingEmail(owner_email, tenant.name, owner_name);
+      await sendOnboardingEmail(email, tenant.name, name, tenant._id.toString());
     } catch (emailError) {
       console.error('Failed to send onboarding email:', emailError);
       // Don't fail registration if email fails
@@ -77,6 +73,7 @@ export const register = async (req: Request, res: Response, next: NextFunction):
       data: {
         tenant_id: tenant._id,
         tenant_name: tenant.name,
+        tenant_slug: tenant.slug,
         owner_id: owner._id,
         owner_email: owner.email,
         requires_email_verification: true,
@@ -101,18 +98,20 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     }
 
     let tenantSlug = null;
+    let tenantBranding = null;
     if (user.tenant_id) {
       const tenant = await Tenant.findById(user.tenant_id);
-      console.log('Login - Tenant lookup:', { 
-        tenant_id: user.tenant_id, 
+      console.log('Login - Tenant lookup:', {
+        tenant_id: user.tenant_id,
         tenant: tenant ? { id: tenant._id, name: tenant.name, slug: tenant.slug } : null,
-        slug: tenant?.slug 
+        slug: tenant?.slug
       });
       if (tenant?.status === TenantStatus.SUSPENDED) {
         return next(new AuthError('Tenant account is suspended. Contact support.'));
       }
       if (tenant) {
         tenantSlug = tenant.slug || null;
+        tenantBranding = tenant.branding || null;
         // If slug is empty or null, generate one from tenant name and update the database
         if (!tenantSlug && tenant.name) {
           tenantSlug = tenant.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
@@ -159,6 +158,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
           gate_assignment: user.gate_assignment,
           ticket_prefix: user.ticket_prefix,
         },
+        tenant_branding: tenantBranding,
       },
     });
   } catch (err) {
@@ -268,6 +268,107 @@ export const verifyEmail = async (req: Request, res: Response, next: NextFunctio
     res.status(200).json({
       success: true,
       message: 'Email verified successfully',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const forgotPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return next(new AuthError('Email is required'));
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      // Don't reveal if email exists for security
+      return res.status(200).json({
+        success: true,
+        message: 'If an account with this email exists, a password reset link has been sent.',
+      });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    user.password_reset_token = resetToken;
+    user.password_reset_expires = resetTokenExpiry;
+    await user.save();
+
+    // Send password reset email with tenant branding
+    try {
+      // Import sendPasswordResetEmail function
+      const { sendPasswordResetEmail } = await import('../utils/email.js');
+      await sendPasswordResetEmail(email, resetToken, user.tenant_id?.toString(), user.name);
+    } catch (emailError) {
+      console.error('Failed to send password reset email:', emailError);
+      // Don't fail the request if email fails
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'If an account with this email exists, a password reset link has been sent.',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return next(new AuthError('Token and password are required'));
+    }
+
+    const user = await User.findOne({
+      password_reset_token: token,
+      password_reset_expires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return next(new AuthError('Invalid or expired reset token'));
+    }
+
+    const password_hash = await bcrypt.hash(password, env.BCRYPT_ROUNDS);
+    user.password_hash = password_hash;
+    user.password_reset_token = null;
+    user.password_reset_expires = null;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successfully. Please login with your new password.',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getTenantBranding = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { slug } = req.params;
+
+    if (!slug) {
+      return next(new AuthError('Tenant slug is required'));
+    }
+
+    const tenant = await Tenant.findOne({ slug });
+    if (!tenant) {
+      return next(new AuthError('Tenant not found'));
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        name: tenant.name,
+        branding: tenant.branding,
+      },
     });
   } catch (err) {
     next(err);

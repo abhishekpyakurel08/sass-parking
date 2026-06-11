@@ -17,9 +17,9 @@ export interface Customer {
 
 export interface CreateCustomerData {
   name: string;
-  customer_code: string;
-  email?: string;
   phone_number?: string;
+  email?: string;
+  customer_code: string;
   discount_percentage?: number;
 }
 
@@ -52,7 +52,7 @@ export const customerService = {
   },
 
   async updateCustomer(id: string, data: UpdateCustomerData) {
-    const response = await api.put(`/customers/${id}`, data);
+    const response = await api.patch(`/customers/${id}`, data);
     return response.data;
   },
 

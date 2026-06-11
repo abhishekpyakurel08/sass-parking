@@ -4,9 +4,16 @@ import { PaymentMethod } from '../types/enums.js';
 export const registerSchema = z.object({
   name: z.string().min(2, 'Business name must be at least 2 characters'),
   slug: z.string().optional(),
-  corporate_email: z.string().email('Invalid corporate email'),
+  corporate_email: z.string().email('Invalid corporate email').optional(),
   owner_name: z.string().min(2, 'Owner name is required'),
   owner_email: z.string().email('Invalid owner email'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+export const authRegisterSchema = z.object({
+  tenantName: z.string().min(2, 'Business name is required'),
+  name: z.string().min(2, 'Name is required'),
+  email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 

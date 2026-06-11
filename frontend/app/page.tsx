@@ -11,15 +11,24 @@ export default function Home() {
   }, [router])
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      display: 'flex', 
-      alignItems: 'center', 
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
       justifyContent: 'center',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      background: 'var(--bg-base)',
+      fontFamily: 'Inter, sans-serif'
     }}>
-      <div style={{ color: 'white', fontSize: '24px' }}>
-        Redirecting to login...
+      <div style={{
+        width: 64, height: 64, borderRadius: 16, marginBottom: 24,
+        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 32, fontWeight: 800, color: '#fff',
+        animation: 'pulse 1.5s infinite'
+      }}>P</div>
+      <div style={{ color: 'var(--text-muted)', fontSize: 16, fontWeight: 500 }}>
+        Redirecting to ParkSaaS...
       </div>
     </div>
   )

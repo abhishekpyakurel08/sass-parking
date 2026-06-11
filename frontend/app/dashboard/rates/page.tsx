@@ -2,356 +2,168 @@
 
 import { useState, useEffect } from 'react'
 import DashboardLayout from '../../../components/DashboardLayout'
-import { ratesService, type HourlyRate, type VehicleType } from '../../../lib/rates'
+import { ratesService, type HourlyRate, type CreateRateData, type UpdateRateData, type VehicleType } from '../../../lib/rates'
+
+const VEHICLE_ICONS: Record<string, string> = { CAR: '🚗', BIKE: '🏍️', TRUCK: '🚛', SUV: '🚙', BUS: '🚌' }
+const VEHICLE_TYPES: VehicleType[] = ['CAR', 'BIKE', 'SUV', 'TRUCK', 'BUS']
 
 export default function RatesPage() {
   const [rates, setRates] = useState<HourlyRate[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingRate, setEditingRate] = useState<HourlyRate | null>(null)
+  const [formError, setFormError] = useState('')
+  const [formLoading, setFormLoading] = useState(false)
 
-  const [formData, setFormData] = useState({
-    vehicle_type: 'CAR' as VehicleType,
-    rate_per_hour: 0,
-    lost_ticket_penalty: 0,
-    grace_period_minutes: 0,
-  })
+  const emptyForm: CreateRateData = { vehicle_type: 'CAR', rate_per_hour: 0, lost_ticket_penalty: 0, grace_period_minutes: 10 }
+  const [form, setForm] = useState<any>(emptyForm)
 
-  useEffect(() => {
-    loadRates()
-  }, [])
+  useEffect(() => { load() }, [])
 
-  const loadRates = async () => {
+  const load = async () => {
     try {
       setLoading(true)
-      const data = await ratesService.getRates()
-      setRates(data.data || [])
-    } catch (err) {
-      console.error('Failed to load rates:', err)
-    } finally {
-      setLoading(false)
-    }
+      const data: any = await ratesService.getRates()
+      setRates(Array.isArray(data) ? data : (data?.data || []))
+    } catch { } finally { setLoading(false) }
   }
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const openCreate = () => { setEditingRate(null); setForm(emptyForm); setFormError(''); setShowModal(true) }
+  const openEdit = (r: HourlyRate) => { setEditingRate(r); setForm({ vehicle_type: r.vehicle_type, rate_per_hour: r.rate_per_hour, lost_ticket_penalty: r.lost_ticket_penalty, grace_period_minutes: r.grace_period_minutes }); setFormError(''); setShowModal(true) }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); setFormError(''); setFormLoading(true)
     try {
-      await ratesService.createRate(formData)
-      setShowModal(false)
-      setFormData({ vehicle_type: 'CAR', rate_per_hour: 0, lost_ticket_penalty: 0, grace_period_minutes: 0 })
-      loadRates()
-    } catch (err) {
-      console.error('Failed to create rate:', err)
-    }
+      if (editingRate) await ratesService.updateRate(editingRate.vehicle_type, { rate_per_hour: form.rate_per_hour, lost_ticket_penalty: form.lost_ticket_penalty, grace_period_minutes: form.grace_period_minutes })
+      else await ratesService.createRate(form)
+      setShowModal(false); load()
+    } catch (err: any) { setFormError(err.message || 'Failed to save rate') }
+    finally { setFormLoading(false) }
   }
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingRate) return
-    try {
-      await ratesService.updateRate(editingRate._id, formData)
-      setShowModal(false)
-      setEditingRate(null)
-      setFormData({ vehicle_type: 'CAR', rate_per_hour: 0, lost_ticket_penalty: 0, grace_period_minutes: 0 })
-      loadRates()
-    } catch (err) {
-      console.error('Failed to update rate:', err)
-    }
+  const handleDelete = async (vehicleType: VehicleType) => {
+    if (!confirm(`Delete rate for ${vehicleType}?`)) return
+    try { await ratesService.deleteRate(vehicleType); load() } catch {}
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this rate?')) return
-    try {
-      await ratesService.deleteRate(id)
-      loadRates()
-    } catch (err) {
-      console.error('Failed to delete rate:', err)
-    }
-  }
-
-  const handleEdit = (rate: HourlyRate) => {
-    setEditingRate(rate)
-    setFormData({
-      vehicle_type: rate.vehicle_type,
-      rate_per_hour: rate.rate_per_hour,
-      lost_ticket_penalty: rate.lost_ticket_penalty,
-      grace_period_minutes: rate.grace_period_minutes,
-    })
-    setShowModal(true)
-  }
-
-  const openCreateModal = () => {
-    setEditingRate(null)
-    setFormData({ vehicle_type: 'CAR', rate_per_hour: 0, lost_ticket_penalty: 0, grace_period_minutes: 0 })
-    setShowModal(true)
-  }
+  const coveredTypes = rates.map(r => r.vehicle_type)
 
   return (
-    <DashboardLayout>
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h2 style={{ fontSize: '28px', color: '#1a1a2e' }}>
-            Hourly Rates
-          </h2>
-          <button
-            onClick={openCreateModal}
-            style={{
-              padding: '10px 20px',
-              background: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer'
-            }}
-          >
-            Add Rate
-          </button>
+    <DashboardLayout title="Parking Rates" subtitle="Configure hourly rates for each vehicle type">
+
+      <div className="page-header" style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {VEHICLE_TYPES.filter(v => !coveredTypes.includes(v)).length > 0 && (
+            <p style={{ fontSize: 13, color: 'var(--yellow)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              {VEHICLE_TYPES.filter(v => !coveredTypes.includes(v)).join(', ')} have no rates set
+            </p>
+          )}
         </div>
-
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '48px', color: '#6b7280' }}>
-            Loading rates...
-          </div>
-        ) : (
-          <div style={{
-            background: 'white',
-            borderRadius: '12px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            overflow: 'hidden'
-          }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ background: '#f9fafb' }}>
-                <tr>
-                  <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                    Vehicle Type
-                  </th>
-                  <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                    Rate per Hour
-                  </th>
-                  <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                    Lost Ticket Penalty
-                  </th>
-                  <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                    Grace Period
-                  </th>
-                  <th style={{ padding: '16px', textAlign: 'right', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {rates.map((rate) => (
-                  <tr key={rate._id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                    <td style={{ padding: '16px', fontSize: '14px', color: '#1a1a2e', fontWeight: '600' }}>
-                      {rate.vehicle_type}
-                    </td>
-                    <td style={{ padding: '16px', fontSize: '14px', color: '#1a1a2e', fontWeight: '600' }}>
-                      Rs. {rate.rate_per_hour.toFixed(2)}
-                    </td>
-                    <td style={{ padding: '16px', fontSize: '14px', color: '#1a1a2e' }}>
-                      Rs. {rate.lost_ticket_penalty.toFixed(2)}
-                    </td>
-                    <td style={{ padding: '16px', fontSize: '14px', color: '#6b7280' }}>
-                      {rate.grace_period_minutes} minutes
-                    </td>
-                    <td style={{ padding: '16px', textAlign: 'right' }}>
-                      <button
-                        onClick={() => handleEdit(rate)}
-                        style={{
-                          padding: '6px 12px',
-                          background: '#3b82f6',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          marginRight: '8px'
-                        }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(rate._id)}
-                        style={{
-                          padding: '6px 12px',
-                          background: '#ef4444',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {showModal && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}>
-            <div style={{
-              background: 'white',
-              padding: '32px',
-              borderRadius: '12px',
-              width: '100%',
-              maxWidth: '500px'
-            }}>
-              <h3 style={{ fontSize: '24px', marginBottom: '24px', color: '#1a1a2e' }}>
-                {editingRate ? 'Edit Rate' : 'Add Rate'}
-              </h3>
-
-              <form onSubmit={editingRate ? handleUpdate : handleCreate}>
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#374151', fontSize: '14px', fontWeight: '500' }}>
-                    Vehicle Type *
-                  </label>
-                  <select
-                    value={formData.vehicle_type}
-                    onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value as VehicleType })}
-                    required
-                    disabled={!!editingRate}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box',
-                      background: editingRate ? '#f3f4f6' : 'white'
-                    }}
-                  >
-                    <option value="CAR">Car</option>
-                    <option value="BIKE">Bike</option>
-                    <option value="SUV">SUV</option>
-                    <option value="TRUCK">Truck</option>
-                    <option value="BUS">Bus</option>
-                  </select>
-                </div>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#374151', fontSize: '14px', fontWeight: '500' }}>
-                    Rate per Hour (Rs.) *
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.rate_per_hour}
-                    onChange={(e) => setFormData({ ...formData, rate_per_hour: parseFloat(e.target.value) || 0 })}
-                    required
-                    min="0"
-                    step="0.01"
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#374151', fontSize: '14px', fontWeight: '500' }}>
-                    Lost Ticket Penalty (Rs.)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.lost_ticket_penalty}
-                    onChange={(e) => setFormData({ ...formData, lost_ticket_penalty: parseFloat(e.target.value) || 0 })}
-                    min="0"
-                    step="0.01"
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '24px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#374151', fontSize: '14px', fontWeight: '500' }}>
-                    Grace Period (minutes)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.grace_period_minutes}
-                    onChange={(e) => setFormData({ ...formData, grace_period_minutes: parseInt(e.target.value) || 0 })}
-                    min="0"
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button
-                    type="submit"
-                    style={{
-                      flex: 1,
-                      padding: '12px',
-                      background: '#3b82f6',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {editingRate ? 'Update' : 'Create'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowModal(false)
-                      setEditingRate(null)
-                      setFormData({ vehicle_type: 'CAR', rate_per_hour: 0, lost_ticket_penalty: 0, grace_period_minutes: 0 })
-                    }}
-                    style={{
-                      padding: '12px 24px',
-                      background: '#6b7280',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+        <button id="add-rate-btn" className="btn btn-primary" onClick={openCreate}>
+          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Rate
+        </button>
       </div>
+
+      {loading ? (
+        <div className="loading-container"><div className="loading-spinner" /></div>
+      ) : rates.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-icon">💰</div>
+          <div className="empty-title">No rates configured</div>
+          <p style={{ fontSize: 13, marginTop: 8 }}>Add rates for each vehicle type to enable fare calculation</p>
+          <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={openCreate}>Add First Rate</button>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
+          {rates.map(rate => (
+            <div key={rate._id} className="card" style={{ padding: 24, position: 'relative' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                <div style={{
+                  width: 50, height: 50, borderRadius: 12, fontSize: 24,
+                  background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: '1px solid var(--border)',
+                }}>{VEHICLE_ICONS[rate.vehicle_type]}</div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>{rate.vehicle_type}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Per-hour rate</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Hourly Rate</span>
+                  <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--accent)' }}>Rs. {rate.rate_per_hour}</span>
+                </div>
+                <div className="divider" style={{ margin: '4px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Lost Ticket Penalty</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--red)' }}>Rs. {rate.lost_ticket_penalty}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Grace Period</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--green)' }}>{rate.grace_period_minutes} min</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+                <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => openEdit(rate)}>Edit</button>
+                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(rate.vehicle_type)}>Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showModal && (
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
+          <div className="modal">
+            <h3 className="modal-title">{editingRate ? `Edit ${editingRate.vehicle_type} Rate` : 'Add Parking Rate'}</h3>
+            <form onSubmit={handleSubmit}>
+              {!editingRate && (
+                <div className="form-group">
+                  <label className="form-label">Vehicle Type *</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+                    {VEHICLE_TYPES.map(vt => (
+                      <button key={vt} type="button" onClick={() => setForm({ ...form, vehicle_type: vt })}
+                        style={{
+                          padding: '10px 4px', borderRadius: 10, cursor: 'pointer', textAlign: 'center',
+                          border: form.vehicle_type === vt ? '2px solid var(--accent)' : '1px solid var(--border)',
+                          background: form.vehicle_type === vt ? 'var(--accent-glow)' : 'var(--bg-elevated)',
+                          color: form.vehicle_type === vt ? 'var(--accent)' : 'var(--text-subtle)', fontFamily: 'inherit', transition: 'var(--transition)',
+                        }}>
+                        <div style={{ fontSize: 18 }}>{VEHICLE_ICONS[vt]}</div>
+                        <div style={{ fontSize: 11, fontWeight: 600, marginTop: 4 }}>{vt}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="form-group">
+                <label className="form-label">Rate Per Hour (Rs.) *</label>
+                <input className="form-input" type="number" min={0} step="any" required placeholder="50" value={form.rate_per_hour} onChange={e => setForm({ ...form, rate_per_hour: parseFloat(e.target.value) || 0 })} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Lost Ticket Penalty (Rs.)</label>
+                <input className="form-input" type="number" min={0} step="any" placeholder="200" value={form.lost_ticket_penalty} onChange={e => setForm({ ...form, lost_ticket_penalty: parseFloat(e.target.value) || 0 })} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Grace Period (Minutes)</label>
+                <input className="form-input" type="number" min={0} placeholder="10" value={form.grace_period_minutes} onChange={e => setForm({ ...form, grace_period_minutes: parseInt(e.target.value) || 0 })} />
+                <p className="form-hint">Free parking within grace period after entry</p>
+              </div>
+              {formError && <div className="alert alert-error">{formError}</div>}
+              <div className="modal-actions">
+                <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="submit" disabled={formLoading} className="btn btn-primary" style={{ flex: 2 }}>
+                  {formLoading ? 'Saving…' : editingRate ? 'Update Rate' : 'Create Rate'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   )
 }

@@ -5,8 +5,12 @@ import { TicketStatus } from '../types/enums.js';
 import { redis } from '../config/redis.js';
 
 const acquireLock = async (key: string, ttlSeconds: number): Promise<boolean> => {
-  const result = await redis.set(key, '1', 'EX', ttlSeconds, 'NX');
-  return result === 'OK';
+  try {
+    const result = await redis.set(key, '1', 'EX', ttlSeconds, 'NX');
+    return result === 'OK';
+  } catch (e) {
+    return false; // Fail safe
+  }
 };
 
 export const startCronJobs = (): void => {
@@ -35,7 +39,11 @@ export const startCronJobs = (): void => {
     } catch (err) {
       logger.error('[CRON] Stale ticket cleanup failed:', err);
     } finally {
-      await redis.del('cron:stale-tickets');
+      try {
+        await redis.del('cron:stale-tickets');
+      } catch (e) {
+        // ignore
+      }
     }
   });
 

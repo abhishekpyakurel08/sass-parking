@@ -16,8 +16,6 @@ export const tenantMiddleware = async (
     const user = req.user;
     if (!user) return next(new AuthError('Not authenticated'));
 
-    if (user.role === UserRole.SUPER_ADMIN) return next();
-
     // Priority: 1. Extract from Host header (subdomain), 2. X-Tenant-Slug header, 3. X-Tenant-ID header, 4. user.tenantId
     const host = req.headers.host;
     const subdomain = extractSubdomain(host || '');
@@ -27,8 +25,20 @@ export const tenantMiddleware = async (
     let resolvedId: string | undefined;
     let tenantSlug: string | undefined;
     
+    // Priority 0 — dev only, before all other checks
+    if (process.env.NODE_ENV === 'development') {
+      const devSlug = process.env.DEV_TENANT_SLUG;
+      if (devSlug && !subdomain && !headerTenantSlug) {
+        const tenant = await Tenant.findOne({ slug: devSlug }).lean();
+        if (tenant) {
+          resolvedId = tenant._id.toString();
+          tenantSlug = devSlug;
+        }
+      }
+    }
+    
     // Try to resolve tenant by subdomain from Host header first
-    if (subdomain) {
+    if (!resolvedId && subdomain) {
       const normalizedSlug = normalizeSlug(subdomain);
       if (!normalizedSlug) {
         logSecurity('Invalid subdomain format', { subdomain, host, ip: req.ip });
@@ -43,7 +53,7 @@ export const tenantMiddleware = async (
       tenantSlug = normalizedSlug;
     } 
     // Fallback to X-Tenant-Slug header
-    else if (headerTenantSlug) {
+    else if (!resolvedId && headerTenantSlug) {
       const normalizedSlug = normalizeSlug(headerTenantSlug);
       if (!normalizedSlug) {
         logSecurity('Invalid slug header format', { slug: headerTenantSlug, ip: req.ip });
@@ -58,11 +68,12 @@ export const tenantMiddleware = async (
       tenantSlug = normalizedSlug;
     } 
     // Fallback to X-Tenant-ID header or user.tenantId
-    else {
+    else if (!resolvedId) {
       resolvedId = headerTenantId || user.tenantId || undefined;
     }
 
     if (!resolvedId) {
+      if (user.role === UserRole.SUPER_ADMIN) return next();
       return next(new AuthError('Unable to determine tenant. Provide subdomain, X-Tenant-Slug, or X-Tenant-ID header'));
     }
 
@@ -71,7 +82,7 @@ export const tenantMiddleware = async (
       return next(new NotFoundError('Tenant not found'));
     }
 
-    if (user.tenantId && user.tenantId !== resolvedId) {
+    if (user.role !== UserRole.SUPER_ADMIN && user.tenantId && user.tenantId !== resolvedId) {
       logSecurity('Cross-tenant access attempt blocked', {
         userId: user.userId,
         ownTenantId: user.tenantId,

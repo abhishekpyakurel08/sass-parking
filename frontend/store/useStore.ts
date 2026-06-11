@@ -2,24 +2,29 @@ import { create } from 'zustand'
 
 export type UserRole = 'SUPER_ADMIN' | 'TENANT_OWNER' | 'GATE_STAFF';
 
-type User = {
-  userId: string;
-  tenantId: string | null;
+export type User = {
+  id?: string;
+  tenant_id?: string | null;
   role: UserRole;
   name: string;
-  email: string;
+  email?: string;
+  slug?: string;
 }
 
 type State = {
   user: User | null;
   isAuthenticated: boolean;
+  tenantSlug: string | null;
   setUser: (u: User) => void;
+  setTenantSlug: (slug: string) => void;
   clearUser: () => void;
 }
 
 export const useStore = create<State>((set) => ({
   user: null,
   isAuthenticated: false,
-  setUser: (u) => set({ user: u, isAuthenticated: true }),
-  clearUser: () => set({ user: null, isAuthenticated: false })
+  tenantSlug: null,
+  setUser: (u) => set({ user: u, isAuthenticated: true, tenantSlug: u.slug || null }),
+  setTenantSlug: (slug) => set({ tenantSlug: slug }),
+  clearUser: () => set({ user: null, isAuthenticated: false, tenantSlug: null })
 }))

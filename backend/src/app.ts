@@ -33,6 +33,7 @@ import customerRoutes  from './routes/customer.route.js';
 import auditLogRoutes  from './routes/auditLog.route.js';
 import syncRoutes      from './routes/sync.route.js';
 import apiKeyRoutes    from './routes/apiKey.route.js';
+import brandingRoutes  from './routes/branding.route.js';
 
 const app: Application = express();
 
@@ -49,8 +50,19 @@ app.use(cors({
     // Allow non-browser requests (curl, server-to-server)
     if (!origin) return callback(null, true);
 
-    // Allow configured origins
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Allow configured origins (including wildcard patterns)
+    for (const allowedOrigin of allowedOrigins) {
+      // Wildcard pattern for multi-tenant subdomains
+      if (allowedOrigin.includes('*')) {
+        const pattern = allowedOrigin.replace(/\*/g, '[a-z0-9-]+');
+        const regex = new RegExp(`^${pattern}$`);
+        if (regex.test(origin)) return callback(null, true);
+      }
+      // Exact match
+      else if (allowedOrigin === origin) {
+        return callback(null, true);
+      }
+    }
 
     // Allow tecobit preview subdomains (production pattern)
     if (/^https?:\/\/[a-z0-9-]+\.tecobit\.cloud$/.test(origin)) return callback(null, true);
@@ -58,6 +70,8 @@ app.use(cors({
     // During development, allow localhost / 127.0.0.1 on any port (helps Vite dev frontends)
     if (env.NODE_ENV === 'development') {
       if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return callback(null, true);
+      // Allow *.localhost for multi-tenant local development
+      if (/^https?:\/\/[a-z0-9-]+\.localhost:\d+$/.test(origin)) return callback(null, true);
     }
 
     // Otherwise reject
@@ -144,6 +158,7 @@ app.use('/api/v1/tenants',   apiLimiter,  tenantRoutes);
 app.use('/api/v1/parking',   posLimiter,  parkingRoutes);
 app.use('/api/v1/rates',     apiLimiter,  ratesRoutes);
 app.use('/api/v1/customers', apiLimiter,  customerRoutes);
+app.use('/api/v1/branding',  apiLimiter,  brandingRoutes);
 app.use('/api/v1/analytics', apiLimiter,  analyticsRoutes);
 app.use('/api/v1/audit-logs', apiLimiter, auditLogRoutes);
 app.use('/api/v1/sync',      posLimiter,  syncRoutes);

@@ -16,6 +16,7 @@ const UserSchema = new Schema<IUser>(
     email_verification_token: { type: String, default: null },
     password_reset_token: { type: String, default: null },
     password_reset_expires: { type: Date, default: null },
+    // TODO: Add more fields if needed
   },
   { timestamps: true }
 );

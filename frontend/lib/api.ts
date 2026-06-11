@@ -1,4 +1,9 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+import { getTenantSlug } from './tenant';
+
+/** API base URL — always use the env var, works for localhost AND production */
+const getBaseUrl = () => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+
+const API_BASE_URL = getBaseUrl();
 
 interface ApiResponse<T = any> {
   success: boolean;
@@ -25,11 +30,21 @@ class ApiClient {
     }
   }
 
+  setTenantSlug(slug: string) {
+    // Use tenant helper for consistency
+    if (typeof window !== 'undefined') {
+      const { setTenantSlug: setSlug } = require('./tenant');
+      setSlug(slug);
+    }
+  }
+
   clearToken() {
     this.token = null;
     if (typeof window !== 'undefined') {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
+      const { clearTenantSlug } = require('./tenant');
+      clearTenantSlug();
     }
   }
 
@@ -43,6 +58,12 @@ class ApiClient {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
     };
+
+    let tenantSlug = getTenantSlug();
+
+    if (tenantSlug) {
+      headers['X-Tenant-Slug'] = tenantSlug;
+    }
 
     if (this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
@@ -80,6 +101,13 @@ class ApiClient {
   async put<T>(endpoint: string, body?: any): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'PUT',
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  }
+
+  async patch<T>(endpoint: string, body?: any): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
       body: body ? JSON.stringify(body) : undefined,
     });
   }

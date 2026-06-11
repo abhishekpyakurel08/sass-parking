@@ -7,564 +7,197 @@ import { tenantService, type Tenant } from '../../../lib/tenant'
 export default function TenantsPage() {
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [showModal, setShowModal] = useState(false)
+  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null)
+  const [formError, setFormError] = useState('')
+  const [formLoading, setFormLoading] = useState(false)
+  const [search, setSearch] = useState('')
 
-  const [formData, setFormData] = useState({
-    name: '',
-    slug: '',
-    corporate_email: '',
-    owner_name: '',
-    owner_email: '',
-    password: '',
-    contactNumber: '',
-    address: '',
-  })
+  const emptyForm = { name: '', slug: '', corporate_email: '', owner_name: '', owner_email: '', password: '', contactNumber: '', address: '' }
+  const [form, setForm] = useState<any>(emptyForm)
 
-  useEffect(() => {
-    loadTenants()
-  }, [page])
+  useEffect(() => { load() }, [page])
 
-  const loadTenants = async () => {
+  const load = async () => {
     try {
       setLoading(true)
-      const data = await tenantService.getTenants(page, 20)
-      setTenants(data.data || [])
-      setTotalPages(data.pagination?.totalPages || 1)
-    } catch (err) {
-      console.error('Failed to load tenants:', err)
-    } finally {
-      setLoading(false)
-    }
+      const data: any = await tenantService.getTenants(page, 15)
+      setTenants(data?.data || [])
+      setTotalPages(data?.pagination?.totalPages || 1)
+      setTotal(data?.pagination?.total || 0)
+    } catch { } finally { setLoading(false) }
   }
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-      await tenantService.createTenant(formData)
-      setShowModal(false)
-      setFormData({ name: '', slug: '', corporate_email: '', owner_name: '', owner_email: '', password: '', contactNumber: '', address: '' })
-      loadTenants()
-    } catch (err) {
-      console.error('Failed to create tenant:', err)
-    }
-  }
+  const openCreate = () => { setEditingTenant(null); setForm(emptyForm); setFormError(''); setShowModal(true) }
+  const openEdit = (t: Tenant) => { setEditingTenant(t); setForm({ name: t.name, slug: t.slug, corporate_email: t.corporate_email, owner_name: t.ownerName, owner_email: '', password: '', contactNumber: t.contactNumber || '', address: t.address || '' }); setFormError(''); setShowModal(true) }
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingTenant) return
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); setFormError(''); setFormLoading(true)
     try {
-      await tenantService.updateTenant(editingTenant._id, formData)
-      setShowModal(false)
-      setEditingTenant(null)
-      setFormData({ name: '', slug: '', corporate_email: '', owner_name: '', owner_email: '', password: '', contactNumber: '', address: '' })
-      loadTenants()
-    } catch (err) {
-      console.error('Failed to update tenant:', err)
-    }
+      if (editingTenant) await tenantService.updateTenant(editingTenant._id, { name: form.name, contactNumber: form.contactNumber, address: form.address })
+      else await tenantService.createTenant(form)
+      setShowModal(false); load()
+    } catch (err: any) { setFormError(err.message || 'Operation failed') }
+    finally { setFormLoading(false) }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this tenant? This will delete all associated data.')) return
-    try {
-      await tenantService.deleteTenant(id)
-      loadTenants()
-    } catch (err) {
-      console.error('Failed to delete tenant:', err)
-    }
+    if (!confirm('Delete this tenant and ALL associated data? This cannot be undone.')) return
+    try { await tenantService.deleteTenant(id); load() } catch {}
   }
 
-  const handleSuspend = async (id: string) => {
-    try {
-      await tenantService.suspendTenant(id)
-      loadTenants()
-    } catch (err) {
-      console.error('Failed to suspend tenant:', err)
-    }
+  const handleSuspend = async (t: Tenant) => {
+    if (!confirm(`Suspend ${t.name}? They will lose access.`)) return
+    try { await tenantService.suspendTenant(t._id); load() } catch {}
   }
 
   const handleActivate = async (id: string) => {
-    try {
-      await tenantService.activateTenant(id)
-      loadTenants()
-    } catch (err) {
-      console.error('Failed to activate tenant:', err)
-    }
+    try { await tenantService.activateTenant(id); load() } catch {}
   }
 
-  const handleEdit = (tenant: Tenant) => {
-    setEditingTenant(tenant)
-    setFormData({
-      name: tenant.name,
-      slug: tenant.slug,
-      corporate_email: tenant.corporate_email,
-      owner_name: tenant.ownerName,
-      owner_email: '',
-      password: '',
-      contactNumber: tenant.contactNumber,
-      address: tenant.address,
-    })
-    setShowModal(true)
-  }
-
-  const openCreateModal = () => {
-    setEditingTenant(null)
-    setFormData({ name: '', slug: '', corporate_email: '', owner_name: '', owner_email: '', password: '', contactNumber: '', address: '' })
-    setShowModal(true)
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ACTIVE':
-        return '#10b981'
-      case 'SUSPENDED':
-        return '#ef4444'
-      default:
-        return '#6b7280'
-    }
-  }
+  const filtered = tenants.filter(t =>
+    search === '' || t.name.toLowerCase().includes(search.toLowerCase()) || t.slug.includes(search.toLowerCase())
+  )
 
   return (
-    <DashboardLayout>
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h2 style={{ fontSize: '28px', color: '#1a1a2e' }}>
-            Tenant Management
-          </h2>
-          <button
-            onClick={openCreateModal}
-            style={{
-              padding: '10px 20px',
-              background: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer'
-            }}
-          >
-            Add Tenant
-          </button>
+    <DashboardLayout title="Tenant Management" subtitle={`${total} registered parking businesses`}>
+      <div className="page-header" style={{ marginBottom: 20 }}>
+        <div style={{ position: 'relative', width: 280 }}>
+          <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input className="form-input" style={{ paddingLeft: 38 }} placeholder="Search tenants…" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
+        <button id="add-tenant-btn" className="btn btn-primary" onClick={openCreate}>
+          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Tenant
+        </button>
+      </div>
 
+      <div className="table-container">
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '48px', color: '#6b7280' }}>
-            Loading tenants...
+          <div className="loading-container"><div className="loading-spinner" /></div>
+        ) : filtered.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">🏢</div>
+            <div className="empty-title">{search ? 'No matches found' : 'No tenants yet'}</div>
+            <p style={{ fontSize: 13, marginTop: 8 }}>Create the first parking business tenant</p>
           </div>
         ) : (
-          <>
-            <div style={{
-              background: 'white',
-              borderRadius: '12px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              overflow: 'hidden'
-            }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead style={{ background: '#f9fafb' }}>
-                  <tr>
-                    <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                      Name
-                    </th>
-                    <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                      Slug
-                    </th>
-                    <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                      Corporate Email
-                    </th>
-                    <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                      Owner
-                    </th>
-                    <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                      Contact
-                    </th>
-                    <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                      Status
-                    </th>
-                    <th style={{ padding: '16px', textAlign: 'right', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tenants.map((tenant) => (
-                    <tr key={tenant._id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                      <td style={{ padding: '16px', fontSize: '14px', color: '#1a1a2e', fontWeight: '600' }}>
-                        {tenant.name}
-                      </td>
-                      <td style={{ padding: '16px', fontSize: '14px', color: '#6b7280' }}>
-                        {tenant.slug}
-                      </td>
-                      <td style={{ padding: '16px', fontSize: '14px', color: '#6b7280' }}>
-                        {tenant.corporate_email}
-                      </td>
-                      <td style={{ padding: '16px', fontSize: '14px', color: '#1a1a2e' }}>
-                        {tenant.ownerName}
-                      </td>
-                      <td style={{ padding: '16px', fontSize: '14px', color: '#6b7280' }}>
-                        {tenant.contactNumber || '-'}
-                      </td>
-                      <td style={{ padding: '16px' }}>
-                        <span style={{
-                          padding: '4px 12px',
-                          background: `${getStatusColor(tenant.status)}20`,
-                          color: getStatusColor(tenant.status),
-                          borderRadius: '9999px',
-                          fontSize: '12px',
-                          fontWeight: '500'
-                        }}>
-                          {tenant.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: '16px', textAlign: 'right' }}>
-                        <button
-                          onClick={() => handleEdit(tenant)}
-                          style={{
-                            padding: '6px 12px',
-                            background: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            marginRight: '8px'
-                          }}
-                        >
-                          Edit
-                        </button>
-                        {tenant.status === 'ACTIVE' ? (
-                          <button
-                            onClick={() => handleSuspend(tenant._id)}
-                            style={{
-                              padding: '6px 12px',
-                              background: '#f59e0b',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              fontSize: '12px',
-                              cursor: 'pointer',
-                              marginRight: '8px'
-                            }}
-                          >
-                            Suspend
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleActivate(tenant._id)}
-                            style={{
-                              padding: '6px 12px',
-                              background: '#10b981',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              fontSize: '12px',
-                              cursor: 'pointer',
-                              marginRight: '8px'
-                            }}
-                          >
-                            Activate
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleDelete(tenant._id)}
-                          style={{
-                            padding: '6px 12px',
-                            background: '#ef4444',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {totalPages > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '24px' }}>
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  style={{
-                    padding: '8px 16px',
-                    background: page === 1 ? '#e5e7eb' : '#3b82f6',
-                    color: page === 1 ? '#9ca3af' : 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    cursor: page === 1 ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  Previous
-                </button>
-                <span style={{ padding: '8px 16px', color: '#6b7280' }}>
-                  Page {page} of {totalPages}
-                </span>
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  style={{
-                    padding: '8px 16px',
-                    background: page === totalPages ? '#e5e7eb' : '#3b82f6',
-                    color: page === totalPages ? '#9ca3af' : 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    cursor: page === totalPages ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  Next
-                </button>
-              </div>
-            )}
-          </>
-        )}
-
-        {showModal && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}>
-            <div style={{
-              background: 'white',
-              padding: '32px',
-              borderRadius: '12px',
-              width: '100%',
-              maxWidth: '500px',
-              maxHeight: '90vh',
-              overflowY: 'auto'
-            }}>
-              <h3 style={{ fontSize: '24px', marginBottom: '24px', color: '#1a1a2e' }}>
-                {editingTenant ? 'Edit Tenant' : 'Add Tenant'}
-              </h3>
-
-              <form onSubmit={editingTenant ? handleUpdate : handleCreate}>
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#374151', fontSize: '14px', fontWeight: '500' }}>
-                    Business Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#374151', fontSize: '14px', fontWeight: '500' }}>
-                    Slug
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                    disabled={!!editingTenant}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box',
-                      background: editingTenant ? '#f3f4f6' : 'white'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#374151', fontSize: '14px', fontWeight: '500' }}>
-                    Corporate Email *
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.corporate_email}
-                    onChange={(e) => setFormData({ ...formData, corporate_email: e.target.value })}
-                    required
-                    disabled={!!editingTenant}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box',
-                      background: editingTenant ? '#f3f4f6' : 'white'
-                    }}
-                  />
-                </div>
-
-                {!editingTenant && (
-                  <>
-                    <div style={{ marginBottom: '16px' }}>
-                      <label style={{ display: 'block', marginBottom: '8px', color: '#374151', fontSize: '14px', fontWeight: '500' }}>
-                        Owner Name *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.owner_name}
-                        onChange={(e) => setFormData({ ...formData, owner_name: e.target.value })}
-                        required
-                        style={{
-                          width: '100%',
-                          padding: '12px',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '6px',
-                          fontSize: '14px',
-                          boxSizing: 'border-box'
-                        }}
-                      />
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Business</th>
+                <th>Slug</th>
+                <th>Owner</th>
+                <th>Contact</th>
+                <th>Status</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(t => (
+                <tr key={t._id}>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{
+                        width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                        background: `hsl(${t.name.charCodeAt(0) * 7 % 360}, 60%, 20%)`,
+                        border: `1px solid hsl(${t.name.charCodeAt(0) * 7 % 360}, 60%, 35%)`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 16, fontWeight: 700, color: `hsl(${t.name.charCodeAt(0) * 7 % 360}, 80%, 70%)`,
+                      }}>{t.name.charAt(0).toUpperCase()}</div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{t.name}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{t.corporate_email}</div>
+                      </div>
                     </div>
-
-                    <div style={{ marginBottom: '16px' }}>
-                      <label style={{ display: 'block', marginBottom: '8px', color: '#374151', fontSize: '14px', fontWeight: '500' }}>
-                        Owner Email *
-                      </label>
-                      <input
-                        type="email"
-                        value={formData.owner_email}
-                        onChange={(e) => setFormData({ ...formData, owner_email: e.target.value })}
-                        required
-                        style={{
-                          width: '100%',
-                          padding: '12px',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '6px',
-                          fontSize: '14px',
-                          boxSizing: 'border-box'
-                        }}
-                      />
+                  </td>
+                  <td style={{ fontFamily: 'monospace', color: 'var(--accent)', fontSize: 13 }}>{t.slug}</td>
+                  <td style={{ color: 'var(--text-subtle)' }}>{t.ownerName}</td>
+                  <td style={{ color: 'var(--text-muted)' }}>{t.contactNumber || '—'}</td>
+                  <td>
+                    <span className={`badge ${t.status === 'ACTIVE' ? 'badge-green' : 'badge-red'}`}>{t.status}</span>
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      <button className="btn btn-ghost btn-sm" onClick={() => openEdit(t)}>Edit</button>
+                      {t.status === 'ACTIVE'
+                        ? <button className="btn btn-warning btn-sm" onClick={() => handleSuspend(t)}>Suspend</button>
+                        : <button className="btn btn-success btn-sm" onClick={() => handleActivate(t._id)}>Activate</button>}
+                      <button className="btn btn-danger btn-sm" onClick={() => handleDelete(t._id)}>Delete</button>
                     </div>
-
-                    <div style={{ marginBottom: '16px' }}>
-                      <label style={{ display: 'block', marginBottom: '8px', color: '#374151', fontSize: '14px', fontWeight: '500' }}>
-                        Password *
-                      </label>
-                      <input
-                        type="password"
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        required
-                        minLength={8}
-                        style={{
-                          width: '100%',
-                          padding: '12px',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '6px',
-                          fontSize: '14px',
-                          boxSizing: 'border-box'
-                        }}
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#374151', fontSize: '14px', fontWeight: '500' }}>
-                    Contact Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.contactNumber}
-                    onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '24px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#374151', fontSize: '14px', fontWeight: '500' }}>
-                    Address
-                  </label>
-                  <textarea
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    rows={3}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box',
-                      resize: 'vertical'
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button
-                    type="submit"
-                    style={{
-                      flex: 1,
-                      padding: '12px',
-                      background: '#3b82f6',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {editingTenant ? 'Update' : 'Create'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowModal(false)
-                      setEditingTenant(null)
-                      setFormData({ name: '', slug: '', corporate_email: '', owner_name: '', owner_email: '', password: '', contactNumber: '', address: '' })
-                    }}
-                    style={{
-                      padding: '12px 24px',
-                      background: '#6b7280',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="pagination">
+          <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>← Prev</button>
+          <span>Page {page} of {totalPages}</span>
+          <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next →</button>
+        </div>
+      )}
+
+      {showModal && (
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
+          <div className="modal">
+            <h3 className="modal-title">{editingTenant ? `Edit — ${editingTenant.name}` : 'Register New Tenant'}</h3>
+            <form onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label className="form-label">Business Name *</label>
+                <input className="form-input" required placeholder="ABC Parking Pvt. Ltd." value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+              </div>
+              {!editingTenant && (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">Slug (URL identifier)</label>
+                    <input className="form-input" placeholder="abc-parking (auto-generated if blank)" value={form.slug} onChange={e => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Corporate Email *</label>
+                    <input className="form-input" type="email" required placeholder="info@abcparking.com" value={form.corporate_email} onChange={e => setForm({ ...form, corporate_email: e.target.value })} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div className="form-group">
+                      <label className="form-label">Owner Name *</label>
+                      <input className="form-input" required placeholder="Ram Sharma" value={form.owner_name} onChange={e => setForm({ ...form, owner_name: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Owner Email *</label>
+                      <input className="form-input" type="email" required placeholder="owner@abc.com" value={form.owner_email} onChange={e => setForm({ ...form, owner_email: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Password *</label>
+                    <input className="form-input" type="password" required minLength={8} placeholder="Min 8 characters" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+                  </div>
+                </>
+              )}
+              <div className="form-group">
+                <label className="form-label">Contact Number</label>
+                <input className="form-input" type="tel" placeholder="+977 1-XXXXXXX" value={form.contactNumber} onChange={e => setForm({ ...form, contactNumber: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Address</label>
+                <textarea className="form-textarea" placeholder="Kathmandu, Nepal" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} style={{ minHeight: 72 }} />
+              </div>
+              {formError && <div className="alert alert-error">{formError}</div>}
+              <div className="modal-actions">
+                <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="submit" disabled={formLoading} className="btn btn-primary" style={{ flex: 2 }}>
+                  {formLoading ? 'Saving…' : editingTenant ? 'Update Tenant' : 'Create Tenant'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   )
 }

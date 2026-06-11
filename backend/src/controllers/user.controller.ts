@@ -29,6 +29,7 @@ export const registerTenantOwner = async (req: Request, res: Response): Promise<
     }
 
     const existingTenant = await Tenant.findOne({ slug: tenantSlug });
+    console.log("tenantSlug check:", tenantSlug, "existing:", existingTenant !== null);
     if (existingTenant) {
       res.status(400).json({ success: false, message: 'A tenant with this slug already exists.' });
       return;
@@ -55,21 +56,21 @@ export const registerTenantOwner = async (req: Request, res: Response): Promise<
       email: ownerEmail,
       password_hash,
       role: UserRole.TENANT_OWNER,
-      is_email_verified: false,
-      email_verification_token,
+      is_email_verified: process.env.NODE_ENV === 'development',
+      email_verification_token: process.env.NODE_ENV === 'development' ? null : email_verification_token,
     });
 
-    // Send verification email
+    // Send verification email with tenant branding
     try {
-      await sendVerificationEmail(ownerEmail, email_verification_token);
+      await sendVerificationEmail(ownerEmail, email_verification_token, tenant._id.toString(), owner_name);
     } catch (emailError) {
       console.error('Failed to send verification email:', emailError);
       // Don't fail registration if email fails
     }
 
-    // Send onboarding email
+    // Send onboarding email with tenant branding
     try {
-      await sendOnboardingEmail(ownerEmail, tenant.name, owner_name);
+      await sendOnboardingEmail(ownerEmail, tenant.name, owner_name, tenant._id.toString());
     } catch (emailError) {
       console.error('Failed to send onboarding email:', emailError);
       // Don't fail registration if email fails
@@ -81,7 +82,7 @@ export const registerTenantOwner = async (req: Request, res: Response): Promise<
       tenant_id: tenant._id,
       slug: tenant.slug,
       owner_id: owner._id,
-      requires_email_verification: true,
+      requires_email_verification: process.env.NODE_ENV !== 'development',
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'An unknown error occurred';
@@ -177,7 +178,12 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
       res.status(404).json({ success: false, message: 'User not found' });
       return;
     }
-    res.status(200).json({ success: true, data: user });
+    let slug = null;
+    if (user.tenant_id) {
+      const tenant = await Tenant.findById(user.tenant_id);
+      slug = tenant?.slug || null;
+    }
+    res.status(200).json({ success: true, data: { ...user, slug } });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'An unknown error occurred';
     res.status(500).json({ success: false, error: message });
@@ -186,7 +192,13 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
 
 export const resendEmailVerification = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = await User.findById(req.user!.userId);
+    const { email } = req.body;
+    if (!email) {
+      res.status(400).json({ success: false, message: 'Email is required' });
+      return;
+    }
+
+    const user = await User.findOne({ email });
     if (!user) {
       res.status(404).json({ success: false, message: 'User not found' });
       return;

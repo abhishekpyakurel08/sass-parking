@@ -1,5 +1,57 @@
 import { api } from './api';
 
+const STORAGE_KEY = "tenant_slug";
+
+// Tenant Helper Functions for Multi-Tenant Support
+export function getTenantFromSubdomain(): string | null {
+  if (typeof window === "undefined") return null;
+
+  const host = window.location.hostname;
+
+  // dipika.localhost - support localhost subdomains
+  if (host.endsWith(".localhost")) {
+    return host.split(".")[0];
+  }
+
+  const parts = host.split(".");
+
+  // localhost
+  if (host.includes("localhost")) {
+    return null;
+  }
+
+  // dipika.yourdomain.com
+  if (parts.length >= 3 && parts[0] !== "www") {
+    return parts[0];
+  }
+
+  return null;
+}
+
+export function getTenantSlug(): string | null {
+  if (typeof window === "undefined") return null;
+
+  return (
+    getTenantFromSubdomain() ||
+    localStorage.getItem(STORAGE_KEY) ||
+    process.env.NEXT_PUBLIC_TENANT_SLUG ||
+    null
+  );
+}
+
+export function setTenantSlug(slug: string) {
+  if (typeof window === "undefined") return;
+
+  localStorage.setItem(STORAGE_KEY, slug);
+}
+
+export function clearTenantSlug() {
+  if (typeof window === "undefined") return;
+
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+// Tenant Service Functions
 export interface Tenant {
   _id: string;
   name: string;
@@ -42,7 +94,11 @@ export const tenantService = {
   },
 
   async createTenant(data: CreateTenantData) {
-    const response = await api.post('/tenants', data);
+    const payload = {
+      name: data.name,
+      corporate_email: data.corporate_email,
+    };
+    const response = await api.post('/tenants', payload);
     return response.data;
   },
 
@@ -52,7 +108,11 @@ export const tenantService = {
   },
 
   async updateTenant(id: string, data: UpdateTenantData) {
-    const response = await api.put(`/tenants/${id}`, data);
+    const payload = {
+      name: data.name,
+      status: data.status,
+    };
+    const response = await api.patch(`/tenants/${id}`, payload);
     return response.data;
   },
 

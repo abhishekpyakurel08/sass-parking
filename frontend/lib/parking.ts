@@ -15,15 +15,15 @@ export interface CheckOutData {
 }
 
 export interface LostTicketData {
-  vehicle_type: VehicleType;
   license_plate: string;
+  vehicle_type: VehicleType;
   assumed_duration_hours: number;
 }
 
 export interface PaymentData {
   ticket_id: string;
+  amount_received: number;
   payment_method: PaymentMethod;
-  amount_received?: number;
   transaction_reference?: string;
 }
 
@@ -66,8 +66,8 @@ export const parkingService = {
     return response.data;
   },
 
-  async scanTicket(code: string) {
-    const response = await api.post('/parking/scan', { code });
+  async scanTicket(qrCode: string) {
+    const response = await api.post('/parking/scan', { qrCode });
     return response.data;
   },
 

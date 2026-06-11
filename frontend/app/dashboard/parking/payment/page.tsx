@@ -41,7 +41,7 @@ export default function PaymentPage() {
       }
 
       const data = await parkingService.processPayment(paymentData)
-      setReceiptData(data.receipt)
+      setReceiptData((data as any).receipt)
     } catch (err: any) {
       setError(err.message || 'Payment failed')
     } finally {

@@ -52,7 +52,13 @@ export const getTenantAnalytics = async (req: Request, res: Response, next: Next
 
     // Check cache first
     const cacheKey = `analytics:${tenantId}:${filter}`;
-    const cached = await redis.get(cacheKey);
+    let cached: string | null = null;
+    try {
+      cached = await redis.get(cacheKey);
+    } catch (e) {
+      // ignore
+    }
+    
     if (cached) {
       res.status(200).json(JSON.parse(cached));
       return;
@@ -111,7 +117,11 @@ export const getTenantAnalytics = async (req: Request, res: Response, next: Next
     };
 
     // Cache for 5 minutes (analytics don't need to be real-time)
-    await redis.setex(cacheKey, 300, JSON.stringify(response));
+    try {
+      await redis.setex(cacheKey, 300, JSON.stringify(response));
+    } catch (e) {
+      // ignore
+    }
 
     res.status(200).json(response);
   } catch (err) { next(err); }

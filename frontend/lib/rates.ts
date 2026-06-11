@@ -37,18 +37,18 @@ export const ratesService = {
     return response.data;
   },
 
-  async getRate(id: string) {
-    const response = await api.get(`/rates/${id}`);
+  async getRate(vehicleType: VehicleType) {
+    const response = await api.get(`/rates/${vehicleType}`);
     return response.data;
   },
 
-  async updateRate(id: string, data: UpdateRateData) {
-    const response = await api.put(`/rates/${id}`, data);
+  async updateRate(vehicleType: VehicleType, data: UpdateRateData) {
+    const response = await api.patch(`/rates/${vehicleType}`, data);
     return response.data;
   },
 
-  async deleteRate(id: string) {
-    const response = await api.delete(`/rates/${id}`);
+  async deleteRate(vehicleType: VehicleType) {
+    const response = await api.delete(`/rates/${vehicleType}`);
     return response.data;
   },
 };
