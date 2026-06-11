@@ -1,4 +1,4 @@
-import { getTenantSlug } from './tenant';
+import { getTenantSlug, setTenantSlug as setSlug, clearTenantSlug } from './tenant';
 
 /** API base URL — always use the env var, works for localhost AND production */
 const getBaseUrl = () => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
@@ -15,6 +15,8 @@ interface ApiResponse<T = any> {
 class ApiClient {
   private baseUrl: string;
   private token: string | null = null;
+  private isRefreshing = false;
+  private refreshSubscribers: ((token: string | null) => void)[] = [];
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
@@ -31,9 +33,7 @@ class ApiClient {
   }
 
   setTenantSlug(slug: string) {
-    // Use tenant helper for consistency
     if (typeof window !== 'undefined') {
-      const { setTenantSlug: setSlug } = require('./tenant');
       setSlug(slug);
     }
   }
@@ -43,8 +43,67 @@ class ApiClient {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
-      const { clearTenantSlug } = require('./tenant');
       clearTenantSlug();
+    }
+  }
+
+  private subscribeTokenRefresh(cb: (token: string | null) => void) {
+    this.refreshSubscribers.push(cb);
+  }
+
+  private onRefreshed(token: string | null) {
+    this.refreshSubscribers.forEach((cb) => cb(token));
+    this.refreshSubscribers = [];
+  }
+
+  private async executeRefresh(): Promise<string> {
+    const url = `${this.baseUrl}/auth/refresh`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.message || 'Refresh failed');
+    }
+
+    const data = await response.json();
+    if (data.success && data.data?.access_token) {
+      const newToken = data.data.access_token;
+      this.setToken(newToken);
+      return newToken;
+    }
+    throw new Error('No token returned from refresh');
+  }
+
+  private async handleTokenRefresh(): Promise<string> {
+    if (this.isRefreshing) {
+      return new Promise((resolve, reject) => {
+        this.subscribeTokenRefresh((token) => {
+          if (token) {
+            resolve(token);
+          } else {
+            reject(new Error('Refresh failed'));
+          }
+        });
+      });
+    }
+
+    this.isRefreshing = true;
+
+    try {
+      const newToken = await this.executeRefresh();
+      this.onRefreshed(newToken);
+      return newToken;
+    } catch (error) {
+      this.onRefreshed(null);
+      throw error;
+    } finally {
+      this.isRefreshing = false;
     }
   }
 
@@ -54,6 +113,9 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
     
+    // Always include credentials to support cookies cross-origin
+    options.credentials = 'include';
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
@@ -70,10 +132,31 @@ class ApiClient {
     }
 
     try {
-      const response = await fetch(url, {
+      let response = await fetch(url, {
         ...options,
         headers,
       });
+
+      // Handle 401 Unauthorized (expired token) by attempting refresh
+      if (response.status === 401 && !endpoint.includes('/auth/')) {
+        try {
+          const newToken = await this.handleTokenRefresh();
+          headers['Authorization'] = `Bearer ${newToken}`;
+          
+          // Retry the request with the new token
+          response = await fetch(url, {
+            ...options,
+            headers,
+          });
+        } catch (refreshError) {
+          console.error('Session refresh failed. Clearing session.', refreshError);
+          this.clearToken();
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login';
+          }
+          throw refreshError;
+        }
+      }
 
       const data = await response.json();
 

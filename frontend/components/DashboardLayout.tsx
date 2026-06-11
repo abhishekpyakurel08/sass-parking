@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useStore, type UserRole } from '../store/useStore'
 import { authService } from '../lib/auth'
+import { getTenantSlug } from '../lib/tenant'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -125,8 +126,10 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   const isAuthenticated = useStore((s) => s.isAuthenticated)
   const clearUser = useStore((s) => s.clearUser)
   const [collapsed, setCollapsed] = useState(false)
+  const [currentTenant, setCurrentTenant] = useState<string | null>(null)
 
   useEffect(() => {
+    setCurrentTenant(getTenantSlug())
     if (!isAuthenticated) {
       router.replace('/login')
     }
@@ -177,7 +180,14 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 16, fontWeight: 800, color: '#fff', flexShrink: 0,
               }}>P</div>
-              <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>ParkSaaS</span>
+              <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', display: 'flex', flexDirection: 'column' }}>
+                <span>ParkSaaS</span>
+                {currentTenant && (
+                  <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-muted)' }}>
+                    Tenant: {currentTenant}
+                  </span>
+                )}
+              </span>
             </div>
           )}
           <button onClick={() => setCollapsed(!collapsed)} style={{

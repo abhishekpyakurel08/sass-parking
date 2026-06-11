@@ -96,7 +96,13 @@ export const tenantService = {
   async createTenant(data: CreateTenantData) {
     const payload = {
       name: data.name,
+      slug: data.slug || undefined,
       corporate_email: data.corporate_email,
+      owner_name: data.owner_name,
+      owner_email: data.owner_email,
+      password: data.password,
+      contactNumber: data.contactNumber || undefined,
+      address: data.address || undefined,
     };
     const response = await api.post('/tenants', payload);
     return response.data;

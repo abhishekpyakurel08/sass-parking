@@ -2,28 +2,33 @@
 
 :root {
   /* Design Tokens for Auth UI */
-  --bg-base: #0A0D17;
-  --bg-surface: rgba(255,255,255,0.03);
-  --bg-card: #111827;
-  --bg-elevated: #1a2235;
+  --bg-base: #0B0F0E;
+  --bg-surface: rgba(255,255,255,0.04);
+  --bg-card: rgba(255,255,255,0.04);
+  --bg-elevated: rgba(255,255,255,0.06);
   --bg-input: rgba(255,255,255,0.05);
-  --bg-input-focus: rgba(99,102,241,0.08);
-  --border: #1e2d45;
-  --border-light: #243050;
-  --border-subtle: rgba(255,255,255,0.08);
+  --bg-input-focus: rgba(52,211,153,0.08);
+  --border: rgba(255,255,255,0.08);
+  --border-light: rgba(255,255,255,0.12);
+  --border-subtle: rgba(255,255,255,0.04);
 
-  --text-primary: #F4F4F8;
-  --text-secondary: #9CA3B8;
-  --text-muted: #64748b;
-  --text-subtle: #94a3b8;
+  --text-primary: #F4F6F4;
+  --text-secondary: #9DAFA8;
+  --text-muted: rgba(157,175,168,0.7);
+  --text-subtle: rgba(157,175,168,0.5);
 
-  --accent-primary: linear-gradient(135deg, #6366F1, #8B5CF6);
-  --accent: #6366f1;
-  --accent-hover: #4f46e5;
-  --accent-glow: rgba(99,102,241,0.25);
+  --accent-1: #34D399;
+  --accent-2: #10B981;
+  --accent-warm: #F2C879;
+  --accent-grad: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  
+  --accent-primary: var(--accent-grad);
+  --accent: var(--accent-1);
+  --accent-hover: var(--accent-2);
+  --accent-glow: rgba(52,211,153,0.25);
 
-  --success: #34D399;
-  --success-bg: rgba(52,211,153,0.12);
+  --success: #4ADE80;
+  --success-bg: rgba(74,222,128,0.12);
   --error: #F87171;
   --error-bg: rgba(248,113,113,0.12);
   --green: #10b981;
@@ -43,7 +48,7 @@
   --radius-xl: 20px;
   --shadow: 0 4px 24px rgba(0,0,0,0.4);
   --shadow-sm: 0 1px 8px rgba(0,0,0,0.3);
-  --shadow-lg: 0 8px 24px rgba(99,102,241,0.35);
+  --shadow-lg: 0 8px 24px rgba(52,211,153,0.35);
   --transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
 }
 
@@ -146,7 +151,7 @@ body {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 14px;
   font-family: inherit;
   transition: var(--transition);
@@ -289,7 +294,7 @@ body {
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: var(--accent-grad);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

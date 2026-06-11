@@ -36,18 +36,8 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       const response = await authService.register(form)
-      // Store user data if available
-      if (response.data?.owner_id) {
-        setUser({
-          id: response.data.owner_id,
-          name: form.name,
-          email: form.email,
-          role: 'TENANT_OWNER',
-          tenant_id: response.data.tenant_id,
-        })
-      }
-      // Redirect to dashboard after successful registration
-      router.push('/dashboard')
+      const slug = response.data?.tenant_slug || ''
+      router.push(`/login?registered=true&email=${encodeURIComponent(form.email)}&slug=${encodeURIComponent(slug)}`)
     } catch (err: any) {
       setError(err.message || 'Registration failed')
     } finally {

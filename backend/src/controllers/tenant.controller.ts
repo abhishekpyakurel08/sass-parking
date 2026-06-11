@@ -33,23 +33,27 @@ export const getAllTenants = async (req: Request, res: Response, next: NextFunct
 
 export const createTenant = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, corporate_email } = req.body;
+    const { name, corporate_email, owner_name, owner_email, password, contactNumber, address, slug: requestedSlug } = req.body;
 
-    const existing = await Tenant.findOne({ corporate_email });
-    if (existing) return next(new ConflictError(`Tenant with email ${corporate_email} already exists`));
+    if (!name || !corporate_email || !owner_name || !owner_email || !password) {
+      return next(new ValidationError('name, corporate_email, owner_name, owner_email, and password are required'));
+    }
 
-    // Generate normalized slug from name and ensure uniqueness
-    const baseSlug = normalizeSlug(name || '');
+    const existingTenant = await Tenant.findOne({ corporate_email });
+    if (existingTenant) return next(new ConflictError(`Tenant with email ${corporate_email} already exists`));
+
+    const existingOwner = await User.findOne({ email: owner_email });
+    if (existingOwner) return next(new ConflictError(`A user with email ${owner_email} already exists`));
+
+    // Resolve slug: use requested slug if provided, otherwise auto-generate from name
+    let baseSlug = requestedSlug ? normalizeSlug(requestedSlug) : normalizeSlug(name || '');
     const slugValidation = validateSlug(baseSlug);
     if (!slugValidation.valid) {
-      return next(new ValidationError(`Invalid tenant name for slug generation: ${slugValidation.error}`));
+      return next(new ValidationError(`Invalid slug: ${slugValidation.error}`));
     }
 
     let uniqueSlug = baseSlug;
     let counter = 1;
-    // If a tenant with this slug exists, append -1, -2, ... until unique
-    // Note: corporate_email uniqueness already checked above
-    // Use a loop with a limit to avoid infinite loops
     const MAX_ATTEMPTS = 1000;
     while (await Tenant.findOne({ slug: uniqueSlug })) {
       uniqueSlug = `${baseSlug}-${counter}`;
@@ -59,8 +63,47 @@ export const createTenant = async (req: Request, res: Response, next: NextFuncti
       }
     }
 
-    const tenant = await Tenant.create({ name, corporate_email, slug: uniqueSlug });
-    res.status(201).json({ success: true, data: tenant });
+    const tenant = await Tenant.create({
+      name,
+      corporate_email,
+      slug: uniqueSlug,
+      ownerName: owner_name,
+      contactNumber,
+      address,
+    });
+
+    // Create the tenant owner user account
+    const password_hash = await bcrypt.hash(password, env.BCRYPT_ROUNDS);
+    const ownerUser = await User.create({
+      tenant_id: tenant._id,
+      name: owner_name,
+      email: owner_email,
+      password_hash,
+      role: UserRole.TENANT_OWNER,
+      is_email_verified: true, // Super admin created — skip email verification
+    });
+
+    // Send onboarding email (non-blocking)
+    try {
+      const { sendOnboardingEmail } = await import('../utils/email.js');
+      await sendOnboardingEmail(owner_email, name, owner_name, tenant._id.toString());
+    } catch (emailErr) {
+      console.error('Onboarding email failed (non-critical):', emailErr);
+    }
+
+    res.status(201).json({
+      success: true,
+      data: {
+        tenant,
+        owner: {
+          id: ownerUser._id,
+          name: ownerUser.name,
+          email: ownerUser.email,
+          role: ownerUser.role,
+        },
+      },
+      message: `Tenant "${name}" created successfully. Owner account set up for ${owner_email}.`,
+    });
   } catch (err) { next(err); }
 };
 

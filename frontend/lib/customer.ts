@@ -62,7 +62,7 @@ export const customerService = {
   },
 
   async regenerateQrCode(customerId: string) {
-    const response = await api.post('/customers/regenerate-qr', { customer_id: customerId });
+    const response = await api.post(`/customers/${customerId}/regenerate-qr`);
     return response.data;
   },
 };

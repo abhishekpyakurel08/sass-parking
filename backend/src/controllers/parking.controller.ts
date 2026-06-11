@@ -18,9 +18,7 @@ import { calculateFare } from '../utils/billing.js';
 import { generateTicketNumber } from '../utils/ticketNumber.js';
 
 export const checkIn = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
+    try {
     const tenantId = req.tenant!.tenantId;
     const { license_plate, vehicle_type, customer_code, notes } = req.body;
 
@@ -29,13 +27,11 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction): 
     let customerId = undefined;
 
     if (customer_code) {
-      customer = await Customer.findOne({ tenant_id: tenantId, customer_code }).session(session);
+      customer = await Customer.findOne({ tenant_id: tenantId, customer_code });
       if (!customer) {
-        await session.abortTransaction();
         return next(new NotFoundError('Regular customer not found with the provided code.'));
       }
       if (customer.status !== CustomerStatus.ACTIVE) {
-        await session.abortTransaction();
         return next(new ValidationError(`Customer account is ${customer.status}.`));
       }
       customerId = customer._id;
@@ -50,16 +46,14 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction): 
       tenant_id: tenantId,
       license_plate: resolvedLicensePlate.toUpperCase(),
       status: TicketStatus.ACTIVE,
-    }).session(session);
+    });
 
     if (activeTicket) {
-      await session.abortTransaction();
       return next(new ConflictError('This vehicle already has an active parking ticket.'));
     }
 
-    const staffUser = await User.findById(req.user!.userId).session(session);
+    const staffUser = await User.findById(req.user!.userId);
     if (staffUser?.role === UserRole.GATE_STAFF && staffUser.gate_assignment === GateAssignment.EXIT) {
-      await session.abortTransaction();
       return next(new ForbiddenError('Access denied: You are only authorized to process exits.'));
     }
     const ticketUUID = generateTicketNumber(vehicle_type);
@@ -78,11 +72,8 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction): 
         penalty_amount: 0,
         discount_amount: customer ? customer.discount_percentage : 0,
         notes: notes || '',
-      }],
-      { session }
+      }]
     );
-
-    await session.commitTransaction();
 
     logTransaction('CHECK_IN', {
       tenantId,
@@ -135,29 +126,23 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction): 
       }
     });
   } catch (err) {
-    await session.abortTransaction();
     next(err);
-  } finally {
-    session.endSession();
   }
 };
 
 export const checkOut = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
+    try {
     const tenantId = req.tenant!.tenantId;
     const { ticket_id } = req.body;
 
-    const staffUser = await User.findById(req.user!.userId).session(session);
+    const staffUser = await User.findById(req.user!.userId);
     if (staffUser?.role === UserRole.GATE_STAFF && staffUser.gate_assignment === GateAssignment.ENTRY) {
-      await session.abortTransaction();
       return next(new ForbiddenError('Access denied: You are only authorized to process entries.'));
     }
 
     let ticket;
     if (mongoose.isValidObjectId(ticket_id)) {
-      ticket = await Ticket.findOne({ _id: ticket_id, tenant_id: tenantId, status: TicketStatus.ACTIVE }).session(session).populate('customer_id');
+      ticket = await Ticket.findOne({ _id: ticket_id, tenant_id: tenantId, status: TicketStatus.ACTIVE }).populate('customer_id');
     } else {
       const normalizedTicketId = ticket_id.toLowerCase();
       const normalizedPlate = ticket_id.toUpperCase();
@@ -169,11 +154,10 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
           { ticket_number: normalizedTicketId },
           { license_plate: normalizedPlate }
         ]
-      }).session(session).populate('customer_id');
+      }).populate('customer_id');
     }
 
     if (!ticket) {
-      await session.abortTransaction();
       return next(new NotFoundError('Active ticket not found.'));
     }
 
@@ -184,7 +168,7 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
     const rateDoc = await HourlyRate.findOne({
       tenant_id: tenantId,
       vehicle_type: ticket.vehicle_type,
-    }).session(session);
+    });
 
     const rate_per_hour = rateDoc?.rate_per_hour ?? 50;
 
@@ -206,8 +190,6 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
       ticket.notes = (ticket.notes ? ticket.notes + ' | ' : '') + 'AUDIT_ALERT: Overstay > 48h — supervisor review required';
     }
     await ticket.save({ session });
-
-    await session.commitTransaction();
 
     logTransaction('CHECK_OUT', {
       tenantId,
@@ -243,30 +225,24 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
       },
     });
   } catch (err) {
-    await session.abortTransaction();
     next(err);
-  } finally {
-    session.endSession();
   }
 };
 
 export const handleLostTicket = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
+    try {
     const tenantId = req.tenant!.tenantId;
     const { vehicle_type, license_plate, assumed_duration_hours } = req.body;
 
-    const staffUser = await User.findById(req.user!.userId).session(session);
+    const staffUser = await User.findById(req.user!.userId);
     if (staffUser?.role === UserRole.GATE_STAFF && staffUser.gate_assignment === GateAssignment.ENTRY) {
-      await session.abortTransaction();
       return next(new ForbiddenError('Access denied: You are only authorized to process entries.'));
     }
 
     const rateDoc = await HourlyRate.findOne({
       tenant_id: tenantId,
       vehicle_type: vehicle_type,
-    }).session(session);
+    });
 
     const rate_per_hour = rateDoc?.rate_per_hour ?? 50;
     const lost_ticket_penalty = rateDoc?.lost_ticket_penalty ?? 100;
@@ -278,10 +254,9 @@ export const handleLostTicket = async (req: Request, res: Response, next: NextFu
       tenant_id: tenantId,
       license_plate: license_plate.toUpperCase(),
       status: TicketStatus.ACTIVE,
-    }).session(session);
+    });
 
     if (existingActiveTicket) {
-      await session.abortTransaction();
       return next(new ConflictError('An active ticket already exists for this vehicle. Cannot process as lost.'));
     }
 
@@ -302,11 +277,8 @@ export const handleLostTicket = async (req: Request, res: Response, next: NextFu
         discount_amount: 0,
         status: TicketStatus.PENDING_PAYMENT,
         notes: `LOST TICKET - Assumed duration: ${assumed_duration_hours}h`,
-      }],
-      { session }
+      }]
     );
-
-    await session.commitTransaction();
 
     logTransaction('LOST_TICKET_HANDLED', {
       tenantId,
@@ -333,29 +305,23 @@ export const handleLostTicket = async (req: Request, res: Response, next: NextFu
       },
     });
   } catch (err) {
-    await session.abortTransaction();
     next(err);
-  } finally {
-    session.endSession();
   }
 };
 
 export const processPayment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
+    try {
     const tenantId = req.tenant!.tenantId;
     const { ticket_id, payment_method, amount_received, transaction_reference } = req.body;
 
-    const staffUser = await User.findById(req.user!.userId).session(session);
+    const staffUser = await User.findById(req.user!.userId);
     if (staffUser?.role === UserRole.GATE_STAFF && staffUser.gate_assignment === GateAssignment.ENTRY) {
-      await session.abortTransaction();
       return next(new ForbiddenError('Access denied: You are only authorized to process entries.'));
     }
 
     let ticket;
     if (mongoose.isValidObjectId(ticket_id)) {
-      ticket = await Ticket.findOne({ _id: ticket_id, tenant_id: tenantId, status: TicketStatus.PENDING_PAYMENT }).session(session);
+      ticket = await Ticket.findOne({ _id: ticket_id, tenant_id: tenantId, status: TicketStatus.PENDING_PAYMENT });
     } else {
       const normalizedTicketId = ticket_id.toLowerCase();
       const normalizedPlate = ticket_id.toUpperCase();
@@ -367,11 +333,10 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
           { ticket_number: normalizedTicketId },
           { license_plate: normalizedPlate }
         ]
-      }).session(session);
+      });
     }
 
     if (!ticket) {
-      await session.abortTransaction();
       return next(new NotFoundError('Ticket not found or not in PENDING_PAYMENT status.'));
     }
 
@@ -380,7 +345,6 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
 
     if (payment_method === PaymentMethod.CASH) {
       if (amount_received === undefined || amount_received < total_due) {
-        await session.abortTransaction();
         return next(new ValidationError('Amount received is insufficient for cash payment.'));
       }
       change_given = amount_received - total_due;
@@ -396,12 +360,9 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
     if (ticket.customer_id && ticket.discount_amount > 0) {
       await Customer.findByIdAndUpdate(
         ticket.customer_id,
-        { $inc: { total_savings: ticket.discount_amount } },
-        { session }
+        { $inc: { total_savings: ticket.discount_amount } }
       );
     }
-
-    await session.commitTransaction();
 
     logTransaction('PAYMENT_PROCESSED', {
       tenantId,
@@ -462,10 +423,7 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
       },
     });
   } catch (err) {
-    await session.abortTransaction();
     next(err);
-  } finally {
-    session.endSession();
   }
 };
 

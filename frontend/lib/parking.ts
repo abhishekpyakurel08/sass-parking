@@ -67,7 +67,7 @@ export const parkingService = {
   },
 
   async scanTicket(qrCode: string) {
-    const response = await api.post('/parking/scan', { qrCode });
+    const response = await api.post('/parking/scan', { code: qrCode });
     return response.data;
   },
 

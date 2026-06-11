@@ -19,7 +19,7 @@ export default function AuthLayout({ children, brandTitle, brandSubtitle, showSt
       {/* Left Panel - Brand Panel (40%) */}
       <div style={{
         width: '40%',
-        background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #0A0D17 100%)',
+        background: 'radial-gradient(ellipse at 25% 15%, rgba(52,211,153,0.30), transparent 60%), radial-gradient(ellipse at 80% 85%, rgba(242,200,121,0.18), transparent 60%), #0A0E0D',
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
@@ -31,7 +31,7 @@ export default function AuthLayout({ children, brandTitle, brandSubtitle, showSt
         <div style={{
           position: 'absolute',
           inset: 0,
-          background: 'radial-gradient(circle at 30% 50%, rgba(99,102,241,0.3) 0%, transparent 50%), radial-gradient(circle at 70% 50%, rgba(139,92,246,0.3) 0%, transparent 50%)',
+          background: 'radial-gradient(circle at 30% 50%, rgba(52,211,153,0.15) 0%, transparent 50%), radial-gradient(circle at 70% 50%, rgba(242,200,121,0.1) 0%, transparent 50%)',
           animation: 'gradientShift 8s ease-in-out infinite',
         }} />
 
@@ -81,7 +81,7 @@ export default function AuthLayout({ children, brandTitle, brandSubtitle, showSt
           {/* Stats Cards */}
           {showStats && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <StatCard number="200+" label="Active Tenants" />
+              <StatCard number="200+" label="Active Tenants" highlight />
               <StatCard number="50K+" label="Daily Transactions" />
               <StatCard number="99.9%" label="Uptime" />
               <StatCard number="24/7" label="Support" />
@@ -104,7 +104,7 @@ export default function AuthLayout({ children, brandTitle, brandSubtitle, showSt
         <div style={{
           position: 'absolute',
           inset: 0,
-          background: 'radial-gradient(circle at center, rgba(99,102,241,0.05) 0%, transparent 70%)',
+          background: 'radial-gradient(circle at center, rgba(52,211,153,0.05) 0%, transparent 70%)',
           pointerEvents: 'none',
         }} />
 
@@ -122,7 +122,7 @@ export default function AuthLayout({ children, brandTitle, brandSubtitle, showSt
   )
 }
 
-function StatCard({ number, label }: { number: string; label: string }) {
+function StatCard({ number, label, highlight }: { number: string; label: string; highlight?: boolean }) {
   return (
     <div style={{
       background: 'rgba(255,255,255,0.1)',
@@ -142,7 +142,7 @@ function StatCard({ number, label }: { number: string; label: string }) {
       e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
     }}
     >
-      <div style={{ fontSize: 28, fontWeight: 700, color: '#fff', marginBottom: 4 }}>
+      <div style={{ fontSize: 28, fontWeight: 700, color: highlight ? 'var(--accent-warm)' : '#fff', marginBottom: 4 }}>
         {number}
       </div>
       <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>

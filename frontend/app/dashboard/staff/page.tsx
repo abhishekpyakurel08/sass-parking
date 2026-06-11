@@ -35,7 +35,7 @@ export default function StaffPage() {
       if (editingStaff) await staffService.updateStaff(editingStaff._id, { name: form.name, gate_assignment: form.gate_assignment, ticket_prefix: form.ticket_prefix })
       else {
         const res: any = await staffService.createStaff(form)
-        if (res.api_key) setNewApiKey(res.api_key)
+        if (res.api_key?.raw_key) setNewApiKey(res.api_key.raw_key)
       }
       if (editingStaff) setShowModal(false) // Keep modal open on create to show API key
       load()
@@ -53,8 +53,8 @@ export default function StaffPage() {
     try {
       setFormLoading(true)
       const res: any = await staffService.regenerateApiKey(id)
-      if (res.api_key) {
-        setNewApiKey(res.api_key)
+      if (res.api_key?.raw_key) {
+        setNewApiKey(res.api_key.raw_key)
         setShowModal(true) // Show modal just to display the key
         setEditingStaff(staff.find(s => s._id === id) || null)
       }

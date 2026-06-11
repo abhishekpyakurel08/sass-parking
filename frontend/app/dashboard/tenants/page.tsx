@@ -3,10 +3,13 @@
 import { useState, useEffect } from 'react'
 import DashboardLayout from '../../../components/DashboardLayout'
 import { tenantService, type Tenant } from '../../../lib/tenant'
+import { analyticsService } from '../../../lib/analytics'
 
 export default function TenantsPage() {
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [loading, setLoading] = useState(true)
+  const [globalStats, setGlobalStats] = useState<any>(null)
+  const [globalLoading, setGlobalLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
@@ -24,11 +27,25 @@ export default function TenantsPage() {
   const load = async () => {
     try {
       setLoading(true)
-      const data: any = await tenantService.getTenants(page, 15)
-      setTenants(data?.data || [])
-      setTotalPages(data?.pagination?.totalPages || 1)
-      setTotal(data?.pagination?.total || 0)
-    } catch { } finally { setLoading(false) }
+      setGlobalLoading(true)
+      const [tenantData, globalData] = await Promise.all([
+        tenantService.getTenants(page, 15),
+        analyticsService.getGlobalAnalytics().catch(() => null)
+      ])
+      
+      const tData = tenantData as any;
+      setTenants(tData?.data || [])
+      setTotalPages(tData?.pagination?.totalPages || 1)
+      setTotal(tData?.pagination?.total || 0)
+      
+      const gData = globalData as any;
+      if (gData?.success) {
+        setGlobalStats(gData.data)
+      }
+    } catch { } finally {
+      setLoading(false)
+      setGlobalLoading(false)
+    }
   }
 
   const openCreate = () => { setEditingTenant(null); setForm(emptyForm); setFormError(''); setShowModal(true) }
@@ -64,6 +81,46 @@ export default function TenantsPage() {
 
   return (
     <DashboardLayout title="Tenant Management" subtitle={`${total} registered parking businesses`}>
+      {/* Global Analytics Overview */}
+      <div className="stats-grid" style={{ marginBottom: 24 }}>
+        <div className="stat-card" style={{ cursor: 'default' }}>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Businesses</p>
+          <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text)' }}>
+            {globalLoading ? <div style={{ width: 40, height: 24, background: 'var(--bg-elevated)', borderRadius: 4, animation: 'pulse 1.5s infinite' }} /> : (globalStats?.total_tenants ?? 0)}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+            Registered Tenants
+          </div>
+        </div>
+        <div className="stat-card" style={{ cursor: 'default' }}>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active Businesses</p>
+          <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text)' }}>
+            {globalLoading ? <div style={{ width: 40, height: 24, background: 'var(--bg-elevated)', borderRadius: 4, animation: 'pulse 1.5s infinite' }} /> : (globalStats?.active_tenants ?? 0)}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 4, fontWeight: 600 }}>
+            {globalStats?.total_tenants ? `${Math.round((globalStats.active_tenants / globalStats.total_tenants) * 100)}% active` : '0%'}
+          </div>
+        </div>
+        <div className="stat-card" style={{ cursor: 'default' }}>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Platform Revenue</p>
+          <div style={{ fontSize: 24, fontWeight: 700, color: '#10b981' }}>
+            {globalLoading ? <div style={{ width: 80, height: 24, background: 'var(--bg-elevated)', borderRadius: 4, animation: 'pulse 1.5s infinite' }} /> : `Rs. ${(globalStats?.total_revenue ?? 0).toLocaleString()}`}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+            Across all systems
+          </div>
+        </div>
+        <div className="stat-card" style={{ cursor: 'default' }}>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active Tickets</p>
+          <div style={{ fontSize: 24, fontWeight: 700, color: '#6366f1' }}>
+            {globalLoading ? <div style={{ width: 40, height: 24, background: 'var(--bg-elevated)', borderRadius: 4, animation: 'pulse 1.5s infinite' }} /> : (globalStats?.active_tickets ?? 0)}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+            Parked vehicles platform-wide
+          </div>
+        </div>
+      </div>
+
       <div className="page-header" style={{ marginBottom: 20 }}>
         <div style={{ position: 'relative', width: 280 }}>
           <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -114,7 +171,39 @@ export default function TenantsPage() {
                       </div>
                     </div>
                   </td>
-                  <td style={{ fontFamily: 'monospace', color: 'var(--accent)', fontSize: 13 }}>{t.slug}</td>
+                  <td style={{ fontFamily: 'monospace', color: 'var(--accent)', fontSize: 13 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span style={{ fontWeight: 600 }}>{t.slug}</span>
+                      <a
+                        href={(() => {
+                          if (typeof window === 'undefined') return '';
+                          const host = window.location.host;
+                          if (host.includes('localhost')) {
+                            return `http://${t.slug}.localhost:3000/login`;
+                          }
+                          const parts = host.split('.');
+                          if (parts.length >= 2) {
+                            const baseDomain = parts.slice(-2).join('.');
+                            return `https://${t.slug}.${baseDomain}/login`;
+                          }
+                          return `https://${t.slug}.${host}/login`;
+                        })()}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          fontSize: 11,
+                          color: 'var(--accent)',
+                          textDecoration: 'underline',
+                          opacity: 0.8,
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                        onMouseLeave={e => (e.currentTarget.style.opacity = '0.8')}
+                      >
+                        Login URL ↗
+                      </a>
+                    </div>
+                  </td>
                   <td style={{ color: 'var(--text-subtle)' }}>{t.ownerName}</td>
                   <td style={{ color: 'var(--text-muted)' }}>{t.contactNumber || '—'}</td>
                   <td>

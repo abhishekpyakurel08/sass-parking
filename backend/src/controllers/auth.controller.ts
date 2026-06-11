@@ -246,10 +246,12 @@ export const verifyEmail = async (req: Request, res: Response, next: NextFunctio
       return next(new AuthError('Invalid or expired verification token'));
     }
 
-    // Check if token is expired (10 minutes)
+    // Check if token is expired (24 hours in dev, 1 hour in prod)
     const tokenAge = Date.now() - (user.updatedAt?.getTime() || 0);
-    const tenMinutes = 10 * 60 * 1000;
-    if (tokenAge > tenMinutes) {
+    const expiryWindow = env.isProd
+      ? 60 * 60 * 1000          // 1 hour in production
+      : 24 * 60 * 60 * 1000;   // 24 hours in development
+    if (tokenAge > expiryWindow) {
       return next(new AuthError('Verification token has expired. Please request a new verification email.'));
     }
 
@@ -285,10 +287,11 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
     const user = await User.findOne({ email });
     if (!user) {
       // Don't reveal if email exists for security
-      return res.status(200).json({
+      res.status(200).json({
         success: true,
         message: 'If an account with this email exists, a password reset link has been sent.',
       });
+      return;
     }
 
     // Generate reset token

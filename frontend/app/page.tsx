@@ -22,7 +22,7 @@ export default function Home() {
     }}>
       <div style={{
         width: 64, height: 64, borderRadius: 16, marginBottom: 24,
-        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+        background: 'var(--accent-grad)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 32, fontWeight: 800, color: '#fff',
         animation: 'pulse 1.5s infinite'

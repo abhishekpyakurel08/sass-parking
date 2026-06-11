@@ -2,13 +2,18 @@
 export const extractSubdomain = (host: string): string | null => {
   if (!host) return null;
   
-  // Handle localhost or IP addresses
-  if (host === 'localhost' || host === '127.0.0.1' || /^\d+\.\d+\.\d+\.\d+$/.test(host)) {
-    return null;
-  }
-  
   // Remove port if present
   const hostname = host.split(':')[0];
+
+  // Handle localhost or IP addresses
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+    return null;
+  }
+
+  // dipika.localhost
+  if (hostname.endsWith('.localhost')) {
+    return hostname.split('.')[0];
+  }
   
   // Split by dots
   const parts = hostname.split('.');

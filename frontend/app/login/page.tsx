@@ -21,10 +21,11 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Pre-fill slug from URL ?slug=xxx or subdomain
+  // Pre-fill slug and email from URL parameters or subdomain
   useEffect(() => {
     const slugFromUrl = searchParams.get('slug')
-    let subdomainSlug = null;
+    const emailFromUrl = searchParams.get('email')
+    let subdomainSlug: string | null = null;
     
     if (typeof window !== 'undefined') {
       const host = window.location.hostname;
@@ -38,11 +39,11 @@ export default function LoginPage() {
       }
     }
     
-    if (slugFromUrl) {
-      setFormData(f => ({ ...f, slug: slugFromUrl }))
-    } else if (subdomainSlug && subdomainSlug !== 'www') {
-      setFormData(f => ({ ...f, slug: subdomainSlug }))
-    }
+    setFormData(f => ({
+      email: emailFromUrl || f.email,
+      password: f.password,
+      slug: slugFromUrl || subdomainSlug || f.slug || ''
+    }))
   }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,6 +76,11 @@ export default function LoginPage() {
         title="Welcome back"
         subtitle="Sign in to your ParkSaaS account"
       >
+        {searchParams.get('registered') === 'true' && (
+          <div className="alert alert-success animate-fade-in" style={{ marginBottom: '20px' }}>
+            Registration successful! Please check your email to verify your account, and sign in below.
+          </div>
+        )}
         <form onSubmit={handleSubmit}>
           <div className="animate-stagger-1">
             <TextField

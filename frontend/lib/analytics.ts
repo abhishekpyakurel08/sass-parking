@@ -39,4 +39,9 @@ export const analyticsService = {
     const response = await api.get(`/analytics/tenant?type=staff&period=${period}`);
     return response.data;
   },
+  
+  async getGlobalAnalytics() {
+    const response = await api.get('/analytics/global');
+    return response.data;
+  },
 };

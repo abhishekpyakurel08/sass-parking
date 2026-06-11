@@ -51,6 +51,20 @@ export const sendVerificationEmail = async (
   userName?: string
 ): Promise<void> => {
   const verificationUrl = `${env.FRONTEND_URL}/verify-email?token=${token}`;
+
+  // In development, skip Resend (free tier blocks unverified recipients)
+  // and print the link to the console so it can be used directly.
+  if (!env.isProd) {
+    console.log('\n' + '='.repeat(70));
+    console.log('📧  DEV EMAIL — Email Verification');
+    console.log('='.repeat(70));
+    console.log(`  To      : ${email}`);
+    console.log(`  User    : ${userName || 'User'}`);
+    console.log(`  Link    : ${verificationUrl}`);
+    console.log('='.repeat(70) + '\n');
+    return;
+  }
+
   const branding = tenantId ? await getTenantBranding(tenantId) : {};
 
   try {
@@ -86,7 +100,38 @@ export const sendOnboardingEmail = async (
   ownerName: string,
   tenantId?: string
 ): Promise<void> => {
-  const dashboardUrl = `${env.FRONTEND_URL}/dashboard`;
+  let dashboardUrl = `${env.FRONTEND_URL}/dashboard`;
+
+  if (tenantId) {
+    try {
+      const tenant = await Tenant.findById(tenantId).lean();
+      if (tenant && tenant.slug) {
+        const url = new URL(env.FRONTEND_URL);
+        if (url.hostname === 'localhost') {
+          url.hostname = `${tenant.slug}.localhost`;
+        } else {
+          url.hostname = `${tenant.slug}.${url.hostname}`;
+        }
+        dashboardUrl = `${url.origin}/dashboard`;
+      }
+    } catch (err) {
+      console.error('Failed to construct custom subdomain URL for onboarding email:', err);
+    }
+  }
+
+  // In development, skip Resend and log to console instead.
+  if (!env.isProd) {
+    console.log('\n' + '='.repeat(70));
+    console.log('📧  DEV EMAIL — Onboarding Welcome');
+    console.log('='.repeat(70));
+    console.log(`  To          : ${email}`);
+    console.log(`  Owner       : ${ownerName}`);
+    console.log(`  Tenant      : ${tenantName}`);
+    console.log(`  Dashboard   : ${dashboardUrl}`);
+    console.log('='.repeat(70) + '\n');
+    return;
+  }
+
   const branding = tenantId ? await getTenantBranding(tenantId) : {};
 
   try {
@@ -123,6 +168,19 @@ export const sendPasswordResetEmail = async (
   userName?: string
 ): Promise<void> => {
   const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${token}`;
+
+  // In development, skip Resend and log to console instead.
+  if (!env.isProd) {
+    console.log('\n' + '='.repeat(70));
+    console.log('📧  DEV EMAIL — Password Reset');
+    console.log('='.repeat(70));
+    console.log(`  To      : ${email}`);
+    console.log(`  User    : ${userName || 'User'}`);
+    console.log(`  Link    : ${resetUrl}`);
+    console.log('='.repeat(70) + '\n');
+    return;
+  }
+
   const branding = tenantId ? await getTenantBranding(tenantId) : {};
 
   try {

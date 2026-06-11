@@ -35,6 +35,7 @@ export interface AuthResponse {
     };
     tenant_id?: string;
     tenant_name?: string;
+    tenant_slug?: string;
     owner_id?: string;
     owner_email?: string;
     requires_email_verification?: boolean;
@@ -97,23 +98,10 @@ export const authService = {
   },
 
   async refreshToken(): Promise<AuthResponse> {
-    const refreshToken = typeof window !== 'undefined' 
-      ? localStorage.getItem('refresh_token') 
-      : null;
-    
-    if (!refreshToken) {
-      throw new Error('No refresh token available');
-    }
-
-    const response = await api.post<{ access_token: string; refresh_token?: string; expires_in?: number }>('/auth/refresh', {
-      refresh_token: refreshToken,
-    });
+    const response = await api.post<{ access_token: string; expires_in?: number }>('/auth/refresh', {});
 
     if (response.success && response.data?.access_token) {
       api.setToken(response.data.access_token);
-      if (typeof window !== 'undefined' && response.data.refresh_token) {
-        localStorage.setItem('refresh_token', response.data.refresh_token);
-      }
       return {
         success: true,
         data: response.data,
