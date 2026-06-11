@@ -219,7 +219,7 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
         breakdown: billing.breakdown,
         subtotal: billing.base_fare,
         discount: discount_amount,
-        total_amount: base_fare,
+        total_amount: base_fare - discount_amount,
         audit_alert: billing.audit_alert,
         status: ticket.status,
       },

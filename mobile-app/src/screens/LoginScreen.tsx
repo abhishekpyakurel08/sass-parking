@@ -42,7 +42,7 @@ export default function LoginScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       {/* Background Gradients */}
-      <LinearGradient colors={['#020617', '#0f172a', '#020617']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={['#0B0F0E', '#0F1412', '#0B0F0E']} style={StyleSheet.absoluteFill} />
       <View style={styles.glowOrb1} />
       <View style={styles.glowOrb2} />
 
@@ -51,7 +51,7 @@ export default function LoginScreen({ navigation }: any) {
           
           <View style={styles.header}>
             <View style={styles.iconCircle}>
-              <LinearGradient colors={['#38bdf8', '#3b82f6']} style={StyleSheet.absoluteFill} />
+              <LinearGradient colors={['#34D399', '#10B981']} style={StyleSheet.absoluteFill} />
               <Feather name="shield" size={40} color="#fff" />
             </View>
             <Text style={styles.logo}>ParkSaaS</Text>
@@ -63,11 +63,11 @@ export default function LoginScreen({ navigation }: any) {
               <Text style={styles.label}>OPERATOR CREDENTIALS</Text>
               
               <View style={[styles.inputWrapper, email ? styles.inputWrapperActive : null, { marginBottom: 16 }]}>
-                <Feather name="mail" size={20} color={email ? '#38bdf8' : '#64748b'} style={styles.inputIcon} />
+                <Feather name="mail" size={20} color={email ? '#34D399' : '#9DAFA8'} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="Email Address"
-                  placeholderTextColor="#475569"
+                  placeholderTextColor="#9DAFA8"
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
@@ -76,23 +76,23 @@ export default function LoginScreen({ navigation }: any) {
               </View>
 
               <View style={[styles.inputWrapper, password ? styles.inputWrapperActive : null]}>
-                <Feather name="lock" size={20} color={password ? '#38bdf8' : '#64748b'} style={styles.inputIcon} />
+                <Feather name="lock" size={20} color={password ? '#34D399' : '#9DAFA8'} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="Password"
-                  placeholderTextColor="#475569"
+                  placeholderTextColor="#9DAFA8"
                   value={password}
                   onChangeText={setPassword}
                   autoCapitalize="none"
                   secureTextEntry={!showPassword}
                 />
                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-                  <Feather name={showPassword ? "eye-off" : "eye"} size={20} color="#64748b" />
+                  <Feather name={showPassword ? "eye-off" : "eye"} size={20} color="#9DAFA8" />
                 </TouchableOpacity>
               </View>
               
               <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
-                <LinearGradient colors={['#0ea5e9', '#2563eb']} style={styles.gradientBtn} start={{x: 0, y: 0}} end={{x: 1, y: 1}}>
+                <LinearGradient colors={['#34D399', '#10B981']} style={styles.gradientBtn} start={{x: 0, y: 0}} end={{x: 1, y: 1}}>
                   {loading ? <ActivityIndicator color="#fff" /> : (
                     <>
                       <Text style={styles.buttonText}>Authenticate</Text>
@@ -116,29 +116,29 @@ export default function LoginScreen({ navigation }: any) {
 const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#020617' },
-  glowOrb1: { position: 'absolute', top: -100, left: -50, width: width, height: width, borderRadius: width/2, backgroundColor: 'rgba(56, 189, 248, 0.15)', transform: [{ scale: 1.5 }], filter: 'blur(50px)' },
-  glowOrb2: { position: 'absolute', bottom: -100, right: -50, width: width, height: width, borderRadius: width/2, backgroundColor: 'rgba(59, 130, 246, 0.15)', transform: [{ scale: 1.5 }], filter: 'blur(50px)' },
+  container: { flex: 1, backgroundColor: '#0B0F0E' },
+  glowOrb1: { position: 'absolute', top: -100, left: -50, width: width, height: width, borderRadius: width/2, backgroundColor: 'rgba(52, 211, 153, 0.15)', transform: [{ scale: 1.5 }], filter: 'blur(50px)' },
+  glowOrb2: { position: 'absolute', bottom: -100, right: -50, width: width, height: width, borderRadius: width/2, backgroundColor: 'rgba(16, 185, 129, 0.15)', transform: [{ scale: 1.5 }], filter: 'blur(50px)' },
   
   inner: { flex: 1, justifyContent: 'center', padding: 24, zIndex: 10 },
   header: { alignItems: 'center', marginBottom: 48 },
-  iconCircle: { width: 88, height: 88, borderRadius: 44, justifyContent: 'center', alignItems: 'center', marginBottom: 20, overflow: 'hidden', shadowColor: '#38bdf8', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.5, shadowRadius: 16, elevation: 10 },
-  logo: { fontSize: 48, fontWeight: '900', color: '#ffffff', letterSpacing: -2, marginBottom: 4 },
-  subtitle: { fontSize: 16, color: '#94a3b8', fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase' },
+  iconCircle: { width: 88, height: 88, borderRadius: 44, justifyContent: 'center', alignItems: 'center', marginBottom: 20, overflow: 'hidden', shadowColor: 'rgba(52,211,153,0.5)', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.5, shadowRadius: 16, elevation: 10 },
+  logo: { fontSize: 48, fontWeight: '900', color: '#F4F6F4', letterSpacing: -2, marginBottom: 4 },
+  subtitle: { fontSize: 16, color: '#9DAFA8', fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase' },
   
-  formContainer: { borderRadius: 32, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.5, shadowRadius: 30, elevation: 20 },
-  form: { padding: 32, backgroundColor: 'rgba(15, 23, 42, 0.6)' },
-  label: { color: '#e2e8f0', fontSize: 13, fontWeight: '800', marginBottom: 16, letterSpacing: 1.5 },
+  formContainer: { borderRadius: 32, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.5, shadowRadius: 30, elevation: 20 },
+  form: { padding: 32, backgroundColor: 'rgba(255,255,255,0.04)' },
+  label: { color: '#F4F6F4', fontSize: 13, fontWeight: '800', marginBottom: 16, letterSpacing: 1.5 },
   
-  inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', marginBottom: 32 },
-  inputWrapperActive: { borderColor: 'rgba(56, 189, 248, 0.4)', backgroundColor: 'rgba(56, 189, 248, 0.05)' },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginBottom: 32 },
+  inputWrapperActive: { borderColor: 'rgba(52, 211, 153, 0.4)', backgroundColor: 'rgba(52, 211, 153, 0.05)' },
   inputIcon: { paddingLeft: 20 },
-  input: { flex: 1, color: '#fff', padding: 20, fontSize: 16, fontWeight: '600' },
+  input: { flex: 1, color: '#F4F6F4', padding: 20, fontSize: 16, fontWeight: '600' },
   eyeBtn: { padding: 20 },
   
-  button: { borderRadius: 20, overflow: 'hidden', shadowColor: '#2563eb', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 },
+  button: { borderRadius: 20, overflow: 'hidden', shadowColor: 'rgba(52,211,153,0.4)', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 },
   gradientBtn: { padding: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },
   buttonText: { color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: 0.5 },
   
-  footerText: { textAlign: 'center', color: '#64748b', fontSize: 13, marginTop: 40, lineHeight: 22, fontWeight: '500' },
+  footerText: { textAlign: 'center', color: '#9DAFA8', fontSize: 13, marginTop: 40, lineHeight: 22, fontWeight: '500' },
 });

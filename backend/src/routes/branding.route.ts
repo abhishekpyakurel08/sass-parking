@@ -1,5 +1,5 @@
 import { Router, type RequestHandler } from 'express';
-import { authenticate } from '../middleware/auth.middleware.js';
+import { authenticateAny, authenticate } from '../middleware/auth.middleware.js';
 import { tenantMiddleware } from '../middleware/tenant.middleware.js';
 import {
   getTenantBranding,
@@ -11,16 +11,16 @@ import {
 
 const router: Router = Router();
 
-// All branding routes require authentication and tenant context
-router.use(authenticate);
-router.use(tenantMiddleware);
-
 /**
  * @route   GET /api/v1/branding
  * @desc    Get tenant branding settings
- * @access  Private (TENANT_OWNER, SUPER_ADMIN, GATE_STAFF)
+ * @access  Private (supports both JWT and API key for mobile app)
  */
-router.get('/', getTenantBranding);
+router.get('/', authenticateAny, tenantMiddleware, getTenantBranding);
+
+// All other branding routes require JWT authentication and tenant context
+router.use(authenticate);
+router.use(tenantMiddleware);
 
 /**
  * @route   PUT /api/v1/branding

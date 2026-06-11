@@ -18,9 +18,9 @@ const TenantSchema = new Schema<ITenant>(
     // Branding fields for tenant-specific emails and UI
     branding: {
       logoUrl: { type: String, trim: true },
-      primaryColor: { type: String, default: '#2563eb' },
-      secondaryColor: { type: String, default: '#1e40af' },
-      accentColor: { type: String, default: '#3b82f6' },
+      primaryColor: { type: String, default: '#34D399' },
+      secondaryColor: { type: String, default: '#10B981' },
+      accentColor: { type: String, default: '#0B0F0E' },
       customDomain: { type: String, trim: true },
       senderEmail: { type: String, trim: true },
       senderName: { type: String, trim: true },
