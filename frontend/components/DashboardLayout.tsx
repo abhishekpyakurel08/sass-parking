@@ -171,17 +171,28 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
         }}>
           {!collapsed && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{
-                width: 34, height: 34, borderRadius: 8,
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 16, fontWeight: 800, color: '#fff', flexShrink: 0,
-              }}>P</div>
+              {user?.tenant_branding?.logoUrl ? (
+                <img 
+                  src={user.tenant_branding.logoUrl} 
+                  alt="Logo" 
+                  style={{
+                    width: 34, height: 34, borderRadius: 8,
+                    objectFit: 'contain', flexShrink: 0,
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width: 34, height: 34, borderRadius: 8,
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 16, fontWeight: 800, color: '#fff', flexShrink: 0,
+                }}>P</div>
+              )}
               <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', display: 'flex', flexDirection: 'column' }}>
-                <span>ParkSaaS</span>
+                <span>{user?.tenant_branding?.senderName || 'ParkSaaS'}</span>
                 {user?.tenant_name && (
                   <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-muted)' }}>
-                    Tenant: {user.tenant_name}
+                    {user.tenant_branding?.tagline || user.tenant_name}
                   </span>
                 )}
               </span>

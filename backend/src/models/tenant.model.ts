@@ -24,6 +24,11 @@ const TenantSchema = new Schema<ITenant>(
       customDomain: { type: String, trim: true },
       senderEmail: { type: String, trim: true },
       senderName: { type: String, trim: true },
+      // Additional branding text fields
+      tagline: { type: String, trim: true },
+      description: { type: String, trim: true },
+      contactPhone: { type: String, trim: true },
+      contactAddress: { type: String, trim: true },
     },
     // Email templates (tenant-specific overrides)
     emailTemplates: {

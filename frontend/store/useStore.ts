@@ -10,6 +10,15 @@ export type User = {
   email?: string;
   slug?: string;
   tenant_name?: string;
+  tenant_branding?: {
+    logoUrl?: string;
+    senderName?: string;
+    tagline?: string;
+    description?: string;
+    primaryColor?: string;
+    secondaryColor?: string;
+    accentColor?: string;
+  };
 }
 
 type State = {

@@ -53,7 +53,7 @@ export const updateTenantBranding = async (
       return next(new ForbiddenError('Only super admins can update branding'));
     }
 
-    const { logoUrl, primaryColor, secondaryColor, accentColor, customDomain, senderEmail, senderName } = req.body;
+    const { logoUrl, primaryColor, secondaryColor, accentColor, customDomain, senderEmail, senderName, tagline, description, contactPhone, contactAddress } = req.body;
 
     const tenant = await Tenant.findByIdAndUpdate(
       tenantId,
@@ -66,6 +66,10 @@ export const updateTenantBranding = async (
           'branding.customDomain': customDomain,
           'branding.senderEmail': senderEmail,
           'branding.senderName': senderName,
+          'branding.tagline': tagline,
+          'branding.description': description,
+          'branding.contactPhone': contactPhone,
+          'branding.contactAddress': contactAddress,
         },
       },
       { new: true }

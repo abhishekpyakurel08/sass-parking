@@ -15,6 +15,10 @@ const DEFAULT_BRANDING: BrandingSettings = {
   customDomain: '',
   senderEmail: '',
   senderName: '',
+  tagline: '',
+  description: '',
+  contactPhone: '',
+  contactAddress: '',
 }
 
 const DEFAULT_TEMPLATES = {
@@ -396,6 +400,56 @@ export default function BrandingPage() {
                         onChange={(e) => setBranding({ ...branding, senderName: e.target.value })}
                       />
                       <p className="form-hint">Display name shown in outgoing email headers</p>
+                    </div>
+
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label className="form-label">Tagline</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Your company tagline"
+                        value={branding.tagline || ''}
+                        onChange={(e) => setBranding({ ...branding, tagline: e.target.value })}
+                      />
+                      <p className="form-hint">Short tagline displayed in dashboard and receipts</p>
+                    </div>
+
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label className="form-label">Description</label>
+                      <textarea
+                        className="form-input"
+                        rows={3}
+                        placeholder="Company description"
+                        value={branding.description || ''}
+                        onChange={(e) => setBranding({ ...branding, description: e.target.value })}
+                        style={{ resize: 'vertical' }}
+                      />
+                      <p className="form-hint">Detailed company description for receipts and emails</p>
+                    </div>
+
+                    <div>
+                      <label className="form-label">Contact Phone</label>
+                      <input
+                        type="tel"
+                        className="form-input"
+                        placeholder="+1 (555) 123-4567"
+                        value={branding.contactPhone || ''}
+                        onChange={(e) => setBranding({ ...branding, contactPhone: e.target.value })}
+                      />
+                      <p className="form-hint">Customer support phone number</p>
+                    </div>
+
+                    <div>
+                      <label className="form-label">Contact Address</label>
+                      <textarea
+                        className="form-input"
+                        rows={2}
+                        placeholder="123 Business St, City, State 12345"
+                        value={branding.contactAddress || ''}
+                        onChange={(e) => setBranding({ ...branding, contactAddress: e.target.value })}
+                        style={{ resize: 'vertical' }}
+                      />
+                      <p className="form-hint">Business address for receipts</p>
                     </div>
                   </div>
 

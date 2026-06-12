@@ -1,11 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { authService } from '../../lib/auth'
-import { useStore } from '../../store/useStore'
-import { api } from '../../lib/api'
 import AuthLayout from '../../components/AuthLayout'
 import GlassCard from '../../components/ui/GlassCard'
 import TextField from '../../components/ui/TextField'
@@ -13,57 +10,57 @@ import PasswordField from '../../components/ui/PasswordField'
 import Button from '../../components/ui/Button'
 
 export default function LoginPage() {
-  const router = useRouter()
   const searchParams = useSearchParams()
-  const setUser = useStore((s) => s.setUser)
-  const setTenantSlug = useStore((s) => s.setTenantSlug)
-  const [formData, setFormData] = useState({ email: '', password: '', slug: '' })
+  const [formData, setFormData] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Pre-fill slug and email from URL parameters or subdomain
+  // Pre-fill email from URL parameters
   useEffect(() => {
-    const slugFromUrl = searchParams.get('slug')
     const emailFromUrl = searchParams.get('email')
-    let subdomainSlug: string | null = null;
-    
-    if (typeof window !== 'undefined') {
-      const host = window.location.hostname;
-      if (host.endsWith('.localhost')) {
-        subdomainSlug = host.split('.')[0];
-      } else {
-        const parts = host.split('.');
-        if (parts.length >= 3 && parts[0] !== 'www' && !host.includes('localhost')) {
-          subdomainSlug = parts[0];
-        }
-      }
+    if (emailFromUrl) {
+      setFormData(f => ({ ...f, email: emailFromUrl }))
     }
-    
-    setFormData(f => ({
-      email: emailFromUrl || f.email,
-      password: f.password,
-      slug: slugFromUrl || subdomainSlug || f.slug || ''
-    }))
   }, [searchParams])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError('')
     setLoading(true)
-    // Set tenant slug from URL param or form input before login request
-    const slugToUse = formData.slug.trim().toLowerCase() || searchParams.get('slug')?.toLowerCase()
-    if (slugToUse) {
-      api.setTenantSlug(slugToUse)
-    }
-    try {
-      const response = await authService.login({ email: formData.email, password: formData.password })
-      setUser(response.data?.user || response.user as any)
-      router.push('/dashboard')
-    } catch (err: any) {
-      setError(err.message || 'Login failed. Check credentials.')
-    } finally {
+
+    const form = new FormData(e.currentTarget)
+
+    // Backend expects JSON body with email and password
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: form.get("email") as string,
+        password: form.get("password") as string,
+      }),
+    })
+
+    if (!res.ok) {
+      const data = await res.json()
+      setError(data.message ?? "Login failed")
       setLoading(false)
+      return
     }
+
+    const data = await res.json()
+    // Backend returns: { success, message, data: { access_token, user: { slug, ... }, ... } }
+
+    // Store access token
+    localStorage.setItem("access_token", data.data.access_token)
+    // Refresh token is stored in httpOnly cookie by backend
+
+    // Redirect to tenant subdomain
+    const isDev = process.env.NODE_ENV === "development"
+    const baseHost = isDev ? "localhost:3000" : "buddhadental.com"
+    const tenantSlug = data.data.user.slug
+    const redirectUrl = `http://${tenantSlug}.${baseHost}/dashboard`
+
+    window.location.href = redirectUrl   // hard navigate — crosses subdomain boundary
   }
 
   return (
@@ -84,26 +81,7 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit}>
           <div className="animate-stagger-1">
             <TextField
-              label="Business Slug"
-              placeholder="e.g. dipika"
-              value={formData.slug}
-              onChange={(value) => setFormData({ ...formData, slug: value.toLowerCase().replace(/\s+/g, '-') })}
-              helperText="Your parking business identifier (used in the URL)"
-              required
-              icon={
-                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
-                  <line x1="9" y1="22" x2="9" y2="2" />
-                  <path d="M9 7h6" />
-                  <path d="M9 12h6" />
-                  <path d="M9 17h6" />
-                </svg>
-              }
-            />
-          </div>
-
-          <div className="animate-stagger-2">
-            <TextField
+              name="email"
               label="Email Address"
               type="email"
               placeholder="you@company.com"
@@ -119,8 +97,9 @@ export default function LoginPage() {
             />
           </div>
 
-          <div className="animate-stagger-3">
+          <div className="animate-stagger-2">
             <PasswordField
+              name="password"
               label="Password"
               placeholder="••••••••"
               value={formData.password}

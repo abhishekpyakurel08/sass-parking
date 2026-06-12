@@ -159,6 +159,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
           tenant_name: tenant?.name,
           gate_assignment: user.gate_assignment,
           ticket_prefix: user.ticket_prefix,
+          tenant_branding: tenantBranding,
         },
         tenant_branding: tenantBranding,
       },

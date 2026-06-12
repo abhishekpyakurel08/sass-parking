@@ -189,7 +189,7 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction):
     if (billing.audit_alert) {
       ticket.notes = (ticket.notes ? ticket.notes + ' | ' : '') + 'AUDIT_ALERT: Overstay > 48h — supervisor review required';
     }
-    await ticket.save({ session });
+    await ticket.save();
 
     logTransaction('CHECK_OUT', {
       tenantId,
@@ -355,7 +355,7 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
     ticket.amount_received = amount_received;
     ticket.change_given = change_given;
     ticket.transaction_reference = transaction_reference;
-    await ticket.save({ session });
+    await ticket.save();
 
     if (ticket.customer_id && ticket.discount_amount > 0) {
       await Customer.findByIdAndUpdate(

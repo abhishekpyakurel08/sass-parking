@@ -180,12 +180,14 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
     }
     let slug = null;
     let tenant_name = null;
+    let tenant_branding = null;
     if (user.tenant_id) {
       const tenant = await Tenant.findById(user.tenant_id);
       slug = tenant?.slug || null;
       tenant_name = tenant?.name || null;
+      tenant_branding = tenant?.branding || null;
     }
-    res.status(200).json({ success: true, data: { ...user, slug, tenant_name } });
+    res.status(200).json({ success: true, data: { ...user, slug, tenant_name, tenant_branding } });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'An unknown error occurred';
     res.status(500).json({ success: false, error: message });
