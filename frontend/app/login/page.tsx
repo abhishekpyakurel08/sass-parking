@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { useStore } from '../../store/useStore'
+import { loginSchema } from '../../lib/validation.schemas'
 import AuthLayout from '../../components/AuthLayout'
 import GlassCard from '../../components/ui/GlassCard'
 import TextField from '../../components/ui/TextField'
@@ -11,8 +13,11 @@ import Button from '../../components/ui/Button'
 
 export default function LoginPage() {
   const searchParams = useSearchParams()
+  const darkMode = useStore((s) => s.darkMode)
+  const toggleDarkMode = useStore((s) => s.toggleDarkMode)
   const [formData, setFormData] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
 
   // Pre-fill email from URL parameters
@@ -23,9 +28,37 @@ export default function LoginPage() {
     }
   }, [searchParams])
 
+  // Apply dark mode class to document
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [darkMode])
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError('')
+    setFieldErrors({})
+
+    // Validate with Zod
+    const validationResult = loginSchema.safeParse({
+      email: formData.email,
+      password: formData.password,
+    })
+
+    if (!validationResult.success) {
+      const errors: Record<string, string> = {}
+      validationResult.error.errors.forEach((err) => {
+        if (err.path[0]) {
+          errors[err.path[0] as string] = err.message
+        }
+      })
+      setFieldErrors(errors)
+      return
+    }
+
     setLoading(true)
 
     const form = new FormData(e.currentTarget)
@@ -68,11 +101,35 @@ export default function LoginPage() {
       brandTitle="Smart Parking Management"
       brandSubtitle="Multi-tenant SaaS platform for modern parking businesses. Real-time tracking, analytics, and multi-payment support."
       showStats={true}
+      darkMode={darkMode}
     >
       <GlassCard
         title="Welcome back"
         subtitle="Sign in to your ParkSaaS account"
+        darkMode={darkMode}
       >
+        <button
+          onClick={toggleDarkMode}
+          style={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            background: darkMode ? '#2a2a2a' : 'rgba(255,255,255,0.8)',
+            border: darkMode ? '1px solid #333' : '1px solid rgba(255,255,255,0.3)',
+            borderRadius: 8,
+            padding: '8px 12px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            color: darkMode ? '#fff' : '#333',
+            fontSize: 13,
+            fontWeight: 500,
+            backdropFilter: 'blur(10px)',
+          }}
+        >
+          {darkMode ? '☀️ Light' : '🌙 Dark'}
+        </button>
         {searchParams.get('registered') === 'true' && (
           <div className="alert alert-success animate-fade-in" style={{ marginBottom: '20px' }}>
             Registration successful! Please check your email to verify your account, and sign in below.
@@ -88,6 +145,7 @@ export default function LoginPage() {
               value={formData.email}
               onChange={(value) => setFormData({ ...formData, email: value })}
               required
+              error={fieldErrors.email}
               icon={
                 <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
@@ -105,6 +163,7 @@ export default function LoginPage() {
               value={formData.password}
               onChange={(value) => setFormData({ ...formData, password: value })}
               required
+              error={fieldErrors.password}
             />
           </div>
 

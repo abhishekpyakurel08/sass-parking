@@ -70,6 +70,12 @@ export default function SettingsScreen({ navigation }: any) {
               <View style={styles.divider} />
               
               <View style={styles.infoRow}>
+                <Feather name="user" size={16} color="#94a3b8" />
+                <Text style={styles.infoLabel}>Operator Name:</Text>
+                <Text style={styles.infoValue}>{config?.operator?.name || 'N/A'}</Text>
+              </View>
+              
+              <View style={styles.infoRow}>
                 <Feather name="map-pin" size={16} color="#94a3b8" />
                 <Text style={styles.infoLabel}>Gate Assignment:</Text>
                 <Text style={styles.infoValue}>{config?.operator?.gate_assignment || 'N/A'}</Text>
@@ -100,10 +106,10 @@ export default function SettingsScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 20, alignItems: 'center' },
+  header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12, alignItems: 'center' },
   headerTitle: { color: '#fff', fontSize: 18, fontWeight: '700' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { padding: 20 },
+  content: { paddingHorizontal: 20 },
   
   profileCard: { borderRadius: 24, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', backgroundColor: 'rgba(30, 41, 59, 0.4)', marginBottom: 24 },
   avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(59, 130, 246, 0.1)', justifyContent: 'center', alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: 'rgba(59, 130, 246, 0.3)' },
@@ -116,7 +122,7 @@ const styles = StyleSheet.create({
   infoLabel: { color: '#94a3b8', fontSize: 14, marginLeft: 8, flex: 1 },
   infoValue: { color: '#fff', fontSize: 14, fontWeight: '700' },
   
-  actionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(30, 41, 59, 0.6)', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(30, 41, 59, 0.6)', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', marginHorizontal: 20 },
   actionIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
   actionText: { flex: 1, color: '#f43f5e', fontSize: 16, fontWeight: '600' },
   

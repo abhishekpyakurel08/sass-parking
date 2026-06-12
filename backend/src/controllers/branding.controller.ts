@@ -49,8 +49,8 @@ export const updateTenantBranding = async (
     }
 
     const user = req.user;
-    if (user?.role !== UserRole.SUPER_ADMIN) {
-      return next(new ForbiddenError('Only super admins can update branding'));
+    if (user?.role !== UserRole.SUPER_ADMIN && user?.role !== UserRole.TENANT_OWNER) {
+      return next(new ForbiddenError('Only admins can update branding'));
     }
 
     const { logoUrl, primaryColor, secondaryColor, accentColor, customDomain, senderEmail, senderName, tagline, description, contactPhone, contactAddress } = req.body;

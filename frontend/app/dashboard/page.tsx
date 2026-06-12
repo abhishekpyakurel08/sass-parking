@@ -7,13 +7,18 @@ import DashboardLayout from '../../components/DashboardLayout'
 import { useStore } from '../../store/useStore'
 import { analyticsService } from '../../lib/analytics'
 import { parkingService } from '../../lib/parking'
+import RevenueBarChart from '../../components/charts/RevenueBarChart'
+import VehicleBarChart from '../../components/charts/VehicleBarChart'
 
 export default function DashboardPage() {
   const router = useRouter()
+  const darkMode = useStore((s) => s.darkMode)
   const isAuthenticated = useStore((s) => s.isAuthenticated)
   const user = useStore((s) => s.user)
   const [stats, setStats] = useState<any>(null)
   const [tickets, setTickets] = useState<any[]>([])
+  const [revenueData, setRevenueData] = useState<any[]>([])
+  const [vehicleData, setVehicleData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -23,14 +28,20 @@ export default function DashboardPage() {
 
   const loadData = async () => {
     try {
-      const [dashStats, ticketData] = await Promise.all([
+      const [dashStats, ticketData, revenueStats, vehicleStats] = await Promise.all([
         analyticsService.getDashboardStats(),
         parkingService.getTickets(1, 5),
+        analyticsService.getRevenueStats('week'),
+        analyticsService.getVehicleStats('week'),
       ])
       setStats(dashStats)
-      setTickets((ticketData as any)?.data || [])
+      // Handle different response structures
+      const ticketsArray = Array.isArray(ticketData) ? ticketData : (ticketData as any)?.data || []
+      setTickets(ticketsArray)
+      setRevenueData(Array.isArray(revenueStats) ? revenueStats : (revenueStats as any)?.data || [])
+      setVehicleData(Array.isArray(vehicleStats) ? vehicleStats : (vehicleStats as any)?.data || [])
     } catch (err) {
-      console.error(err)
+      console.error('Error loading dashboard data:', err)
     } finally {
       setLoading(false)
     }
@@ -112,6 +123,16 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {/* Charts Section */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24 }}>
+        <div className="card" style={{ padding: 24, background: darkMode ? '#1a1a1a' : '', border: darkMode ? '1px solid #333' : '' }}>
+          <RevenueBarChart data={revenueData} title="Weekly Revenue" />
+        </div>
+        <div className="card" style={{ padding: 24, background: darkMode ? '#1a1a1a' : '', border: darkMode ? '1px solid #333' : '' }}>
+          <VehicleBarChart data={vehicleData} title="Vehicle Distribution" />
+        </div>
+      </div>
+
       {/* Quick Actions + Recent */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 24, marginBottom: 24 }}>
 
@@ -148,7 +169,10 @@ export default function DashboardPage() {
             <div className="empty-state">
               <div className="empty-icon">🎟️</div>
               <div className="empty-title">No tickets yet</div>
-              <p style={{ fontSize: 13, marginTop: 8 }}>Check-in a vehicle to get started</p>
+              <p style={{ fontSize: 13, marginTop: 8, marginBottom: 16 }}>Check-in a vehicle to get started</p>
+              <Link href="/dashboard/parking/check-in" className="btn btn-primary btn-sm">
+                Check-In Vehicle
+              </Link>
             </div>
           ) : (
             <table className="data-table">
@@ -164,14 +188,14 @@ export default function DashboardPage() {
               </thead>
               <tbody>
                 {tickets.map(t => (
-                  <tr key={t._id}>
-                    <td style={{ fontFamily: 'monospace', color: 'var(--accent)', fontWeight: 600 }}>{t.ticket_number}</td>
-                    <td style={{ fontWeight: 600, color: 'var(--text)' }}>{t.license_plate || '—'}</td>
-                    <td>{t.vehicle_type}</td>
-                    <td>{new Date(t.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                    <td>{getStatusBadge(t.status)}</td>
+                  <tr key={t._id || t.ticket_number}>
+                    <td style={{ fontFamily: 'monospace', color: 'var(--accent)', fontWeight: 600 }}>{t.ticket_number || '—'}</td>
+                    <td style={{ fontWeight: 600, color: 'var(--text)' }}>{t.license_plate || t.vehiclePlateNumber || '—'}</td>
+                    <td>{t.vehicle_type || t.vehicleType || '—'}</td>
+                    <td>{t.check_in_time || t.checkInTime ? new Date(t.check_in_time || t.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+                    <td>{getStatusBadge(t.status || t.paymentStatus)}</td>
                     <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--text)' }}>
-                      Rs. {((t.fare_amount || 0) + (t.penalty_amount || 0) - (t.discount_amount || 0)).toFixed(0)}
+                      Rs. {((t.fare_amount || t.fareAmount || 0) + (t.penalty_amount || t.penaltyAmount || 0) - (t.discount_amount || t.discountAmount || 0)).toFixed(0)}
                     </td>
                   </tr>
                 ))}

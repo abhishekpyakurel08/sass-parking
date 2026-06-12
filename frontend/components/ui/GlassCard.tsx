@@ -6,14 +6,15 @@ interface GlassCardProps {
   children: ReactNode
   title?: string
   subtitle?: string
+  darkMode?: boolean
 }
 
-export default function GlassCard({ children, title, subtitle }: GlassCardProps) {
+export default function GlassCard({ children, title, subtitle, darkMode = false }: GlassCardProps) {
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.03)',
+      background: darkMode ? 'rgba(42,42,42,0.8)' : 'rgba(255,255,255,0.03)',
       backdropFilter: 'blur(16px)',
-      border: '1px solid rgba(255,255,255,0.08)',
+      border: darkMode ? '1px solid #333' : '1px solid rgba(255,255,255,0.08)',
       borderRadius: 'var(--radius-xl)',
       padding: '32px',
       position: 'relative',
@@ -37,7 +38,7 @@ export default function GlassCard({ children, title, subtitle }: GlassCardProps)
             <h1 style={{
               fontSize: '28px',
               fontWeight: 700,
-              color: 'var(--text-primary)',
+              color: darkMode ? '#fff' : 'var(--text-primary)',
               marginBottom: subtitle ? '8px' : '24px',
             }}>
               {title}
@@ -45,7 +46,7 @@ export default function GlassCard({ children, title, subtitle }: GlassCardProps)
             {subtitle && (
               <p style={{
                 fontSize: '14px',
-                color: 'var(--text-secondary)',
+                color: darkMode ? '#888' : 'var(--text-secondary)',
                 marginBottom: '24px',
                 lineHeight: 1.5,
               }}>

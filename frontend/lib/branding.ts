@@ -8,6 +8,10 @@ export interface BrandingSettings {
   customDomain?: string;
   senderEmail?: string;
   senderName?: string;
+  tagline?: string;
+  description?: string;
+  contactPhone?: string;
+  contactAddress?: string;
 }
 
 export interface EmailTemplate {
@@ -34,9 +38,10 @@ export const brandingService = {
     if (tenantSlug) api.setTenantSlug(tenantSlug);
     try {
       const response = await api.get('/branding');
-      return response.data as BrandingData;
+      // Backend returns { success: true, data: { branding: {}, emailTemplates: {} } }
+      const payload = (response as any).data?.data ?? (response as any).data ?? {};
+      return payload as BrandingData;
     } finally {
-      // restore previous slug if we overrode it
       if (tenantSlug && savedSlug) api.setTenantSlug(savedSlug);
     }
   },
@@ -44,7 +49,8 @@ export const brandingService = {
   async updateBranding(data: BrandingSettings, tenantSlug?: string): Promise<BrandingSettings> {
     if (tenantSlug) api.setTenantSlug(tenantSlug);
     const response = await api.put('/branding', data);
-    return response.data as BrandingSettings;
+    // Backend returns { success: true, data: branding }
+    return ((response as any).data?.data ?? (response as any).data) as BrandingSettings;
   },
 
   async updateEmailTemplate(templateType: string, data: EmailTemplate, tenantSlug?: string): Promise<EmailTemplates> {

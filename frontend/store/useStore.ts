@@ -25,16 +25,24 @@ type State = {
   user: User | null;
   isAuthenticated: boolean;
   tenantSlug: string | null;
+  darkMode: boolean;
   setUser: (u: User) => void;
   setTenantSlug: (slug: string) => void;
   clearUser: () => void;
+  toggleDarkMode: () => void;
 }
 
 export const useStore = create<State>((set) => ({
   user: null,
   isAuthenticated: false,
   tenantSlug: null,
+  darkMode: typeof window !== 'undefined' ? localStorage.getItem('darkMode') === 'true' : false,
   setUser: (u) => set({ user: u, isAuthenticated: true, tenantSlug: u.slug || null }),
   setTenantSlug: (slug) => set({ tenantSlug: slug }),
-  clearUser: () => set({ user: null, isAuthenticated: false, tenantSlug: null })
+  clearUser: () => set({ user: null, isAuthenticated: false, tenantSlug: null }),
+  toggleDarkMode: () => set((state) => {
+    const newMode = !state.darkMode;
+    localStorage.setItem('darkMode', String(newMode));
+    return { darkMode: newMode };
+  }),
 }))

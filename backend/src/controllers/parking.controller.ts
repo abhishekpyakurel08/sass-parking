@@ -430,29 +430,64 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
 export const scanTicket = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const tenantId = req.tenant!.tenantId;
-    const { code } = req.body;
-
+    let { code } = req.body;
+    
     if (!code) {
       return next(new ValidationError('Scan code is required'));
     }
+    
+    code = code.toString().trim();
+    console.log('Scan request - Cleaned Code:', `'${code}'`, 'TenantId:', tenantId);
 
     let ticket;
     if (mongoose.isValidObjectId(code)) {
+      console.log('Searching by ObjectId');
       ticket = await Ticket.findOne({ _id: code, tenant_id: tenantId }).populate('customer_id');
     } else {
       const normalizedCode = code.toLowerCase();
       const normalizedPlate = code.toUpperCase();
+      
+      console.log('Searching by patterns - Original:', code, 'Lower:', normalizedCode, 'Upper:', code.toUpperCase());
+      
+      // Try multiple search patterns
       ticket = await Ticket.findOne({
         tenant_id: tenantId,
         $or: [
           { ticket_number: code },
           { ticket_number: normalizedCode },
-          { license_plate: normalizedPlate }
+          { ticket_number: code.toUpperCase() },
+          { license_plate: normalizedPlate },
+          { license_plate: code },
+          { license_plate: normalizedCode }
         ]
       }).populate('customer_id');
+      
+      console.log('First search result:', ticket ? 'Found' : 'Not found');
+      
+      // If still not found, try searching by just the numeric suffix
+      if (!ticket && code.match(/\d{4}$/)) {
+        const suffix = code.match(/\d{4}$/)?.[0];
+        console.log('Searching by suffix:', suffix);
+        ticket = await Ticket.findOne({
+          tenant_id: tenantId,
+          ticket_number: { $regex: suffix, $options: 'i' }
+        }).populate('customer_id');
+        console.log('Suffix search result:', ticket ? 'Found' : 'Not found');
+      }
+      
+      // If still not found, try to find any active tickets for this tenant
+      if (!ticket) {
+        console.log('Searching for any active tickets for tenant');
+        const allTickets = await Ticket.find({ tenant_id: tenantId, status: 'ACTIVE' }).limit(5);
+        console.log('Active tickets found:', allTickets.length);
+        if (allTickets.length > 0) {
+          console.log('Sample ticket numbers:', allTickets.map(t => t.ticket_number));
+        }
+      }
     }
 
     if (!ticket) {
+      console.log('No ticket found for code:', code);
       return next(new NotFoundError('No ticket matches the scanned QR code/license plate'));
     }
 

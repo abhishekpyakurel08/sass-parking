@@ -6,6 +6,11 @@ import { BlurView } from 'expo-blur';
 import { Feather } from '@expo/vector-icons';
 import { saveApiKey } from '../lib/auth';
 import { api } from '../lib/api';
+import { Colors, Gradients } from '../lib/colors';
+import Button from '../components/Button';
+import Input from '../components/Input';
+import GradientButton from '../components/GradientButton';
+import Card from '../components/Card';
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
@@ -42,16 +47,16 @@ export default function LoginScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       {/* Background Gradients */}
-      <LinearGradient colors={['#0B0F0E', '#0F1412', '#0B0F0E']} style={StyleSheet.absoluteFill} />
-      <View style={styles.glowOrb1} />
-      <View style={styles.glowOrb2} />
+      <LinearGradient colors={[Colors.dark.background, '#1a1a2e', Colors.dark.background]} style={StyleSheet.absoluteFill} />
+      <View style={[styles.glowOrb1, { backgroundColor: Colors.primary }]} />
+      <View style={[styles.glowOrb2, { backgroundColor: Colors.accent }]} />
 
       <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.inner}>
           
           <View style={styles.header}>
             <View style={styles.iconCircle}>
-              <LinearGradient colors={['#34D399', '#10B981']} style={StyleSheet.absoluteFill} />
+              <LinearGradient colors={Gradients.primary as any} style={StyleSheet.absoluteFill} />
               <Feather name="shield" size={40} color="#fff" />
             </View>
             <Text style={styles.logo}>ParkSaaS</Text>
@@ -62,45 +67,38 @@ export default function LoginScreen({ navigation }: any) {
             <View style={styles.form}>
               <Text style={styles.label}>OPERATOR CREDENTIALS</Text>
               
-              <View style={[styles.inputWrapper, email ? styles.inputWrapperActive : null, { marginBottom: 16 }]}>
-                <Feather name="mail" size={20} color={email ? '#34D399' : '#9DAFA8'} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Email Address"
-                  placeholderTextColor="#9DAFA8"
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                />
-              </View>
+              <Input
+                label="Email Address"
+                placeholder="Enter your email"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
 
-              <View style={[styles.inputWrapper, password ? styles.inputWrapperActive : null]}>
-                <Feather name="lock" size={20} color={password ? '#34D399' : '#9DAFA8'} style={styles.inputIcon} />
+              <View style={styles.passwordContainer}>
                 <TextInput
-                  style={styles.input}
+                  style={styles.passwordInput}
                   placeholder="Password"
-                  placeholderTextColor="#9DAFA8"
+                  placeholderTextColor={Colors.dark.textMuted}
                   value={password}
                   onChangeText={setPassword}
                   autoCapitalize="none"
                   secureTextEntry={!showPassword}
                 />
                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-                  <Feather name={showPassword ? "eye-off" : "eye"} size={20} color="#9DAFA8" />
+                  <Feather name={showPassword ? "eye-off" : "eye"} size={20} color={Colors.dark.textMuted} />
                 </TouchableOpacity>
               </View>
               
-              <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
-                <LinearGradient colors={['#34D399', '#10B981']} style={styles.gradientBtn} start={{x: 0, y: 0}} end={{x: 1, y: 1}}>
-                  {loading ? <ActivityIndicator color="#fff" /> : (
-                    <>
-                      <Text style={styles.buttonText}>Authenticate</Text>
-                      <Feather name="arrow-right" size={20} color="#fff" />
-                    </>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
+              <GradientButton
+                title="Sign In"
+                onPress={handleLogin}
+                gradient="primary"
+                loading={loading}
+                disabled={loading}
+                style={styles.loginButton}
+              />
             </View>
           </BlurView>
           
@@ -116,29 +114,24 @@ export default function LoginScreen({ navigation }: any) {
 const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0B0F0E' },
-  glowOrb1: { position: 'absolute', top: -100, left: -50, width: width, height: width, borderRadius: width/2, backgroundColor: 'rgba(52, 211, 153, 0.15)', transform: [{ scale: 1.5 }], filter: 'blur(50px)' },
-  glowOrb2: { position: 'absolute', bottom: -100, right: -50, width: width, height: width, borderRadius: width/2, backgroundColor: 'rgba(16, 185, 129, 0.15)', transform: [{ scale: 1.5 }], filter: 'blur(50px)' },
+  container: { flex: 1, backgroundColor: Colors.dark.background },
+  glowOrb1: { position: 'absolute', top: -100, left: -50, width: width, height: width, borderRadius: width/2, backgroundColor: `${Colors.primary}26`, transform: [{ scale: 1.5 }], filter: 'blur(50px)' },
+  glowOrb2: { position: 'absolute', bottom: -100, right: -50, width: width, height: width, borderRadius: width/2, backgroundColor: `${Colors.accent}26`, transform: [{ scale: 1.5 }], filter: 'blur(50px)' },
   
   inner: { flex: 1, justifyContent: 'center', padding: 24, zIndex: 10 },
   header: { alignItems: 'center', marginBottom: 48 },
-  iconCircle: { width: 88, height: 88, borderRadius: 44, justifyContent: 'center', alignItems: 'center', marginBottom: 20, overflow: 'hidden', shadowColor: 'rgba(52,211,153,0.5)', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.5, shadowRadius: 16, elevation: 10 },
-  logo: { fontSize: 48, fontWeight: '900', color: '#F4F6F4', letterSpacing: -2, marginBottom: 4 },
-  subtitle: { fontSize: 16, color: '#9DAFA8', fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase' },
+  iconCircle: { width: 88, height: 88, borderRadius: 44, justifyContent: 'center', alignItems: 'center', marginBottom: 20, overflow: 'hidden', shadowColor: Colors.primary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.5, shadowRadius: 16, elevation: 10 },
+  logo: { fontSize: 48, fontWeight: '900', color: Colors.dark.text, letterSpacing: -2, marginBottom: 4 },
+  subtitle: { fontSize: 16, color: Colors.dark.textSecondary, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase' },
   
   formContainer: { borderRadius: 32, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.5, shadowRadius: 30, elevation: 20 },
   form: { padding: 32, backgroundColor: 'rgba(255,255,255,0.04)' },
-  label: { color: '#F4F6F4', fontSize: 13, fontWeight: '800', marginBottom: 16, letterSpacing: 1.5 },
+  label: { color: Colors.dark.text, fontSize: 13, fontWeight: '800', marginBottom: 16, letterSpacing: 1.5 },
   
-  inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginBottom: 32 },
-  inputWrapperActive: { borderColor: 'rgba(52, 211, 153, 0.4)', backgroundColor: 'rgba(52, 211, 153, 0.05)' },
-  inputIcon: { paddingLeft: 20 },
-  input: { flex: 1, color: '#F4F6F4', padding: 20, fontSize: 16, fontWeight: '600' },
-  eyeBtn: { padding: 20 },
+  passwordContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.dark.elevated, borderRadius: 12, borderWidth: 1, borderColor: Colors.dark.border, marginBottom: 24 },
+  passwordInput: { flex: 1, color: Colors.dark.text, padding: 16, fontSize: 16, fontWeight: '600' },
+  eyeBtn: { padding: 16 },
+  loginButton: { marginTop: 8 },
   
-  button: { borderRadius: 20, overflow: 'hidden', shadowColor: 'rgba(52,211,153,0.4)', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 },
-  gradientBtn: { padding: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },
-  buttonText: { color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: 0.5 },
-  
-  footerText: { textAlign: 'center', color: '#9DAFA8', fontSize: 13, marginTop: 40, lineHeight: 22, fontWeight: '500' },
+  footerText: { textAlign: 'center', color: Colors.dark.textSecondary, fontSize: 13, marginTop: 40, lineHeight: 22, fontWeight: '500' },
 });

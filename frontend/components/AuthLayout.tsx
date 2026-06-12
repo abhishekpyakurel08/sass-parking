@@ -8,18 +8,19 @@ interface AuthLayoutProps {
   brandTitle?: string
   brandSubtitle?: string
   showStats?: boolean
+  darkMode?: boolean
 }
 
-export default function AuthLayout({ children, brandTitle, brandSubtitle, showStats = false }: AuthLayoutProps) {
+export default function AuthLayout({ children, brandTitle, brandSubtitle, showStats = false, darkMode = false }: AuthLayoutProps) {
   const defaultTitle = 'Smart Parking Management'
   const defaultSubtitle = 'Multi-tenant parking management SaaS platform for modern parking businesses'
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: darkMode ? '#0f0f0f' : 'var(--bg-base)' }}>
       {/* Left Panel - Brand Panel (40%) */}
       <div style={{
         width: '40%',
-        background: 'radial-gradient(ellipse at 25% 15%, rgba(52,211,153,0.30), transparent 60%), radial-gradient(ellipse at 80% 85%, rgba(242,200,121,0.18), transparent 60%), #0A0E0D',
+        background: darkMode ? '#1a1a1a' : 'radial-gradient(ellipse at 25% 15%, rgba(52,211,153,0.30), transparent 60%), radial-gradient(ellipse at 80% 85%, rgba(242,200,121,0.18), transparent 60%), #0A0E0D',
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
@@ -93,7 +94,7 @@ export default function AuthLayout({ children, brandTitle, brandSubtitle, showSt
       {/* Right Panel - Form Panel (60%) */}
       <div style={{
         width: '60%',
-        background: 'var(--bg-base)',
+        background: darkMode ? '#0f0f0f' : 'var(--bg-base)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

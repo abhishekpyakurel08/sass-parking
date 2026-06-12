@@ -107,11 +107,11 @@ const navItems = (role?: UserRole) => {
   const owner: NavItem[] = [
     { href: '/dashboard/analytics', label: 'Analytics', icon: 'analytics' },
     { href: '/dashboard/staff', label: 'Operators', icon: 'staff' },
+    { href: '/dashboard/audit-logs', label: 'Audit Logs', icon: 'audit-logs' },
+    { href: '/dashboard/branding', label: 'Branding', icon: 'branding' },
   ]
   const admin: NavItem[] = [
     { href: '/dashboard/tenants', label: 'Tenants', icon: 'tenants' },
-    { href: '/dashboard/audit-logs', label: 'Audit Logs', icon: 'audit-logs' },
-    { href: '/dashboard/branding', label: 'Branding', icon: 'branding' },
   ]
   if (role === 'SUPER_ADMIN') return [...common, ...owner, ...admin]
   if (role === 'TENANT_OWNER') return [...common, ...owner]
@@ -123,6 +123,8 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   const pathname = usePathname()
   const user = useStore((s) => s.user)
   const isAuthenticated = useStore((s) => s.isAuthenticated)
+  const darkMode = useStore((s) => s.darkMode)
+  const toggleDarkMode = useStore((s) => s.toggleDarkMode)
   const clearUser = useStore((s) => s.clearUser)
   const [collapsed, setCollapsed] = useState(false)
 
@@ -149,13 +151,22 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
 
   const sidebarW = collapsed ? 72 : 260
 
+  // Apply dark mode class to document
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [darkMode])
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: darkMode ? '#0f0f0f' : 'var(--bg)' }}>
 
       {/* Sidebar */}
       <aside style={{
-        width: sidebarW, minWidth: sidebarW, background: 'var(--bg-card)',
-        borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column',
+        width: sidebarW, minWidth: sidebarW, background: darkMode ? '#1a1a1a' : 'var(--bg-card)',
+        borderRight: darkMode ? '1px solid #333' : '1px solid var(--border)', display: 'flex', flexDirection: 'column',
         position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 200,
         transition: 'width 0.25s cubic-bezier(0.4,0,0.2,1)',
         overflow: 'hidden',
@@ -164,7 +175,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
         {/* Logo */}
         <div style={{
           padding: collapsed ? '20px 0' : '20px 24px',
-          borderBottom: '1px solid var(--border)',
+          borderBottom: darkMode ? '1px solid #333' : '1px solid var(--border)',
           display: 'flex', alignItems: 'center',
           justifyContent: collapsed ? 'center' : 'space-between',
           minHeight: 72,
@@ -186,26 +197,26 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                   background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 16, fontWeight: 800, color: '#fff', flexShrink: 0,
-                }}>P</div>
+                }}>{(user?.tenant_name || user?.name || 'P').charAt(0).toUpperCase()}</div>
               )}
-              <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', display: 'flex', flexDirection: 'column' }}>
-                <span>{user?.tenant_branding?.senderName || 'ParkSaaS'}</span>
-                {user?.tenant_name && (
-                  <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-muted)' }}>
-                    {user.tenant_branding?.tagline || user.tenant_name}
+              <span style={{ fontSize: 18, fontWeight: 700, color: darkMode ? '#fff' : 'var(--text)', display: 'flex', flexDirection: 'column' }}>
+                <span>{user?.tenant_branding?.senderName || user?.tenant_name || 'ParkSaaS'}</span>
+                {user?.tenant_branding?.tagline && (
+                  <span style={{ fontSize: 12, fontWeight: 500, color: darkMode ? '#888' : 'var(--text-muted)' }}>
+                    {user.tenant_branding.tagline}
                   </span>
                 )}
               </span>
             </div>
           )}
           <button onClick={() => setCollapsed(!collapsed)} style={{
-            background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-            borderRadius: 8, color: 'var(--text-muted)', cursor: 'pointer',
+            background: darkMode ? '#2a2a2a' : 'var(--bg-elevated)', border: darkMode ? '1px solid #333' : '1px solid var(--border)',
+            borderRadius: 8, color: darkMode ? '#888' : 'var(--text-muted)', cursor: 'pointer',
             padding: '6px 8px', display: 'flex', alignItems: 'center',
             transition: 'var(--transition)',
           }}
-            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
+            onMouseEnter={e => (e.currentTarget.style.color = darkMode ? '#fff' : 'var(--text)')}
+            onMouseLeave={e => (e.currentTarget.style.color = darkMode ? '#888' : 'var(--text-muted)')}>
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               {collapsed
                 ? <><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></>
@@ -225,15 +236,15 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                 padding: collapsed ? '12px 0' : '11px 20px',
                 justifyContent: collapsed ? 'center' : 'flex-start',
                 margin: '2px 8px', borderRadius: 8,
-                color: active ? '#fff' : 'var(--text-muted)',
+                color: active ? '#fff' : darkMode ? '#888' : 'var(--text-muted)',
                 textDecoration: 'none',
                 background: active ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'transparent',
                 boxShadow: active ? '0 4px 12px rgba(99,102,241,0.3)' : 'none',
                 transition: 'var(--transition)', fontWeight: active ? 600 : 400,
                 fontSize: 14, whiteSpace: 'nowrap',
               }}
-                onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--bg-elevated)', e.currentTarget.style.color = 'var(--text)' }}
-                onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent', e.currentTarget.style.color = 'var(--text-muted)' }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = darkMode ? '#2a2a2a' : 'var(--bg-elevated)', e.currentTarget.style.color = darkMode ? '#fff' : 'var(--text)' }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent', e.currentTarget.style.color = darkMode ? '#888' : 'var(--text-muted)' }}
                 title={collapsed ? item.label : undefined}>
                 <span style={{ flexShrink: 0 }}><NavIcon name={item.icon} /></span>
                 {!collapsed && item.label}
@@ -243,7 +254,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
         </nav>
 
         {/* User */}
-        <div style={{ borderTop: '1px solid var(--border)', padding: collapsed ? '16px 0' : '16px 20px' }}>
+        <div style={{ borderTop: darkMode ? '1px solid #333' : '1px solid var(--border)', padding: collapsed ? '16px 0' : '16px 20px' }}>
           {!collapsed && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
               <div style={{
@@ -253,8 +264,8 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                 fontSize: 14, fontWeight: 700, color: '#fff',
               }}>{user?.name?.charAt(0).toUpperCase() || 'U'}</div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{roleLabel[user?.role || ''] || user?.role}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: darkMode ? '#fff' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</div>
+                <div style={{ fontSize: 11, color: darkMode ? '#888' : 'var(--text-muted)' }}>{roleLabel[user?.role || ''] || user?.role}</div>
               </div>
             </div>
           )}
@@ -269,18 +280,34 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
       </aside>
 
       {/* Main */}
-      <main style={{ marginLeft: sidebarW, flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, transition: 'margin-left 0.25s cubic-bezier(0.4,0,0.2,1)' }}>
+      <main style={{ marginLeft: sidebarW, flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, transition: 'margin-left 0.25s cubic-bezier(0.4,0,0.2,1)', background: darkMode ? '#0f0f0f' : 'transparent' }}>
 
         {/* Topbar */}
         {(title || subtitle) && (
           <header style={{
-            background: 'var(--bg-card)', borderBottom: '1px solid var(--border)',
+            background: darkMode ? '#1a1a1a' : 'var(--bg-card)', borderBottom: darkMode ? '1px solid #333' : '1px solid var(--border)',
             padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
             <div>
-              {title && <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', margin: 0 }}>{title}</h1>}
-              {subtitle && <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{subtitle}</p>}
+              {title && <h1 style={{ fontSize: 22, fontWeight: 700, color: darkMode ? '#fff' : 'var(--text)', margin: 0 }}>{title}</h1>}
+              {subtitle && <p style={{ fontSize: 13, color: darkMode ? '#888' : 'var(--text-muted)', marginTop: 4 }}>{subtitle}</p>}
             </div>
+            <button
+              onClick={toggleDarkMode}
+              style={{
+                background: darkMode ? '#2a2a2a' : 'var(--bg-elevated)',
+                border: darkMode ? '1px solid #333' : '1px solid var(--border)',
+                borderRadius: 8,
+                padding: '8px 12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                color: darkMode ? '#fff' : 'var(--text)',
+              }}
+            >
+              {darkMode ? '☀️ Light' : '🌙 Dark'}
+            </button>
           </header>
         )}
 

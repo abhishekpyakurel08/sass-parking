@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react'
 import DashboardLayout from '../../../components/DashboardLayout'
 import { customerService, type Customer, type CreateCustomerData, type UpdateCustomerData } from '../../../lib/customer'
+import { useStore } from '../../../store/useStore'
 
 export default function CustomersPage() {
+  const darkMode = useStore((s) => s.darkMode)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -24,9 +26,10 @@ export default function CustomersPage() {
     try {
       setLoading(true)
       const data: any = await customerService.getCustomers(page, 15)
-      setCustomers(data?.data || [])
+      const customersArray = Array.isArray(data) ? data : (data?.data || [])
+      setCustomers(customersArray)
       setTotalPages(data?.pagination?.totalPages || 1)
-      setTotal(data?.pagination?.total || 0)
+      setTotal(data?.pagination?.total || customersArray.length)
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
   }
@@ -72,10 +75,13 @@ export default function CustomersPage() {
         {loading ? (
           <div className="loading-container"><div className="loading-spinner" /></div>
         ) : customers.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">👥</div>
-            <div className="empty-title">No customers yet</div>
-            <p style={{ fontSize: 13, marginTop: 8 }}>Add your first registered customer</p>
+          <div className="empty-state" style={{ background: darkMode ? '#1a1a1a' : '', padding: 40, textAlign: 'center' }}>
+            <div className="empty-icon" style={{ fontSize: 48 }}>👥</div>
+            <div className="empty-title" style={{ fontSize: 18, fontWeight: 600, color: darkMode ? '#fff' : 'var(--text)', marginTop: 16 }}>No customers yet</div>
+            <p style={{ fontSize: 13, marginTop: 8, color: darkMode ? '#888' : 'var(--text-muted)', marginBottom: 24 }}>Add your first registered customer</p>
+            <button id="add-customer-empty-btn" className="btn btn-primary btn-sm" onClick={openCreate}>
+              Add Customer
+            </button>
           </div>
         ) : (
           <table className="data-table">
@@ -102,17 +108,17 @@ export default function CustomersPage() {
                         fontSize: 13, fontWeight: 700, color: '#fff',
                       }}>{c.name.charAt(0).toUpperCase()}</div>
                       <div>
-                        <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 14 }}>{c.name}</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.email || '—'}</div>
+                        <div style={{ fontWeight: 600, color: darkMode ? '#fff' : 'var(--text)', fontSize: 14 }}>{c.name}</div>
+                        <div style={{ fontSize: 12, color: darkMode ? '#888' : 'var(--text-muted)' }}>{c.email || '—'}</div>
                       </div>
                     </div>
                   </td>
                   <td style={{ fontFamily: 'monospace', color: 'var(--accent)', fontWeight: 600 }}>{c.customer_code}</td>
-                  <td>{c.phone_number || '—'}</td>
+                  <td style={{ color: darkMode ? '#fff' : '' }}>{c.phone_number || '—'}</td>
                   <td>
                     {c.discount_percentage > 0
                       ? <span className="badge badge-purple">{c.discount_percentage}% off</span>
-                      : <span style={{ color: 'var(--text-muted)' }}>None</span>}
+                      : <span style={{ color: darkMode ? '#888' : 'var(--text-muted)' }}>None</span>}
                   </td>
                   <td style={{ color: 'var(--green)', fontWeight: 600 }}>Rs. {(c.total_savings || 0).toLocaleString()}</td>
                   <td>{statusBadge(c.status)}</td>
@@ -133,42 +139,42 @@ export default function CustomersPage() {
       {totalPages > 1 && (
         <div className="pagination">
           <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>← Prev</button>
-          <span>Page {page} of {totalPages}</span>
+          <span style={{ color: darkMode ? '#fff' : '' }}>Page {page} of {totalPages}</span>
           <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next →</button>
         </div>
       )}
 
       {showModal && (
-        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
-          <div className="modal">
-            <h3 className="modal-title">{editingCustomer ? 'Edit Customer' : 'Add Customer'}</h3>
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }} style={{ background: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal" style={{ background: darkMode ? '#1a1a1a' : '#fff', border: darkMode ? '1px solid #333' : '1px solid var(--border)' }}>
+            <h3 className="modal-title" style={{ color: darkMode ? '#fff' : '' }}>{editingCustomer ? 'Edit Customer' : 'Add Customer'}</h3>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label className="form-label">Full Name *</label>
-                <input className="form-input" required placeholder="John Doe" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+                <label className="form-label" style={{ color: darkMode ? '#fff' : '' }}>Full Name *</label>
+                <input className="form-input" required placeholder="John Doe" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={{ background: darkMode ? '#2a2a2a' : '', color: darkMode ? '#fff' : '' }} />
               </div>
               {!editingCustomer && (
                 <div className="form-group">
-                  <label className="form-label">Customer Code *</label>
-                  <input className="form-input" required placeholder="CUST-001" value={form.customer_code} onChange={e => setForm({ ...form, customer_code: e.target.value.toUpperCase() })} style={{ textTransform: 'uppercase' }} />
+                  <label className="form-label" style={{ color: darkMode ? '#fff' : '' }}>Customer Code *</label>
+                  <input className="form-input" required placeholder="CUST-001" value={form.customer_code} onChange={e => setForm({ ...form, customer_code: e.target.value.toUpperCase() })} style={{ textTransform: 'uppercase', background: darkMode ? '#2a2a2a' : '', color: darkMode ? '#fff' : '' }} />
                 </div>
               )}
               <div className="form-group">
-                <label className="form-label">Email</label>
-                <input className="form-input" type="email" placeholder="john@email.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+                <label className="form-label" style={{ color: darkMode ? '#fff' : '' }}>Email</label>
+                <input className="form-input" type="email" placeholder="john@email.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={{ background: darkMode ? '#2a2a2a' : '', color: darkMode ? '#fff' : '' }} />
               </div>
               <div className="form-group">
-                <label className="form-label">Phone Number</label>
-                <input className="form-input" type="tel" placeholder="+977 98XXXXXXXX" value={form.phone_number} onChange={e => setForm({ ...form, phone_number: e.target.value })} />
+                <label className="form-label" style={{ color: darkMode ? '#fff' : '' }}>Phone Number</label>
+                <input className="form-input" type="tel" placeholder="+977 98XXXXXXXX" value={form.phone_number} onChange={e => setForm({ ...form, phone_number: e.target.value })} style={{ background: darkMode ? '#2a2a2a' : '', color: darkMode ? '#fff' : '' }} />
               </div>
               <div className="form-group">
-                <label className="form-label">Discount Percentage (%)</label>
-                <input className="form-input" type="number" min={0} max={100} placeholder="0" value={form.discount_percentage} onChange={e => setForm({ ...form, discount_percentage: parseFloat(e.target.value) || 0 })} />
+                <label className="form-label" style={{ color: darkMode ? '#fff' : '' }}>Discount Percentage (%)</label>
+                <input className="form-input" type="number" min={0} max={100} placeholder="0" value={form.discount_percentage} onChange={e => setForm({ ...form, discount_percentage: parseFloat(e.target.value) || 0 })} style={{ background: darkMode ? '#2a2a2a' : '', color: darkMode ? '#fff' : '' }} />
               </div>
               {editingCustomer && (
                 <div className="form-group">
-                  <label className="form-label">Status</label>
-                  <select className="form-select" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+                  <label className="form-label" style={{ color: darkMode ? '#fff' : '' }}>Status</label>
+                  <select className="form-select" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} style={{ background: darkMode ? '#2a2a2a' : '', color: darkMode ? '#fff' : '' }}>
                     <option value="ACTIVE">Active</option>
                     <option value="SUSPENDED">Suspended</option>
                     <option value="EXPIRED">Expired</option>

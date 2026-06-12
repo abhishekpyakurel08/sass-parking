@@ -1,10 +1,10 @@
 import { api } from './api';
 
-// Default Forest Glass colors
+// Default colors matching frontend branding palette
 const defaultBranding = {
-  primaryColor: '#34D399',
-  secondaryColor: '#10B981',
-  accentColor: '#0B0F0E',
+  primaryColor: '#6366f1', // Indigo
+  secondaryColor: '#1e40af', // Dark Blue
+  accentColor: '#8b5cf6', // Purple
   logoUrl: undefined as string | undefined,
 };
 
